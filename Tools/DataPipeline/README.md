@@ -31,7 +31,7 @@ Excel 이 파일을 열어둔 상태에서도 동작한다 (임시 복사본을 
 - 시트 내 `Id` 중복
 - 시트 간 참조 무결성 — `ShopData`/`GachaData`/`EventData`/`FoodData` 가
   삭제된 항목을 가리키는지, `EggData.PartsGroupIds` 가 실재하는 그룹인지
-- `ResourceKey` 가 가리키는 파일이 `Resource/` 에 있는지
+- `ResourceKey` 가 가리키는 파일이 `SnailPet/Assets/Resources/Snail/` 에 있는지
 
 같은 원인이 수십 행에서 터지면 한 줄로 접어 보여준다 (예: `24건`).
 

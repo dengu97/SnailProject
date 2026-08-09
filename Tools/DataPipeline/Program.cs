@@ -38,7 +38,9 @@ namespace SnailPet.Pipeline
             string idMapPath = Path.Combine(root, "Tools", "DataPipeline", "IdMap.json");
             string csOut     = Path.Combine(root, "SnailPet", "Assets", "Scripts", "Generated", "GameData.g.cs");
             string jsonOut   = Path.Combine(root, "Data", "gamedata.json");
-            string resDir    = Path.Combine(root, "Resource");
+            // 아트는 Unity 프로젝트 안에 있다 (단일 소스). 옮기면 여기와 ExportSnailData.ps1 만 고치면 된다.
+            const string artRoot = "SnailPet/Assets/Resources/Snail";
+            string resDir    = Path.Combine(root, artRoot.Replace('/', Path.DirectorySeparatorChar));
             bool check       = Array.IndexOf(args, "--check") >= 0;   // 생성 없이 검증만
 
             Console.WriteLine("입력: " + xlsx);
@@ -51,7 +53,7 @@ namespace SnailPet.Pipeline
             // 토큰을 먼저 전부 등록해야 상호 참조 검증이 가능하다
             RegisterTokens(tables, ids);
 
-            var report = Validator.Run(tables, enums, ids, resDir);
+            var report = Validator.Run(tables, enums, ids, resDir, artRoot);
             report.Print();
 
             if (report.ErrorCount > 0)

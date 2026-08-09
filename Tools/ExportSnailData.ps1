@@ -14,10 +14,13 @@ $ErrorActionPreference = 'Stop'
 if (-not $OutFile) { $OutFile = Join-Path $PSScriptRoot 'preview\data.js' }
 
 $xlsxPath    = Join-Path $ProjectRoot 'SnailData.xlsx'
-$resourceDir = Join-Path $ProjectRoot 'Resource'
+
+# 아트는 Unity 프로젝트 안에 있다 (단일 소스). 프리뷰 툴도 같은 파일을 본다.
+$artRoot     = 'SnailPet/Assets/Resources/Snail'
+$resourceDir = Join-Path $ProjectRoot ($artRoot -replace '/', '\')
 
 if (-not (Test-Path $xlsxPath))    { throw "SnailData.xlsx 를 찾을 수 없습니다: $xlsxPath" }
-if (-not (Test-Path $resourceDir)) { throw "Resource 폴더를 찾을 수 없습니다: $resourceDir" }
+if (-not (Test-Path $resourceDir)) { throw "아트 폴더를 찾을 수 없습니다: $resourceDir" }
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
@@ -174,6 +177,7 @@ foreach ($f in (Get-ChildItem $resourceDir -Recurse -Filter *.png)) {
 $payload = [ordered]@{
     generatedAt = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
     source      = 'SnailData.xlsx'
+    artRoot     = $artRoot          # 아트 위치가 바뀌면 여기만 고치면 된다
     tables      = $tables
     resources   = $files
 }

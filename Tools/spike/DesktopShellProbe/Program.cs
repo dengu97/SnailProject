@@ -139,13 +139,16 @@ namespace DesktopShellProbe
             catch { /* 리포트 저장 실패는 스파이크 결과에 영향 없음 */ }
         }
 
-        /// <summary>Resource 폴더가 보일 때까지 상위로 올라간다.</summary>
+        /// <summary>아트는 Unity 프로젝트 안에 있다. Tools/ExportSnailData.ps1 과 같은 경로를 쓴다.</summary>
+        private const string ArtRoot = "SnailPet/Assets/Resources/Snail";
+
+        /// <summary>SnailData.xlsx 가 보일 때까지 상위로 올라간다.</summary>
         private static string FindProjectRoot()
         {
             var d = new DirectoryInfo(AppContext.BaseDirectory);
             while (d != null)
             {
-                if (Directory.Exists(Path.Combine(d.FullName, "Resource"))) return d.FullName;
+                if (File.Exists(Path.Combine(d.FullName, "SnailData.xlsx"))) return d.FullName;
                 d = d.Parent;
             }
             return null;
@@ -157,7 +160,8 @@ namespace DesktopShellProbe
         /// </summary>
         private static Bitmap BuildSnail(string root, int size)
         {
-            if (root == null) throw new DirectoryNotFoundException("Resource 폴더를 찾지 못했습니다.");
+            if (root == null) throw new DirectoryNotFoundException("SnailData.xlsx 가 있는 프로젝트 루트를 찾지 못했습니다.");
+            string art = Path.Combine(root, ArtRoot.Replace('/', Path.DirectorySeparatorChar));
 
             var layers = new (string type, string line, string color)[]
             {
@@ -175,8 +179,8 @@ namespace DesktopShellProbe
                 foreach (var (type, line, color) in layers)
                 {
                     if (color != null)
-                        Draw(g, Path.Combine(root, "Resource", type, "Color", color + ".png"), size);
-                    Draw(g, Path.Combine(root, "Resource", type, line + ".png"), size);
+                        Draw(g, Path.Combine(art, type, "Color", color + ".png"), size);
+                    Draw(g, Path.Combine(art, type, line + ".png"), size);
                 }
             }
             return canvas;

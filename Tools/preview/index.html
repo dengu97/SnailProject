@@ -228,9 +228,11 @@ const S = v => (v==null ? "" : String(v).trim());
 const list = v => S(v) ? S(v).split(",").map(s=>s.trim()).filter(Boolean) : [];
 const num = (v,d) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
 
-/* ── 리소스 경로 규약: Resource/{PartsType}/{key}.png, 색상은 .../Color/{key}.png ── */
-const baseRel  = (type,key) => `Resource/${type}/${key}.png`;
-const colorRel = (type,key) => `Resource/${type}/Color/${key}.png`;
+/* ── 리소스 경로 규약: {artRoot}/{PartsType}/{key}.png, 색상은 .../Color/{key}.png ──
+   artRoot 는 익스포터가 넣어준다. 아트가 Unity 프로젝트 안으로 옮겨가도 여기는 그대로. */
+const ART = (D.artRoot || "Resource").replace(/\/+$/, "");
+const baseRel  = (type,key) => `${ART}/${type}/${key}.png`;
+const colorRel = (type,key) => `${ART}/${type}/Color/${key}.png`;
 const has = rel => RES.has(rel);
 const url = rel => RES_ROOT + rel;
 
@@ -262,7 +264,7 @@ const EGGS = rowsOf("EggData").map(r => ({
   resourceKey: S(r.ResourceKey),
   info:        S(r.Info)
 }));
-const eggRel = key => `Resource/Egg/${key}.png`;
+const eggRel = key => `${ART}/Egg/${key}.png`;
 
 /* 아이템 성격의 Id 는 어느 시트에 정의돼 있든 상점·뽑기·이벤트에서 참조될 수 있다. */
 const ITEM_DEFS = {};
@@ -678,7 +680,8 @@ function buildValidate(){
 
   /* 3. 리소스 파일 중 데이터가 안 쓰는 것 */
   for(const rel of D.resources){
-    const m = rel.match(/^Resource\/([^/]+)\/(Color\/)?([^/]+)\.png$/);
+    const m = rel.match(new RegExp("^" + ART.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
+                                   "\\/([^/]+)\\/(Color\\/)?([^/]+)\\.png$"));
     if(!m) continue;
     const [,type, isColor, key] = m;
     let used;

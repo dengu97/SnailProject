@@ -57,7 +57,7 @@ Unity 를 조작할 수 없게 되므로, `Application.isEditor` 일 때는 적�
 | `Assets/Editor/SnailPetSetup.cs` | 프로젝트 설정 자동화, 빌드 메뉴 |
 | `Assets/StreamingAssets/snail_preview.png` | 합성된 달팽이 (임시). 아래 명령으로 재생성 |
 
-스프라이트는 `Resource/` 의 파츠를 합성해 만든 임시 이미지입니다. 다시 뽑으려면:
+스프라이트는 `Assets/Resources/Snail/` 의 파츠를 합성해 만든 임시 이미지입니다. 다시 뽑으려면:
 
 ```bash
 dotnet run --project Tools/spike/DesktopShellProbe -c Release -- --export SnailPet/Assets/StreamingAssets/snail_preview.png 512

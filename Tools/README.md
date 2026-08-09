@@ -1,6 +1,6 @@
 # 파츠 합성 프리뷰 툴
 
-`SnailData.xlsx` + `Resource/` 를 그대로 읽어서 달팽이 조합 결과를 눈으로 확인하고,
+SnailData.xlsx + `SnailPet/Assets/Resources/Snail/` 를 그대로 읽어서 달팽이 조합 결과를 눈으로 확인하고,
 부화 추첨 로직과 데이터 정합성을 Unity 붙이기 전에 검증하는 도구입니다.
 
 ## 사용법
@@ -26,8 +26,8 @@ powershell -ExecutionPolicy Bypass -File Tools/ExportSnailData.ps1
 ## 리소스 규약 (툴이 전제하는 것)
 
 - 모든 파츠 PNG 는 **1200×1200 공유 캔버스**에 미리 배치 → 오프셋 없이 순수 z-스택 합성
-- 선화 레이어: `Resource/{PartsType}/{ResourceKey}.png`
-- 색상 레이어: `Resource/{PartsType}/Color/{ColorResourceKey}.png`
+- 선화 레이어: `SnailPet/Assets/Resources/Snail/{PartsType}/{ResourceKey}.png`
+- 색상 레이어: `SnailPet/Assets/Resources/Snail/{PartsType}/Color/{ColorResourceKey}.png`
 - 파츠 1개 = **색상 레이어(아래) + 선화 레이어(위)** 2장
 - **색상 레이어는 선화 전용입니다.** `commonshell01_c*` 는 `commonshell01` 에만 맞고,
   `commonshell02` 에 씌우면 실루엣이 달라 색이 윤곽 밖으로 삐져나옵니다.
@@ -91,11 +91,22 @@ powershell -ExecutionPolicy Bypass -File Tools/ExportSnailData.ps1
 - **시트 간 `Id` 참조 무결성** — `ShopData` / `GachaData` / `EventData` 가
   삭제된 아이템을 붙들고 있는지
 
-## 알려진 데이터 이슈
+## 이 툴과 데이터 파이프라인의 관계
 
-- **`[일반_일반더듬이]` Id 가 29·30행에 중복** → Id 키 딕셔너리에서 한 행이 유실됩니다.
-- **`ShopData` 10·11행, `GachaData` 10·11행이 삭제된 `[에픽알01]` / `[레전더리알01]` 을
-  아직 참조**합니다.
-- **`Hat` 과 `Bag` 의 SortOrder 가 둘 다 250** → 서로의 앞뒤가 비결정적입니다.
-- `PartsColorData` 의 Eyes 2종·Mucus 2종은 파일 없이 정의만 남아 있습니다.
-  (Eyes 는 `IsUseColor=0` 이라 무해, Mucus 는 파츠 자체가 아직 없음)
+같은 데이터를 보지만 역할이 다릅니다.
+
+- **이 툴(브라우저)** — 눈으로 보는 용도. 조합 결과·부화 분포·아트 매핑을 확인합니다.
+- **`Tools/DataPipeline`** — 빌드 게이트. 같은 검증을 하되 **오류가 있으면 생성을 거부**합니다.
+
+데이터를 고쳤다면 둘 다 다시 돌리세요.
+
+```bash
+dotnet run --project Tools/DataPipeline          # 검증 + 코드 생성
+powershell -File Tools/ExportSnailData.ps1       # 프리뷰 툴용 data.js
+```
+
+## 남아 있는 경고
+
+`PartsColorData` 의 Eyes 2종·Mucus 2종은 아직 아트가 없어 정의만 있습니다.
+Eyes 는 `IsUseColor=0` 이라 무해하고, Mucus 는 파츠 자체가 아직 없습니다.
+아트가 들어오면 자동으로 사라집니다.

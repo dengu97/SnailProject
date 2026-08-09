@@ -82,7 +82,7 @@ namespace SnailPet.Pipeline
     /// </summary>
     public static class Validator
     {
-        public static Report Run(List<Table> tables, List<EnumDef> enums, IdRegistry ids, string resourceDir)
+        public static Report Run(List<Table> tables, List<EnumDef> enums, IdRegistry ids, string resourceDir, string artRoot)
         {
             var rep = new Report();
 
@@ -94,7 +94,7 @@ namespace SnailPet.Pipeline
             CheckValues(rep, tables, enumByName, ids);
             CheckDuplicateIds(rep, tables);
             CheckCrossReferences(rep, tables, ids);
-            if (Directory.Exists(resourceDir)) CheckResources(rep, tables, resourceDir);
+            if (Directory.Exists(resourceDir)) CheckResources(rep, tables, resourceDir, artRoot);
 
             return rep;
         }
@@ -273,11 +273,11 @@ namespace SnailPet.Pipeline
         }
 
         /// <summary>ResourceKey 가 가리키는 파일이 실제로 있는지.</summary>
-        private static void CheckResources(Report rep, List<Table> tables, string resourceDir)
+        private static void CheckResources(Report rep, List<Table> tables, string resourceDir, string artRoot)
         {
             bool Exists(string sub) => File.Exists(Path.Combine(resourceDir, sub.Replace('/', Path.DirectorySeparatorChar)));
 
-            // 파츠: Resource/{PartsType}/{ResourceKey}.png, 색상은 .../Color/{key}.png
+            // 파츠: {artRoot}/{PartsType}/{ResourceKey}.png, 색상은 .../Color/{key}.png
             var parts = tables.Find(x => x.Name == "PartsData");
             if (parts != null)
             {
@@ -291,11 +291,11 @@ namespace SnailPet.Pipeline
                     string type = Program.Get(row, cType?.Index ?? -1);
                     string key  = Program.Get(row, cRes?.Index ?? -1);
                     if (type.Length > 0 && key.Length > 0 && !Exists($"{type}/{key}.png"))
-                        rep.Error(where, $"선화 리소스 Resource/{type}/{key}.png 가 없습니다.");
+                        rep.Error(where, $"선화 리소스 {artRoot}/{type}/{key}.png 가 없습니다.");
 
                     foreach (var ck in Values.SplitList(Program.Get(row, cCol?.Index ?? -1)))
                         if (type.Length > 0 && !Exists($"{type}/Color/{ck}.png"))
-                            rep.Error(where, $"색상 리소스 Resource/{type}/Color/{ck}.png 가 없습니다.");
+                            rep.Error(where, $"색상 리소스 {artRoot}/{type}/Color/{ck}.png 가 없습니다.");
                 }
             }
 
@@ -310,7 +310,7 @@ namespace SnailPet.Pipeline
                     string key  = Program.Get(colors.Rows[r], cKey?.Index ?? -1);
                     if (type.Length > 0 && key.Length > 0 && !Exists($"{type}/Color/{key}.png"))
                         rep.Warn($"PartsColorData {colors.ExcelRowNumbers[r]}행",
-                                 $"Resource/{type}/Color/{key}.png 가 없습니다. 아직 아트가 안 나온 색이면 무시해도 됩니다.");
+                                 $"{artRoot}/{type}/Color/{key}.png 가 없습니다. 아직 아트가 안 나온 색이면 무시해도 됩니다.");
                 }
             }
 
@@ -322,7 +322,7 @@ namespace SnailPet.Pipeline
                 {
                     string key = Program.Get(eggs.Rows[r], cKey?.Index ?? -1);
                     if (key.Length > 0 && !Exists($"Egg/{key}.png"))
-                        rep.Error($"EggData {eggs.ExcelRowNumbers[r]}행", $"Resource/Egg/{key}.png 가 없습니다.");
+                        rep.Error($"EggData {eggs.ExcelRowNumbers[r]}행", $"{artRoot}/Egg/{key}.png 가 없습니다.");
                 }
             }
         }
