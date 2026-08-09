@@ -176,18 +176,48 @@ namespace SnailPet
         private void OnGUI()
         {
             float remain = Mathf.Max(0f, AutoQuitSeconds - _t);
+
+            bool applied = false;
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            applied = TransparentWindow.Applied;
+#endif
+
+            // 투명 창이 적용되지 않았으면 그 사실을 크게 알린다.
+            // (에디터 Play 모드로 돌리면 배경이 검게 나오는데, 이걸 실패로 오해하기 쉽다)
+            if (!applied)
+            {
+                var warn = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 22, wordWrap = true,
+                    normal = { textColor = new Color(1f, 0.45f, 0.45f) }
+                };
+                GUI.color = new Color(0.25f, 0f, 0f, 0.9f);
+                GUI.DrawTexture(new Rect(20, 20, 1000, 130), Texture2D.whiteTexture);
+                GUI.color = Color.white;
+                GUI.Label(new Rect(36, 32, 970, 110),
+                    "투명 창이 적용되지 않았습니다.\n" +
+#if UNITY_EDITOR
+                    "에디터 Play 모드에서는 확인할 수 없습니다. 메뉴 SnailPet → 2. 빌드 & 실행 으로 확인하세요.\n" +
+                    "(배경이 검은 것은 정상입니다)",
+#else
+                    "빌드된 플레이어인데 실패했습니다. unity-probe-result.txt 를 확인하세요.",
+#endif
+                    warn);
+            }
+
             var style = new GUIStyle(GUI.skin.label)
             {
                 fontSize = 16,
                 normal = { textColor = Color.white }
             };
-            var box = new Rect(20, 20, 900, 90);
+            float y = applied ? 20f : 165f;
             GUI.color = new Color(0, 0, 0, 0.55f);
-            GUI.DrawTexture(box, Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(20, y, 900, 90), Texture2D.whiteTexture);
             GUI.color = Color.white;
-            GUI.Label(new Rect(32, 28, 880, 24), _status, style);
-            GUI.Label(new Rect(32, 52, 880, 24), "걷는 중: " + _walkTitle, style);
-            GUI.Label(new Rect(32, 76, 880, 24), "자동 종료까지 " + remain.ToString("0.0") + "초 (ESC 로 즉시 종료)", style);
+            GUI.Label(new Rect(32, y + 8,  880, 24), _status, style);
+            GUI.Label(new Rect(32, y + 32, 880, 24), "걷는 중: " + _walkTitle, style);
+            GUI.Label(new Rect(32, y + 56, 880, 24),
+                "자동 종료까지 " + remain.ToString("0.0") + "초 (ESC 로 즉시 종료)", style);
         }
 
         private void WriteReport()
