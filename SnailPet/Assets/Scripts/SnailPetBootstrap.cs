@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
 using SnailPet.Data;
@@ -31,10 +31,24 @@ namespace SnailPet
         /// 안전장치. 클릭 통과 + 항상 위 + 테두리 없는 전체 화면 창은 마우스로 닫을 수 없다.
         /// 반드시 스스로 종료되게 둘 것.
         /// </summary>
-        private const float AutoQuitSeconds = 25f;
+        private const float AutoQuitSeconds = 40f;
 
-        private const float SnailPixels = 220f;   // 화면에 보일 달팽이 가로 크기(px)
-        private const float WalkSeconds = 12f;    // 표면 한 번 횡단하는 시간
+        private const float SnailPixels = 200f;
+
+        /// <summary>
+        /// 데모용 속도. 최종적으로는 LevelData.Speed 가 성장 단계에 따라 결정한다
+        /// (레벨 1~20 에 1~20 으로 정의돼 있다).
+        /// </summary>
+        private const float DemoPixelsPerSecond = 240f;
+
+        /// <summary>
+        /// 달팽이가 기어다닐 박스를 무엇으로 삼을지.
+        ///
+        /// false = 화면 전체. 달팽이가 바탕화면 테두리를 한 바퀴 돈다.
+        /// true  = 활성 창. 기획서 「창 반응」 항목용이며 창을 옮기면 달팽이도 따라온다.
+        ///         구현과 검증은 끝나 있고 이 값만 바꾸면 동작한다.
+        /// </summary>
+        private const bool UseActiveWindowAsBox = false;
 
         private readonly StringBuilder _log = new StringBuilder();
         private Camera _cam;
@@ -47,9 +61,12 @@ namespace SnailPet
         private float _scale = 1f;
 
         private int _vLeft, _vTop, _vWidth, _vHeight;
-        private float _walkFrom, _walkTo, _walkY;
-        private string _walkTitle = "(없음)";
         private string _status = "";
+
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+        private BoxAnchor _anchor;
+        private ScreenRect _box;
+#endif
 
         private void Say(string s) { _log.AppendLine(s); Debug.Log(s); }
 
@@ -58,7 +75,6 @@ namespace SnailPet
             Application.runInBackground = true;
             Say("=== SnailPet ===");
             Say("Unity " + Application.unityVersion + " / " + SystemInfo.operatingSystem);
-            Say("그래픽 API: " + SystemInfo.graphicsDeviceType);
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             var v = TransparentWindow.VirtualScreen;
@@ -66,10 +82,7 @@ namespace SnailPet
             Say("가상 화면: " + v);
 #else
             _vLeft = 0; _vTop = 0; _vWidth = Screen.width; _vHeight = Screen.height;
-            Say("Windows 가 아니므로 투명 창을 적용하지 않습니다.");
 #endif
-
-            // 창만 키우고 렌더 해상도를 두면 백버퍼가 기본값으로 남아 좌표 매핑이 틀어진다
             Screen.SetResolution(_vWidth, _vHeight, FullScreenMode.Windowed);
 
             SetupCamera();
@@ -80,33 +93,14 @@ namespace SnailPet
             Say("[2] 투명 창 적용 ..... " + (ok ? "OK" : "실패: " + TransparentWindow.LastError));
             Say("[3] 클릭 통과 ....... " + (TransparentWindow.IsClickThrough() ? "OK" : "미적용"));
 
-            var surfaces = WindowSurfaces.Collect(TransparentWindow.Hwnd);
-            Say("[4] 창 표면 수집 .... " + surfaces.Count + "개");
-            for (int i = 0; i < Mathf.Min(6, surfaces.Count); i++) Say("      " + surfaces[i]);
-
-            Surface best = null;
-            foreach (var s in surfaces) if (best == null || s.Width > best.Width) best = s;
-            if (best != null)
-            {
-                _walkFrom = best.Left; _walkTo = best.Right; _walkY = best.Top;
-                _walkTitle = best.Title;
-            }
-            else PickWalkFallback();
-#else
-            PickWalkFallback();
+            _anchor = new BoxAnchor { Edge = BoxEdge.Bottom, T = 0.05f, Forward = true };
+            _box = ResolveBox();
+            Say("[4] 박스 ............ " + BoxName + "  " + _box);
 #endif
-            _status = "달팽이 뒤로 바탕화면이 보이면 성공. 검은 사각형이면 실패.";
+            _status = "화면 안쪽 테두리를 따라 한 바퀴 돕니다.";
             Say("");
-            Say("→ " + _walkTitle + " 위를 걸어갑니다. " + AutoQuitSeconds + "초 뒤 자동 종료.");
+            Say("→ " + AutoQuitSeconds + "초 뒤 자동 종료.");
             WriteReport();
-        }
-
-        private void PickWalkFallback()
-        {
-            _walkFrom = _vLeft;
-            _walkTo = _vLeft + _vWidth;
-            _walkY = _vTop + _vHeight - 80;
-            _walkTitle = "(화면 하단)";
         }
 
         private void SetupCamera()
@@ -123,11 +117,9 @@ namespace SnailPet
             _cam.allowMSAA = false;
         }
 
-        /// <summary>데이터에서 알을 하나 골라 부화시키고, 그 결과를 합성한다.</summary>
         private void SetupSnail()
         {
             var rng = new System.Random();
-
             var eggs = GameData.EggData;
             var egg = eggs[rng.Next(eggs.Length)];
             _appearance = SnailHatchery.Hatch(egg.Id, rng);
@@ -142,10 +134,9 @@ namespace SnailPet
             _bounds = SnailMetrics.Measure(_appearance);
             float visibleWidth = _bounds.Right - _bounds.Left;
             _scale = (_bounds.Measured && visibleWidth > 0.01f) ? SnailPixels / visibleWidth : 1f;
-            _snail.localScale = new Vector3(_scale, _scale, 1f);
 
-            Say(string.Format("      몸통 실측: 가로 {0:0}px, 발선 {1:0.0} (스케일 {2:0.000})",
-                visibleWidth * _scale, _bounds.Foot * _scale, _scale));
+            Say(string.Format("      몸통 실측: 가로 {0:0}px, 발선 {1:0.0}px",
+                visibleWidth * _scale, _bounds.Foot * _scale));
         }
 
         private void Update()
@@ -153,41 +144,29 @@ namespace SnailPet
             _t += Time.deltaTime;
             _cam.orthographicSize = Screen.height * 0.5f;
 
-            // 월드 → 가상 화면 px 환산 (해상도가 어긋나 있어도 맞도록 매번 계산)
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            // 매 프레임 다시 읽는다. 창 모드일 때 창을 옮기면 달팽이가 자동으로 따라붙고,
+            // 화면 모드일 때는 해상도·모니터 구성이 바뀌어도 알아서 맞춰진다.
+            _box = ResolveBox();
+
             float pxPerWorldY = _vHeight / Mathf.Max(1f, 2f * _cam.orthographicSize);
             float pxPerWorldX = _vWidth  / Mathf.Max(1f, 2f * _cam.orthographicSize * _cam.aspect);
+            float px = (pxPerWorldX + pxPerWorldY) * 0.5f;   // 회전하면 두 축이 섞이므로 평균을 쓴다
 
-            float leftPx   = _bounds.Left  * _scale * pxPerWorldX;   // 음수
-            float rightPx  = _bounds.Right * _scale * pxPerWorldX;   // 양수
-            float footPx   = _bounds.Foot  * _scale * pxPerWorldY;   // 음수
-            float topPx    = _bounds.Top   * _scale * pxPerWorldY;   // 양수
+            float footDepth = Mathf.Abs(_bounds.Foot) * _scale * px;
+            float alongMin  = _bounds.Left  * _scale * px;
+            float alongMax  = _bounds.Right * _scale * px;
 
-            // 가로: 걷는 구간을 몸 크기만큼 안쪽으로 들이고, 화면 밖으로도 못 나가게
-            float screenMinX = _vLeft - leftPx;
-            float screenMaxX = _vLeft + _vWidth - rightPx;
-            float from = Mathf.Clamp(_walkFrom - leftPx,  screenMinX, screenMaxX);
-            float to   = Mathf.Clamp(_walkTo   - rightPx, screenMinX, screenMaxX);
-            if (to < from)
+            _anchor = BoxWalk.Advance(_box, _anchor, DemoPixelsPerSecond, Time.deltaTime, alongMin, alongMax);
+            var pose = BoxWalk.Evaluate(_box, _anchor, footDepth, alongMin, alongMax);
+
+            if (pose.Valid)
             {
-                float mid = Mathf.Clamp((_walkFrom + _walkTo) * 0.5f, screenMinX, screenMaxX);
-                from = to = mid;
+                _snail.position = VirtualToWorld(pose.RootScreen.x, pose.RootScreen.y);
+                _snail.localRotation = Quaternion.Euler(0f, 0f, pose.RotationDeg);
+                _snail.localScale = new Vector3(pose.FlipX ? -_scale : _scale, _scale, 1f);
             }
-
-            float phase = Mathf.PingPong(_t / WalkSeconds, 1f);
-            float sx = Mathf.Lerp(from, to, phase);
-
-            // 세로: 발이 표면 위에 놓이도록. 화면 위/아래로도 못 나가게.
-            // 화면 y 는 아래로, 월드 y 는 위로 증가하므로 부호가 뒤집힌다.
-            float sy = Mathf.Clamp(_walkY + footPx, _vTop + topPx, _vTop + _vHeight + footPx);
-
-            _snail.position = VirtualToWorld(sx, sy);
-
-            // 진행 방향으로 뒤집기 (달팽이 아트는 왼쪽을 본다)
-            float dir = Mathf.Sin(Mathf.PI * 2f * (_t / (WalkSeconds * 2f)));
-            var s = _snail.localScale;
-            s.x = Mathf.Abs(s.x) * (dir >= 0 ? -1f : 1f);
-            _snail.localScale = s;
-
+#endif
             if (!_diagDone && _t > 1f) { LogDiagnostics(); _diagDone = true; }
 
             if (_t >= AutoQuitSeconds || Input.GetKeyDown(KeyCode.Escape))
@@ -196,6 +175,15 @@ namespace SnailPet
                 Application.Quit();
             }
         }
+
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+        private ScreenRect ResolveBox() =>
+            UseActiveWindowAsBox ? ActiveWindowBox.Resolve(TransparentWindow.Hwnd)
+                                 : TransparentWindow.VirtualScreen;
+
+        private static string BoxName =>
+            UseActiveWindowAsBox ? ActiveWindowBox.CurrentTitle : "(화면 전체)";
+#endif
 
         /// <summary>
         /// 가상 화면 px → 월드 좌표.
@@ -213,20 +201,16 @@ namespace SnailPet
 
         private void LogDiagnostics()
         {
-            var p = _snail.position;
-            float halfH = _cam.orthographicSize;
-            float halfW = halfH * _cam.aspect;
-            bool inside = Mathf.Abs(p.x) <= halfW && Mathf.Abs(p.y) <= halfH;
-
             Say("");
             Say("[5] 렌더 진단");
             Say($"      Screen        : {Screen.width}x{Screen.height} (요청 {_vWidth}x{_vHeight})");
-            Say($"      카메라        : ortho={halfH:0.0} aspect={_cam.aspect:0.000}");
-            Say($"      달팽이 위치   : ({p.x:0.0}, {p.y:0.0})  {(inside ? "화면 안" : "화면 밖 ← 원인")}");
             Say($"      레이어 수     : {_snail.childCount}장");
-            Say($"      몸통 경계     : {(_bounds.Measured ? "실측" : "미측정")} " +
-                $"L{_bounds.Left:0} R{_bounds.Right:0} 발{_bounds.Foot:0} T{_bounds.Top:0} (스케일 전)");
-            Say($"      걷는 구간     : x={_walkFrom:0}..{_walkTo:0}, y={_walkY:0}");
+            Say($"      몸통 경계     : L{_bounds.Left:0} R{_bounds.Right:0} 발{_bounds.Foot:0} T{_bounds.Top:0} (스케일 전)");
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            Say($"      박스          : {BoxName}  {_box}");
+            Say($"      앵커          : {_anchor.Edge} T={_anchor.T:0.00} 회전={BoxWalk.RotationOf(_anchor.Edge)}도");
+            Say($"      달팽이 위치   : {_snail.position}");
+#endif
             WriteReport();
         }
 
@@ -235,8 +219,11 @@ namespace SnailPet
             float remain = Mathf.Max(0f, AutoQuitSeconds - _t);
 
             bool applied = false;
+            string boxName = "-", edgeName = "-";
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             applied = TransparentWindow.Applied;
+            boxName = BoxName;
+            edgeName = _anchor.Edge + " (회전 " + BoxWalk.RotationOf(_anchor.Edge) + "도)";
 #endif
             if (!applied)
             {
@@ -259,15 +246,17 @@ namespace SnailPet
                     warn);
             }
 
-            var style = new GUIStyle(GUI.skin.label) { fontSize = 16, normal = { textColor = Color.white } };
-            float y = applied ? 20f : 165f;
+            // HUD 는 화면 하단에 둔다. 위에 두면 달팽이가 위쪽 벽을 걸을 때 가린다.
+            var style = new GUIStyle(GUI.skin.label) { fontSize = 15, normal = { textColor = Color.white } };
+            float h = 108f;
+            float y = Screen.height - h - 20f;
             GUI.color = new Color(0, 0, 0, 0.55f);
-            GUI.DrawTexture(new Rect(20, y, 940, 112), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(20, y, 980, h), Texture2D.whiteTexture);
             GUI.color = Color.white;
-            GUI.Label(new Rect(32, y + 8,  920, 24), _status, style);
-            GUI.Label(new Rect(32, y + 30, 920, 24), "부화 결과: " + _appearance, style);
-            GUI.Label(new Rect(32, y + 54, 920, 24), "걷는 중: " + _walkTitle, style);
-            GUI.Label(new Rect(32, y + 78, 920, 24),
+            GUI.Label(new Rect(32, y + 6,  960, 22), _status, style);
+            GUI.Label(new Rect(32, y + 28, 960, 22), "박스: " + boxName, style);
+            GUI.Label(new Rect(32, y + 50, 960, 22), "벽: " + edgeName, style);
+            GUI.Label(new Rect(32, y + 72, 960, 22),
                 "자동 종료까지 " + remain.ToString("0.0") + "초 (ESC 로 즉시 종료)", style);
         }
 

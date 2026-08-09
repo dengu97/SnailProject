@@ -52,6 +52,10 @@ namespace SnailPet.Desktop
         [DllImport("user32.dll")]
         public static extern IntPtr GetActiveWindow();
 
+        /// <summary>지금 사용자가 보고 있는 창. 정의상 맨 앞이라 가려질 걱정이 없다.</summary>
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetForegroundWindow();
+
         [DllImport("user32.dll", SetLastError = true)]
         public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 
