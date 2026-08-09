@@ -13,6 +13,10 @@
 *.meta      text eol=lf
 *.cs        text eol=lf diff=csharp
 
+# Unity Hub 의 파서는 이 파일이 LF 면 에디터 버전을 읽지 못한다 ("제한된 에디터 버전" 경고).
+# Unity 자신이 CRLF 로 쓰므로 체크아웃 시에도 CRLF 를 강제한다.
+ProjectVersion.txt text eol=crlf
+
 # ── 스크립트/데이터 ──
 *.ps1       text eol=crlf
 *.json      text eol=lf
