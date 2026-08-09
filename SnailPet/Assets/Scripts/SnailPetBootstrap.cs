@@ -33,13 +33,14 @@ namespace SnailPet
         /// </summary>
         private const float AutoQuitSeconds = 40f;
 
-        private const float SnailPixels = 200f;
-
         /// <summary>
-        /// 데모용 속도. 최종적으로는 LevelData.Speed 가 성장 단계에 따라 결정한다
-        /// (레벨 1~20 에 1~20 으로 정의돼 있다).
+        /// 데모용. 실제로는 먹이·경험치로 레벨이 오르지만, 여기서는 LevelData 의
+        /// Speed / Size 곡선을 눈으로 보기 위해 이 간격마다 강제로 한 단계씩 올린다.
         /// </summary>
-        private const float DemoPixelsPerSecond = 240f;
+        private const float DemoLevelSeconds = 2f;
+
+        /// <summary>포만도 감소는 1800초 간격이라 데모에서는 시간을 크게 당겨야 보인다.</summary>
+        private const float DemoTimeScale = 600f;
 
         /// <summary>
         /// 달팽이가 기어다닐 박스를 무엇으로 삼을지.
@@ -58,7 +59,9 @@ namespace SnailPet
 
         private SnailAppearance _appearance;
         private SnailBounds _bounds;      // 스케일 적용 전 (월드 단위)
+        private float _visibleWidth = 1f; // 스케일 적용 전 몸통 가로 (월드 단위)
         private float _scale = 1f;
+        private SnailGrowth _growth;
 
         private int _vLeft, _vTop, _vWidth, _vHeight;
         private string _status = "";
@@ -90,12 +93,12 @@ namespace SnailPet
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             bool ok = TransparentWindow.Apply(clickThrough: true);
-            Say("[2] 투명 창 적용 ..... " + (ok ? "OK" : "실패: " + TransparentWindow.LastError));
-            Say("[3] 클릭 통과 ....... " + (TransparentWindow.IsClickThrough() ? "OK" : "미적용"));
+            Say("[3] 투명 창 적용 ..... " + (ok ? "OK" : "실패: " + TransparentWindow.LastError));
+            Say("[4] 클릭 통과 ....... " + (TransparentWindow.IsClickThrough() ? "OK" : "미적용"));
 
             _anchor = new BoxAnchor { Edge = BoxEdge.Bottom, T = 0.05f, Forward = true };
             _box = ResolveBox();
-            Say("[4] 박스 ............ " + BoxName + "  " + _box);
+            Say("[5] 박스 ............ " + BoxName + "  " + _box);
 #endif
             _status = "화면 안쪽 테두리를 따라 한 바퀴 돕니다.";
             Say("");
@@ -132,17 +135,41 @@ namespace SnailPet
             _snail = root.transform;
 
             _bounds = SnailMetrics.Measure(_appearance);
-            float visibleWidth = _bounds.Right - _bounds.Left;
-            _scale = (_bounds.Measured && visibleWidth > 0.01f) ? SnailPixels / visibleWidth : 1f;
+            _visibleWidth = _bounds.Right - _bounds.Left;
+            if (!_bounds.Measured || _visibleWidth < 0.01f) _visibleWidth = 1f;
 
-            Say(string.Format("      몸통 실측: 가로 {0:0}px, 발선 {1:0.0}px",
-                visibleWidth * _scale, _bounds.Foot * _scale));
+            _growth = new SnailGrowth();
+            ApplyGrowth();
+
+            Say("[2] 성장 ............. " + _growth);
+            Say(string.Format("      환산: Speed 1 = {0}px/s, Size 1 = {1}px  (레벨 1~{2})",
+                SnailGrowth.PixelsPerSpeedUnit, SnailGrowth.PixelsPerSizeUnit, SnailGrowth.MaxLevel));
+            var top = GameData.LevelData[GameData.LevelData.Length - 1];
+            Say(string.Format("      최고 레벨: 속도 {0}px/s, 크기 {1}px",
+                top.Speed * SnailGrowth.PixelsPerSpeedUnit, top.Size * SnailGrowth.PixelsPerSizeUnit));
+        }
+
+        /// <summary>레벨이 바뀌면 크기를 다시 맞춘다. 속도는 매 프레임 읽으므로 여기선 안 건드린다.</summary>
+        private void ApplyGrowth()
+        {
+            _scale = _growth.SizePixels / _visibleWidth;
         }
 
         private void Update()
         {
             _t += Time.deltaTime;
             _cam.orthographicSize = Screen.height * 0.5f;
+
+            _growth.Tick(Time.deltaTime, DemoTimeScale);
+
+            // 데모: LevelData 의 Speed / Size 곡선을 눈으로 보기 위해 강제로 성장시킨다
+            int demoLevel = Mathf.Clamp(1 + (int)(_t / DemoLevelSeconds), 1, SnailGrowth.MaxLevel);
+            if (demoLevel != _growth.Level)
+            {
+                _growth.ForceLevel(demoLevel);
+                ApplyGrowth();
+                Say("      → " + _growth);
+            }
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             // 매 프레임 다시 읽는다. 창 모드일 때 창을 옮기면 달팽이가 자동으로 따라붙고,
@@ -157,7 +184,7 @@ namespace SnailPet
             float alongMin  = _bounds.Left  * _scale * px;
             float alongMax  = _bounds.Right * _scale * px;
 
-            _anchor = BoxWalk.Advance(_box, _anchor, DemoPixelsPerSecond, Time.deltaTime, alongMin, alongMax);
+            _anchor = BoxWalk.Advance(_box, _anchor, _growth.PixelsPerSecond, Time.deltaTime, alongMin, alongMax);
             var pose = BoxWalk.Evaluate(_box, _anchor, footDepth, alongMin, alongMax);
 
             if (pose.Valid)
@@ -202,7 +229,7 @@ namespace SnailPet
         private void LogDiagnostics()
         {
             Say("");
-            Say("[5] 렌더 진단");
+            Say("[6] 렌더 진단");
             Say($"      Screen        : {Screen.width}x{Screen.height} (요청 {_vWidth}x{_vHeight})");
             Say($"      레이어 수     : {_snail.childCount}장");
             Say($"      몸통 경계     : L{_bounds.Left:0} R{_bounds.Right:0} 발{_bounds.Foot:0} T{_bounds.Top:0} (스케일 전)");
@@ -254,8 +281,8 @@ namespace SnailPet
             GUI.DrawTexture(new Rect(20, y, 980, h), Texture2D.whiteTexture);
             GUI.color = Color.white;
             GUI.Label(new Rect(32, y + 6,  960, 22), _status, style);
-            GUI.Label(new Rect(32, y + 28, 960, 22), "박스: " + boxName, style);
-            GUI.Label(new Rect(32, y + 50, 960, 22), "벽: " + edgeName, style);
+            GUI.Label(new Rect(32, y + 28, 960, 22), _growth.ToString(), style);
+            GUI.Label(new Rect(32, y + 50, 960, 22), "박스: " + boxName + "   벽: " + edgeName, style);
             GUI.Label(new Rect(32, y + 72, 960, 22),
                 "자동 종료까지 " + remain.ToString("0.0") + "초 (ESC 로 즉시 종료)", style);
         }

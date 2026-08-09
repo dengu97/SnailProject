@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-10 00:13:02",
+  "generatedAt": "2026-08-10 00:49:47",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -152,26 +152,26 @@
       {"Id": 34, "FoodType": "bean", "Name": "두부", "FullPoint": 15, "HappyPoint": 10, "BuffId": "[포만감01]", "Info": null}
     ],
     "LevelData": [
-      {"Level": 1, "RequiredExp": 0, "NeedFullPoint": 10, "NeedHappyPoint": 10, "UseFullPointTime": 1800, "Speed": 1},
-      {"Level": 2, "RequiredExp": 10, "NeedFullPoint": 15, "NeedHappyPoint": 15, "UseFullPointTime": 1800, "Speed": 2},
-      {"Level": 3, "RequiredExp": 50, "NeedFullPoint": 20, "NeedHappyPoint": 20, "UseFullPointTime": 1800, "Speed": 3},
-      {"Level": 4, "RequiredExp": 100, "NeedFullPoint": 25, "NeedHappyPoint": 25, "UseFullPointTime": 1800, "Speed": 4},
-      {"Level": 5, "RequiredExp": 150, "NeedFullPoint": 30, "NeedHappyPoint": 30, "UseFullPointTime": 1800, "Speed": 5},
-      {"Level": 6, "RequiredExp": 200, "NeedFullPoint": 35, "NeedHappyPoint": 35, "UseFullPointTime": 1800, "Speed": 6},
-      {"Level": 7, "RequiredExp": 250, "NeedFullPoint": 40, "NeedHappyPoint": 40, "UseFullPointTime": 1800, "Speed": 7},
-      {"Level": 8, "RequiredExp": 300, "NeedFullPoint": 45, "NeedHappyPoint": 45, "UseFullPointTime": 1800, "Speed": 8},
-      {"Level": 9, "RequiredExp": 350, "NeedFullPoint": 50, "NeedHappyPoint": 50, "UseFullPointTime": 1800, "Speed": 9},
-      {"Level": 10, "RequiredExp": 400, "NeedFullPoint": 55, "NeedHappyPoint": 55, "UseFullPointTime": 1800, "Speed": 10},
-      {"Level": 11, "RequiredExp": 450, "NeedFullPoint": 60, "NeedHappyPoint": 60, "UseFullPointTime": 1800, "Speed": 11},
-      {"Level": 12, "RequiredExp": 500, "NeedFullPoint": 65, "NeedHappyPoint": 65, "UseFullPointTime": 1800, "Speed": 12},
-      {"Level": 13, "RequiredExp": 550, "NeedFullPoint": 70, "NeedHappyPoint": 70, "UseFullPointTime": 1800, "Speed": 13},
-      {"Level": 14, "RequiredExp": 600, "NeedFullPoint": 75, "NeedHappyPoint": 75, "UseFullPointTime": 1800, "Speed": 14},
-      {"Level": 15, "RequiredExp": 650, "NeedFullPoint": 80, "NeedHappyPoint": 80, "UseFullPointTime": 1800, "Speed": 15},
-      {"Level": 16, "RequiredExp": 700, "NeedFullPoint": 85, "NeedHappyPoint": 85, "UseFullPointTime": 1800, "Speed": 16},
-      {"Level": 17, "RequiredExp": 750, "NeedFullPoint": 90, "NeedHappyPoint": 90, "UseFullPointTime": 1800, "Speed": 17},
-      {"Level": 18, "RequiredExp": 800, "NeedFullPoint": 95, "NeedHappyPoint": 95, "UseFullPointTime": 1800, "Speed": 18},
-      {"Level": 19, "RequiredExp": 850, "NeedFullPoint": 100, "NeedHappyPoint": 100, "UseFullPointTime": 1800, "Speed": 19},
-      {"Level": 20, "RequiredExp": 900, "NeedFullPoint": 105, "NeedHappyPoint": 105, "UseFullPointTime": 1800, "Speed": 20}
+      {"Level": 1, "RequiredExp": 0, "NeedFullPoint": 10, "NeedHappyPoint": 10, "UseFullPointTime": 1800, "Speed": 1, "Size": 1},
+      {"Level": 2, "RequiredExp": 10, "NeedFullPoint": 15, "NeedHappyPoint": 15, "UseFullPointTime": 1800, "Speed": 2, "Size": 2},
+      {"Level": 3, "RequiredExp": 50, "NeedFullPoint": 20, "NeedHappyPoint": 20, "UseFullPointTime": 1800, "Speed": 3, "Size": 3},
+      {"Level": 4, "RequiredExp": 100, "NeedFullPoint": 25, "NeedHappyPoint": 25, "UseFullPointTime": 1800, "Speed": 4, "Size": 4},
+      {"Level": 5, "RequiredExp": 150, "NeedFullPoint": 30, "NeedHappyPoint": 30, "UseFullPointTime": 1800, "Speed": 5, "Size": 5},
+      {"Level": 6, "RequiredExp": 200, "NeedFullPoint": 35, "NeedHappyPoint": 35, "UseFullPointTime": 1800, "Speed": 6, "Size": 6},
+      {"Level": 7, "RequiredExp": 250, "NeedFullPoint": 40, "NeedHappyPoint": 40, "UseFullPointTime": 1800, "Speed": 7, "Size": 7},
+      {"Level": 8, "RequiredExp": 300, "NeedFullPoint": 45, "NeedHappyPoint": 45, "UseFullPointTime": 1800, "Speed": 8, "Size": 8},
+      {"Level": 9, "RequiredExp": 350, "NeedFullPoint": 50, "NeedHappyPoint": 50, "UseFullPointTime": 1800, "Speed": 9, "Size": 9},
+      {"Level": 10, "RequiredExp": 400, "NeedFullPoint": 55, "NeedHappyPoint": 55, "UseFullPointTime": 1800, "Speed": 10, "Size": 10},
+      {"Level": 11, "RequiredExp": 450, "NeedFullPoint": 60, "NeedHappyPoint": 60, "UseFullPointTime": 1800, "Speed": 11, "Size": 11},
+      {"Level": 12, "RequiredExp": 500, "NeedFullPoint": 65, "NeedHappyPoint": 65, "UseFullPointTime": 1800, "Speed": 12, "Size": 12},
+      {"Level": 13, "RequiredExp": 550, "NeedFullPoint": 70, "NeedHappyPoint": 70, "UseFullPointTime": 1800, "Speed": 13, "Size": 13},
+      {"Level": 14, "RequiredExp": 600, "NeedFullPoint": 75, "NeedHappyPoint": 75, "UseFullPointTime": 1800, "Speed": 14, "Size": 14},
+      {"Level": 15, "RequiredExp": 650, "NeedFullPoint": 80, "NeedHappyPoint": 80, "UseFullPointTime": 1800, "Speed": 15, "Size": 15},
+      {"Level": 16, "RequiredExp": 700, "NeedFullPoint": 85, "NeedHappyPoint": 85, "UseFullPointTime": 1800, "Speed": 16, "Size": 16},
+      {"Level": 17, "RequiredExp": 750, "NeedFullPoint": 90, "NeedHappyPoint": 90, "UseFullPointTime": 1800, "Speed": 17, "Size": 17},
+      {"Level": 18, "RequiredExp": 800, "NeedFullPoint": 95, "NeedHappyPoint": 95, "UseFullPointTime": 1800, "Speed": 18, "Size": 18},
+      {"Level": 19, "RequiredExp": 850, "NeedFullPoint": 100, "NeedHappyPoint": 100, "UseFullPointTime": 1800, "Speed": 19, "Size": 19},
+      {"Level": 20, "RequiredExp": 900, "NeedFullPoint": 105, "NeedHappyPoint": 105, "UseFullPointTime": 1800, "Speed": 20, "Size": 20}
     ],
     "BuffData": [
       {"Id": 35, "BuffType": "Full", "Value1": "1800", "IconResourceKey": "buff_fullIcon", "Info": "30분간 허기가 떨어지지 않습니다."}
