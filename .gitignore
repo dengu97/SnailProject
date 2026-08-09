@@ -53,3 +53,6 @@ Desktop.ini
 
 # 데이터 파이프라인 생성물 중 IdMap.json 은 커밋 대상이다 (직렬화 신원).
 # 생성 코드와 JSON 도 커밋한다 — 클론 직후 Unity 가 바로 열리도록.
+
+# 플레이어 실행 리포트 (실행할 때마다 갱신)
+unity-probe-result.txt

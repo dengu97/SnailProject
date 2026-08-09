@@ -1,9 +1,14 @@
 # SnailPet (Unity 2022.3.13f1)
 
-PC 데스크톱 상주 클라이언트. 현재는 **투명 창 스파이크 단계**입니다.
+PC 데스크톱 상주 클라이언트.
 
-`Tools/spike` 에서 OS 레벨(투명·항상 위·클릭 통과·창 테두리 감지)이 5/5 로 확인됐고,
-여기서 확인하려는 것은 **Unity 플레이어 창에서도 per-pixel alpha 가 살아나는가** 하나입니다.
+투명 창은 검증 완료입니다. `Tools/spike` 에서 OS 레벨(투명·항상 위·클릭 통과·창
+테두리 감지)이 5/5 로 확인됐고, Unity 플레이어 창에서도 per-pixel alpha 가 살아나는 것을
+빌드해서 확인했습니다.
+
+현재는 **데이터 기반 런타임 파츠 합성**이 동작합니다. 실행하면 `EggData` 에서 알을 하나
+골라 부화시키고, 그 결과를 `PartsData` / `PartsColorData` / `EnumData.SortOrder` 대로
+합성해 창 테두리 위를 걷습니다.
 
 ## 처음 열 때
 
@@ -55,16 +60,25 @@ Unity 를 조작할 수 없게 되므로, `Application.isEditor` 일 때는 적�
 | `Assets/Scripts/Desktop/TransparentWindow.cs` | Unity 전용. 테두리 제거 + DWM 유리 확장 + 항상 위 |
 | `Assets/Scripts/SnailPetBootstrap.cs` | 씬 없이 런타임에 카메라·달팽이 생성, 표면 위 왕복 |
 | `Assets/Editor/SnailPetSetup.cs` | 프로젝트 설정 자동화, 빌드 메뉴 |
-| `Assets/StreamingAssets/snail_preview.png` | 합성된 달팽이 (임시). 아래 명령으로 재생성 |
+| `Assets/Scripts/Snail/SnailAppearance.cs` | 개체 외형 정의 + `SortOrder` 조회 |
+| `Assets/Scripts/Snail/SnailComposer.cs` | 파츠 스프라이트를 겹쳐 달팽이를 만든다 |
+| `Assets/Scripts/Snail/SnailMetrics.cs` | 발선(몸통만) + 가로 경계(전체) 실측, 캐시 |
+| `Assets/Scripts/Snail/SnailHatchery.cs` | 알 → 개체. `PartsGroupIds` union 추첨 |
+| `Assets/Editor/SnailArtImporter.cs` | 아트를 Sprite 로 임포트 (PPU=1, 최대 512px) |
+| `Assets/Resources/Snail/` | 파츠 아트 (단일 소스) |
 
-스프라이트는 `Assets/Resources/Snail/` 의 파츠를 합성해 만든 임시 이미지입니다. 다시 뽑으려면:
+데이터는 `Tools/DataPipeline` 이 생성한 `Assets/Scripts/Generated/GameData.g.cs` 를 씁니다.
+`SnailData.xlsx` 를 고쳤다면 파이프라인을 다시 돌려야 반영됩니다.
+
+## 배치모드 빌드
 
 ```bash
-dotnet run --project Tools/spike/DesktopShellProbe -c Release -- --export SnailPet/Assets/StreamingAssets/snail_preview.png 512
+& "C:\Program Files\Unity\Hub\Editor\2022.3.13f1\Editor\Unity.exe" -batchmode -quit -nographics `
+  -projectPath SnailPet -executeMethod SnailPet.EditorTools.SnailPetSetup.BuildOnly -logFile -
 ```
 
-파츠 합성을 Unity 런타임에서 직접 하는 것은 데이터 파이프라인 작업 이후입니다.
-지금은 투명 창 검증에만 집중합니다.
+> 스크립트를 새로 추가한 직후 첫 실행은 **에셋 임포트가 끝나기 전에 컴파일이 돌아**
+> `CS0234` 로 실패할 수 있습니다. 그대로 한 번 더 실행하면 통과합니다.
 
 ## 발선(接地) 처리 — 런타임 합성 때 반드시 손볼 것
 
