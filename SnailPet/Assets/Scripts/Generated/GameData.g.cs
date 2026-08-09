@@ -117,8 +117,9 @@ namespace SnailPet.Data
         public readonly double HappyPoint;
         public readonly string BuffId;
         public readonly string Info;
+        public readonly string ResourceKey;
 
-        public FoodDataRow(int id, FoodType foodType, string name, double fullPoint, double happyPoint, string buffId, string info)
+        public FoodDataRow(int id, FoodType foodType, string name, double fullPoint, double happyPoint, string buffId, string info, string resourceKey)
         {
             Id = id;
             FoodType = foodType;
@@ -127,6 +128,7 @@ namespace SnailPet.Data
             HappyPoint = happyPoint;
             BuffId = buffId;
             Info = info;
+            ResourceKey = resourceKey;
         }
     }
 
@@ -409,34 +411,34 @@ namespace SnailPet.Data
 
         public static readonly FoodDataRow[] FoodData = new FoodDataRow[]
         {
-            new FoodDataRow(31, FoodType.vegetable, "상추", 5d, 3d, null, null),
-            new FoodDataRow(32, FoodType.vegetable, "토마토", 7d, 5d, null, null),
-            new FoodDataRow(33, FoodType.vegetable, "애호박", 7d, 5d, null, null),
-            new FoodDataRow(34, FoodType.bean, "두부", 15d, 10d, "[포만감01]", null),
+            new FoodDataRow(31, FoodType.vegetable, "상추", 5d, 3d, null, null, "food_lettuce"),
+            new FoodDataRow(32, FoodType.vegetable, "토마토", 7d, 5d, null, null, null),
+            new FoodDataRow(33, FoodType.vegetable, "애호박", 7d, 5d, null, null, null),
+            new FoodDataRow(34, FoodType.bean, "두부", 15d, 10d, "[포만감01]", null, null),
         };
 
         public static readonly LevelDataRow[] LevelData = new LevelDataRow[]
         {
-            new LevelDataRow(1, 0d, 10d, 10d, 1800d, 1d, 1d),
-            new LevelDataRow(2, 10d, 15d, 15d, 1800d, 2d, 2d),
-            new LevelDataRow(3, 50d, 20d, 20d, 1800d, 3d, 3d),
-            new LevelDataRow(4, 100d, 25d, 25d, 1800d, 4d, 4d),
-            new LevelDataRow(5, 150d, 30d, 30d, 1800d, 5d, 5d),
-            new LevelDataRow(6, 200d, 35d, 35d, 1800d, 6d, 6d),
-            new LevelDataRow(7, 250d, 40d, 40d, 1800d, 7d, 7d),
-            new LevelDataRow(8, 300d, 45d, 45d, 1800d, 8d, 8d),
-            new LevelDataRow(9, 350d, 50d, 50d, 1800d, 9d, 9d),
-            new LevelDataRow(10, 400d, 55d, 55d, 1800d, 10d, 10d),
-            new LevelDataRow(11, 450d, 60d, 60d, 1800d, 11d, 11d),
-            new LevelDataRow(12, 500d, 65d, 65d, 1800d, 12d, 12d),
-            new LevelDataRow(13, 550d, 70d, 70d, 1800d, 13d, 13d),
-            new LevelDataRow(14, 600d, 75d, 75d, 1800d, 14d, 14d),
-            new LevelDataRow(15, 650d, 80d, 80d, 1800d, 15d, 15d),
-            new LevelDataRow(16, 700d, 85d, 85d, 1800d, 16d, 16d),
-            new LevelDataRow(17, 750d, 90d, 90d, 1800d, 17d, 17d),
-            new LevelDataRow(18, 800d, 95d, 95d, 1800d, 18d, 18d),
-            new LevelDataRow(19, 850d, 100d, 100d, 1800d, 19d, 19d),
-            new LevelDataRow(20, 900d, 105d, 105d, 1800d, 20d, 20d),
+            new LevelDataRow(1, 0d, 10d, 10d, 120d, 1d, 4d),
+            new LevelDataRow(2, 10d, 15d, 15d, 120d, 1.5d, 4d),
+            new LevelDataRow(3, 50d, 20d, 20d, 120d, 2d, 5d),
+            new LevelDataRow(4, 100d, 25d, 25d, 180d, 2.5d, 5d),
+            new LevelDataRow(5, 150d, 30d, 30d, 180d, 3d, 6d),
+            new LevelDataRow(6, 200d, 35d, 35d, 180d, 3.5d, 6d),
+            new LevelDataRow(7, 250d, 40d, 40d, 180d, 4d, 6d),
+            new LevelDataRow(8, 300d, 45d, 45d, 180d, 4.5d, 7d),
+            new LevelDataRow(9, 350d, 50d, 50d, 180d, 5d, 7d),
+            new LevelDataRow(10, 400d, 55d, 55d, 240d, 5.5d, 7d),
+            new LevelDataRow(11, 450d, 60d, 60d, 240d, 6d, 8d),
+            new LevelDataRow(12, 500d, 65d, 65d, 240d, 6.5d, 8d),
+            new LevelDataRow(13, 550d, 70d, 70d, 240d, 7d, 8d),
+            new LevelDataRow(14, 600d, 75d, 75d, 240d, 7.5d, 9d),
+            new LevelDataRow(15, 650d, 80d, 80d, 300d, 8d, 9d),
+            new LevelDataRow(16, 700d, 85d, 85d, 300d, 8.5d, 9d),
+            new LevelDataRow(17, 750d, 90d, 90d, 300d, 9d, 10d),
+            new LevelDataRow(18, 800d, 95d, 95d, 300d, 9.5d, 10d),
+            new LevelDataRow(19, 850d, 100d, 100d, 300d, 10d, 10d),
+            new LevelDataRow(20, 900d, 105d, 105d, 300d, 10.5d, 11d),
         };
 
         public static readonly BuffDataRow[] BuffData = new BuffDataRow[]

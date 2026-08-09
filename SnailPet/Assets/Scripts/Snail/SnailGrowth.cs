@@ -12,16 +12,17 @@ namespace SnailPet.Snail
     /// </summary>
     public sealed class SnailGrowth
     {
-        /// <summary>Speed 1 당 초속 픽셀. Speed 1~20 이면 24~480 px/s 가 된다.</summary>
+        /// <summary>Speed 1 당 초속 픽셀. 현재 데이터(Speed 1~10.5)에서 24~252 px/s 가 된다.</summary>
         public const float PixelsPerSpeedUnit = 24f;
 
-        /// <summary>Size 1 당 화면 가로 픽셀. Size 1~20 이면 14~280 px 가 된다.</summary>
-        public const float PixelsPerSizeUnit = 14f;
+        /// <summary>Size 1 당 화면 가로 픽셀. 현재 데이터(Size 4~11)에서 80~220 px 가 된다.</summary>
+        public const float PixelsPerSizeUnit = 20f;
 
         /// <summary>
-        /// UseFullPointTime 마다 포만도가 얼마나 줄어드는지는 데이터에 없다.
-        /// 1 로 가정한다. 레벨 1 기준 NeedFullPoint 가 10 이므로 가득 찬 상태에서
-        /// 바닥까지 10회 = 5시간이 걸린다. 데이터로 옮길 값이면 열을 추가하면 된다.
+        /// UseFullPointTime 마다 포만도가 얼마나 줄어드는지는 데이터에 없다. 1 로 가정한다.
+        /// 레벨 1 기준 UseFullPointTime 120초 · NeedFullPoint 10 이므로
+        /// 가득 찬 상태에서 바닥까지 10회 = 20분이 걸린다.
+        /// 데이터로 옮길 값이면 LevelData 에 열을 추가하면 된다.
         /// </summary>
         public const double FullPointDecayPerTick = 1.0;
 

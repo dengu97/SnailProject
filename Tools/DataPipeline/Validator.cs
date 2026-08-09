@@ -314,6 +314,31 @@ namespace SnailPet.Pipeline
                 }
             }
 
+            // 음식: {artRoot}/Food/{ResourceKey}.png
+            var foods = tables.Find(x => x.Name == "FoodData");
+            if (foods != null)
+            {
+                var cKey  = foods.Columns.Find(c => c.Name == "ResourceKey");
+                var cName = foods.Columns.Find(c => c.Name == "Name");
+                if (cKey != null)
+                    for (int r = 0; r < foods.Rows.Count; r++)
+                    {
+                        string key  = Program.Get(foods.Rows[r], cKey.Index);
+                        string name = Program.Get(foods.Rows[r], cName?.Index ?? -1);
+                        // 이름은 Where 에 넣는다. 메시지에 넣으면 여러 건을 묶을 때
+                        // 첫 행의 이름만 대표로 보여 오해를 부른다.
+                        string where = $"FoodData {foods.ExcelRowNumbers[r]}행" +
+                                       (name.Length > 0 ? $"({name})" : "");
+
+                        if (key.Length == 0)
+                            rep.Warn(where, "FoodData.ResourceKey 가 비어 있어 화면에 표시할 수 없습니다. " +
+                                            "아트가 아직 없으면 무시해도 됩니다.",
+                                     "food-nores");
+                        else if (!Exists($"Food/{key}.png"))
+                            rep.Error(where, $"음식 리소스 {artRoot}/Food/{key}.png 가 없습니다.");
+                    }
+            }
+
             var eggs = tables.Find(x => x.Name == "EggData");
             if (eggs != null)
             {

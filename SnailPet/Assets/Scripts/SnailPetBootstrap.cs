@@ -39,8 +39,8 @@ namespace SnailPet
         /// </summary>
         private const float DemoLevelSeconds = 2f;
 
-        /// <summary>포만도 감소는 1800초 간격이라 데모에서는 시간을 크게 당겨야 보인다.</summary>
-        private const float DemoTimeScale = 600f;
+        /// <summary>포만도 감소 간격이 120~300초라 데모에서는 시간을 당겨야 보인다. 40초 실행 = 약 40분.</summary>
+        private const float DemoTimeScale = 60f;
 
         /// <summary>
         /// 달팽이가 기어다닐 박스를 무엇으로 삼을지.
