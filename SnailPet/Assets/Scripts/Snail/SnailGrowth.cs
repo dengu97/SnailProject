@@ -23,11 +23,11 @@ namespace SnailPet.Snail
         public const float PixelsPerSizeUnit = 20f;
 
         /// <summary>
-        /// UseFullPointTime 마다 포만도가 얼마나 줄어드는지는 데이터에 없다. 1 로 가정한다.
-        /// 레벨 1 기준 120초 · NeedFullPoint 10 이므로 가득 찬 상태에서 바닥까지 20분이다.
-        /// 데이터로 옮길 값이면 LevelData 에 열을 추가하면 된다.
+        /// UseFullPointTime / UseHappyPointTime 마다 각각 1 씩 줄어든다.
+        /// 레벨 1 기준 120초 · Need 10 이므로 가득 찬 상태에서 바닥까지 20분이다.
+        /// 감소량을 레벨마다 다르게 할 일이 생기면 LevelData 에 열을 추가하면 된다.
         /// </summary>
-        public const double FullPointDecayPerTick = 1.0;
+        public const double DecayPerTick = 1.0;
 
         private static Dictionary<int, LevelDataRow> _byLevel;
         private static int _maxLevel;
@@ -39,7 +39,8 @@ namespace SnailPet.Snail
         /// <summary>다음 레벨까지 쌓인 시간(초). 가속이 붙으면 실제 시간보다 빨리 찬다.</summary>
         public double LevelUpProgress { get; private set; }
 
-        private double _decayTimer;
+        private double _fullDecayTimer;
+        private double _happyDecayTimer;
 
         public SnailGrowth()
         {
@@ -139,17 +140,9 @@ namespace SnailPet.Snail
         {
             double dt = deltaSeconds * timeScale;
 
-            // 포만도 감소
-            double interval = Current.UseFullPointTime;
-            if (interval > 0)
-            {
-                _decayTimer += dt;
-                while (_decayTimer >= interval)
-                {
-                    _decayTimer -= interval;
-                    FullPoint = Math.Max(0, FullPoint - FullPointDecayPerTick);
-                }
-            }
+            // 포만도·행복도 감소. 각자의 주기마다 1 씩 줄어든다.
+            FullPoint  = Decay(FullPoint,  Current.UseFullPointTime,  dt, ref _fullDecayTimer);
+            HappyPoint = Decay(HappyPoint, Current.UseHappyPointTime, dt, ref _happyDecayTimer);
 
             // 레벨업 시간 누적 (돌봄 상태에 따라 가속)
             var next = Next;
@@ -164,6 +157,21 @@ namespace SnailPet.Snail
             FullPoint  = Math.Min(FullPoint,  Current.NeedFullPoint);
             HappyPoint = Math.Min(HappyPoint, Current.NeedHappyPoint);
             return true;
+        }
+
+        /// <summary>주기마다 1 씩 깎는다. 한 프레임에 여러 주기가 지나도 그만큼 처리한다.</summary>
+        private static double Decay(double value, double interval, double dt, ref double timer)
+        {
+            if (interval <= 0 || value <= 0) return value;
+
+            timer += dt;
+            while (timer >= interval)
+            {
+                timer -= interval;
+                value = Math.Max(0, value - DecayPerTick);
+                if (value <= 0) break;
+            }
+            return value;
         }
 
         public override string ToString() =>
