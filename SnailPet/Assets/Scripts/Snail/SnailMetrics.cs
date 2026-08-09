@@ -24,9 +24,18 @@ namespace SnailPet.Snail
     /// </summary>
     public static class SnailMetrics
     {
-        private struct Extents { public float Left, Right, Bottom, Top; }
+        /// <summary>스프라이트의 불투명 영역. 피벗 기준 월드 단위 오프셋.</summary>
+        public struct Extents
+        {
+            public float Left, Right, Bottom, Top;
+            public float Width  { get { return Right - Left; } }
+            public float Height { get { return Top - Bottom; } }
+        }
 
         private static readonly Dictionary<Sprite, Extents> _cache = new Dictionary<Sprite, Extents>();
+
+        /// <summary>먹이 등 달팽이가 아닌 스프라이트도 같은 방식으로 잰다.</summary>
+        public static bool TryMeasure(Sprite sprite, out Extents extents) => TryGetExtents(sprite, out extents);
 
         public static SnailBounds Measure(SnailAppearance appearance)
         {

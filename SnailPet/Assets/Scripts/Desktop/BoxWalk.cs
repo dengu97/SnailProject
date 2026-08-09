@@ -1,5 +1,3 @@
-#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
-using System;
 using UnityEngine;
 
 namespace SnailPet.Desktop
@@ -79,39 +77,47 @@ namespace SnailPet.Desktop
         public static BoxEdge Prev(BoxEdge e) => (BoxEdge)(((int)e + 3) & 3);
 
         /// <summary>
+        /// 벽 위에서 몸통이 차지하는 구간. 좌우 비대칭을 그대로 쓰면 진행 방향이 바뀔 때마다
+        /// 여백이 달라져 둘레 좌표가 방향에 의존하게 된다. 큰 쪽으로 대칭을 맞춘다.
+        /// 한쪽이 10px 남짓 일찍 멈추는 대신 위치 계산이 방향과 무관해진다.
+        /// </summary>
+        public static float HalfExtent(float alongMin, float alongMax) =>
+            Mathf.Max(Mathf.Abs(alongMin), Mathf.Abs(alongMax));
+
+        /// <summary>벽 위에서 몸이 들어갈 수 있는 구간 [min, max] (벽 시작점으로부터의 거리).</summary>
+        public static void UsableSpan(ScreenRect box, BoxEdge e, float halfExtent,
+                                      out float min, out float max)
+        {
+            EdgeSegment(box, e, out _, out _, out float length);
+            min = halfExtent;
+            max = length - halfExtent;
+            if (max < min) min = max = length * 0.5f;   // 벽이 몸보다 짧으면 가운데
+        }
+
+        /// <summary>
         /// 앵커를 실제 자세로 바꾼다.
         ///
         /// 회전하면 스프라이트의 로컬 +x 축이 항상 벽의 진행 방향과 일치한다(네 벽 모두).
         /// 달팽이 아트는 로컬 -x 를 보고 있으므로, 진행 방향으로 걸으려면 좌우를 뒤집어야 한다.
         /// </summary>
         /// <param name="footDepth">루트에서 발까지의 거리(px). SnailBounds.Foot 의 절대값에 스케일을 곱한 값.</param>
-        /// <param name="alongMin">진행축 방향 몸통 최소 오프셋(px). SnailBounds.Left * scale.</param>
-        /// <param name="alongMax">진행축 방향 몸통 최대 오프셋(px). SnailBounds.Right * scale.</param>
-        public static SnailPose Evaluate(ScreenRect box, BoxAnchor anchor,
-                                         float footDepth, float alongMin, float alongMax)
+        /// <param name="halfExtent">진행축 방향 몸통 반폭(px). <see cref="HalfExtent"/> 로 구한다.</param>
+        public static SnailPose Evaluate(ScreenRect box, BoxAnchor anchor, float footDepth, float halfExtent)
         {
             var pose = new SnailPose();
             if (box.Width <= 0 || box.Height <= 0) return pose;
 
-            EdgeSegment(box, anchor.Edge, out var start, out var dir, out float length);
+            EdgeSegment(box, anchor.Edge, out var start, out var dir, out _);
+            UsableSpan(box, anchor.Edge, halfExtent, out float sMin, out float sMax);
 
-            // 진행 방향으로 걸으려면 뒤집어야 한다. 뒤집으면 몸통의 진행축 범위도 좌우가 바뀐다.
-            bool flip = anchor.Forward;
-            float lo = flip ? -alongMax : alongMin;
-            float hi = flip ? -alongMin : alongMax;
-
-            // 몸 전체가 벽 안에 들어오는 구간. 벽이 몸보다 짧으면 가운데에 둔다.
-            float sMin = -lo;
-            float sMax = length - hi;
-            float s = (sMax >= sMin) ? Mathf.Lerp(sMin, sMax, Mathf.Clamp01(anchor.T))
-                                     : (length - (hi + lo)) * 0.5f;
+            float s = Mathf.Lerp(sMin, sMax, Mathf.Clamp01(anchor.T));
 
             Vector2 foot = start + dir * s;                       // 발이 벽에 닿는 지점
             Vector2 n = OutwardNormal(anchor.Edge);
 
             pose.RootScreen  = foot - n * footDepth;              // 몸은 박스 안쪽으로
             pose.RotationDeg = RotationOf(anchor.Edge);
-            pose.FlipX       = flip;
+            pose.FlipX       = anchor.Forward;                    // 아트가 왼쪽을 보므로 진행 방향이면 뒤집는다
             pose.Valid       = true;
             return pose;
         }
@@ -121,31 +127,73 @@ namespace SnailPet.Desktop
         /// 벽마다 길이가 달라 T 를 그대로 쓰면 짧은 벽에서 빨라지므로, 속도는 px/초로 받는다.
         /// </summary>
         public static BoxAnchor Advance(ScreenRect box, BoxAnchor anchor,
-                                        float pixelsPerSecond, float deltaTime,
-                                        float alongMin, float alongMax)
+                                        float pixelsPerSecond, float deltaTime, float halfExtent)
         {
-            EdgeSegment(box, anchor.Edge, out _, out _, out float length);
-
-            bool flip = anchor.Forward;
-            float lo = flip ? -alongMax : alongMin;
-            float hi = flip ? -alongMin : alongMax;
-            float usable = Mathf.Max(1f, (length - hi) - (-lo));   // 실제로 걸을 수 있는 길이
+            UsableSpan(box, anchor.Edge, halfExtent, out float sMin, out float sMax);
+            float usable = Mathf.Max(1f, sMax - sMin);
 
             float dt = pixelsPerSecond * deltaTime / usable;
             anchor.T += anchor.Forward ? dt : -dt;
 
-            while (anchor.T > 1f)
-            {
-                anchor.T -= 1f;
-                anchor.Edge = Next(anchor.Edge);
-            }
-            while (anchor.T < 0f)
-            {
-                anchor.T += 1f;
-                anchor.Edge = Prev(anchor.Edge);
-            }
+            while (anchor.T > 1f) { anchor.T -= 1f; anchor.Edge = Next(anchor.Edge); }
+            while (anchor.T < 0f) { anchor.T += 1f; anchor.Edge = Prev(anchor.Edge); }
             return anchor;
+        }
+
+        // ── 둘레 좌표 ──
+        // 네 벽을 한 줄로 편 1차원 좌표. 달팽이와 먹이를 같은 축에 놓으면
+        // "어느 쪽으로 돌아야 가까운가" 가 뺄셈 한 번으로 끝난다.
+
+        public static float Perimeter(ScreenRect box) => 2f * (box.Width + box.Height);
+
+        /// <summary>해당 벽이 둘레 좌표에서 시작하는 지점.</summary>
+        public static float EdgeStart(ScreenRect box, BoxEdge e) => e switch
+        {
+            BoxEdge.Bottom => 0f,
+            BoxEdge.Right  => box.Width,
+            BoxEdge.Top    => box.Width + box.Height,
+            _              => 2f * box.Width + box.Height,
+        };
+
+        public static float ToPerimeter(ScreenRect box, BoxAnchor anchor, float halfExtent)
+        {
+            UsableSpan(box, anchor.Edge, halfExtent, out float sMin, out float sMax);
+            return EdgeStart(box, anchor.Edge) + Mathf.Lerp(sMin, sMax, Mathf.Clamp01(anchor.T));
+        }
+
+        /// <summary>바닥에 놓인 것(먹이 등)의 화면 x 를 둘레 좌표로.</summary>
+        public static float BottomXToPerimeter(ScreenRect box, float screenX) =>
+            Mathf.Clamp(screenX - box.Left, 0f, Mathf.Max(0f, box.Width));
+
+        /// <summary>둘레 좌표를 앵커로. 진행 방향은 호출한 쪽이 정한다.</summary>
+        public static BoxAnchor FromPerimeter(ScreenRect box, float p, bool forward, float halfExtent)
+        {
+            float total = Perimeter(box);
+            if (total <= 0f) return new BoxAnchor { Edge = BoxEdge.Bottom, T = 0f, Forward = forward };
+
+            p = Mathf.Repeat(p, total);
+
+            BoxEdge edge = BoxEdge.Left;
+            if (p < box.Width)                          edge = BoxEdge.Bottom;
+            else if (p < box.Width + box.Height)        edge = BoxEdge.Right;
+            else if (p < 2f * box.Width + box.Height)   edge = BoxEdge.Top;
+
+            UsableSpan(box, edge, halfExtent, out float sMin, out float sMax);
+            float s = p - EdgeStart(box, edge);
+            float t = (sMax > sMin) ? Mathf.Clamp01((s - sMin) / (sMax - sMin)) : 0.5f;
+            return new BoxAnchor { Edge = edge, T = t, Forward = forward };
+        }
+
+        /// <summary>
+        /// from 에서 to 로 가는 가장 짧은 방향과 거리.
+        /// 양수면 진행 방향(Forward), 음수면 반대 방향이 가깝다.
+        /// </summary>
+        public static float ShortestDelta(ScreenRect box, float from, float to)
+        {
+            float total = Perimeter(box);
+            if (total <= 0f) return 0f;
+            float d = Mathf.Repeat(to - from, total);
+            return (d <= total * 0.5f) ? d : d - total;
         }
     }
 }
-#endif

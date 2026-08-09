@@ -4,9 +4,7 @@ using System.Text;
 using SnailPet.Data;
 using SnailPet.Snail;
 using UnityEngine;
-#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
-using SnailPet.Desktop;
-#endif
+using SnailPet.Desktop;   // ScreenRect / BoxWalk 는 플랫폼 의존이 없다
 
 namespace SnailPet
 {
@@ -33,11 +31,8 @@ namespace SnailPet
         /// </summary>
         private const float AutoQuitSeconds = 40f;
 
-        /// <summary>
-        /// 데모용. 실제로는 먹이·경험치로 레벨이 오르지만, 여기서는 LevelData 의
-        /// Speed / Size 곡선을 눈으로 보기 위해 이 간격마다 강제로 한 단계씩 올린다.
-        /// </summary>
-        private const float DemoLevelSeconds = 2f;
+        /// <summary>데모용. 이 간격마다 먹이를 하나 떨어뜨린다.</summary>
+        private const float DemoFoodSeconds = 5f;
 
         /// <summary>포만도 감소 간격이 120~300초라 데모에서는 시간을 당겨야 보인다. 40초 실행 = 약 40분.</summary>
         private const float DemoTimeScale = 60f;
@@ -62,6 +57,14 @@ namespace SnailPet
         private float _visibleWidth = 1f; // 스케일 적용 전 몸통 가로 (월드 단위)
         private float _scale = 1f;
         private SnailGrowth _growth;
+
+        private enum PetState { Wander, Seek, Eat }
+        private PetState _state = PetState.Wander;
+        private FoodField _food;
+        private FoodItem _target;
+        private FoodDataRow[] _droppable;
+        private float _nextFoodAt = 2f;
+        private float _eatFlashUntil;
 
         private int _vLeft, _vTop, _vWidth, _vHeight;
         private string _status = "";
@@ -140,6 +143,7 @@ namespace SnailPet
 
             _growth = new SnailGrowth();
             ApplyGrowth();
+            _food = new FoodField(transform);
 
             Say("[2] 성장 ............. " + _growth);
             Say(string.Format("      환산: Speed 1 = {0}px/s, Size 1 = {1}px  (레벨 1~{2})",
@@ -162,15 +166,6 @@ namespace SnailPet
 
             _growth.Tick(Time.deltaTime, DemoTimeScale);
 
-            // 데모: LevelData 의 Speed / Size 곡선을 눈으로 보기 위해 강제로 성장시킨다
-            int demoLevel = Mathf.Clamp(1 + (int)(_t / DemoLevelSeconds), 1, SnailGrowth.MaxLevel);
-            if (demoLevel != _growth.Level)
-            {
-                _growth.ForceLevel(demoLevel);
-                ApplyGrowth();
-                Say("      → " + _growth);
-            }
-
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             // 매 프레임 다시 읽는다. 창 모드일 때 창을 옮기면 달팽이가 자동으로 따라붙고,
             // 화면 모드일 때는 해상도·모니터 구성이 바뀌어도 알아서 맞춰진다.
@@ -181,12 +176,16 @@ namespace SnailPet
             float px = (pxPerWorldX + pxPerWorldY) * 0.5f;   // 회전하면 두 축이 섞이므로 평균을 쓴다
 
             float footDepth = Mathf.Abs(_bounds.Foot) * _scale * px;
-            float alongMin  = _bounds.Left  * _scale * px;
-            float alongMax  = _bounds.Right * _scale * px;
+            float halfExtent = BoxWalk.HalfExtent(_bounds.Left * _scale * px, _bounds.Right * _scale * px);
 
-            _anchor = BoxWalk.Advance(_box, _anchor, _growth.PixelsPerSecond, Time.deltaTime, alongMin, alongMax);
-            var pose = BoxWalk.Evaluate(_box, _anchor, footDepth, alongMin, alongMax);
+            // 먹이는 어디에 놓아도 바닥까지 떨어진다
+            DemoDropFood();
+            _food.Tick(Time.deltaTime, _box.Bottom);
+            UpdateFoodTransforms(px);
 
+            StepBehaviour(halfExtent, Time.deltaTime);
+
+            var pose = BoxWalk.Evaluate(_box, _anchor, footDepth, halfExtent);
             if (pose.Valid)
             {
                 _snail.position = VirtualToWorld(pose.RootScreen.x, pose.RootScreen.y);
@@ -204,6 +203,92 @@ namespace SnailPet
         }
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+        /// <summary>
+        /// 배가 고프면 가장 가까운 먹이 쪽으로, 아니면 하던 방향으로 계속 기어간다.
+        ///
+        /// 달팽이는 벽에만 붙어 있고 먹이는 항상 바닥에 있으므로, 둘 다 「둘레 좌표」
+        /// 위의 한 점이 된다. 어느 쪽으로 돌아야 가까운지가 뺄셈 한 번으로 정해진다.
+        /// </summary>
+        private void StepBehaviour(float halfExtent, float deltaTime)
+        {
+            bool hungry = _growth.FullPoint < _growth.Current.NeedFullPoint;
+            _target = null;
+
+            if (hungry && _food.Count > 0)
+            {
+                float myP = BoxWalk.ToPerimeter(_box, _anchor, halfExtent);
+                _target = _food.FindNearestLanded(_box, myP, out float delta);
+
+                if (_target != null)
+                {
+                    _anchor.Forward = delta >= 0f;                 // 가까운 쪽으로 방향을 튼다
+
+                    // 몸이 먹이에 닿으면 먹는다
+                    if (Mathf.Abs(delta) <= _target.HalfWidth + halfExtent * 0.5f)
+                    {
+                        Eat(_target);
+                        return;
+                    }
+                }
+            }
+
+            _state = _target != null ? PetState.Seek : PetState.Wander;
+            _anchor = BoxWalk.Advance(_box, _anchor, _growth.PixelsPerSecond, deltaTime, halfExtent);
+        }
+
+        private void Eat(FoodItem item)
+        {
+            int before = _growth.Level;
+            _growth.Feed(item.Data.FullPoint, item.Data.HappyPoint);
+
+            // FoodData 에 경험치 열이 없다. 포만도를 그대로 경험치로 준다고 가정한다.
+            // 따로 조절하고 싶으면 FoodData 에 Exp 열을 추가하면 된다.
+            _growth.AddExp(item.Data.FullPoint);
+
+            _food.Consume(item);
+            _state = PetState.Eat;
+            _eatFlashUntil = _t + 1.2f;
+
+            Say($"      먹음: {item.Data.Name} (+포만 {item.Data.FullPoint} +행복 {item.Data.HappyPoint}) → {_growth}");
+            if (_growth.Level != before) { ApplyGrowth(); Say($"      레벨업! Lv.{before} → Lv.{_growth.Level}"); }
+        }
+
+        /// <summary>데모용. 실제로는 유저가 상점에서 사서 원하는 위치에 떨어뜨린다.</summary>
+        private void DemoDropFood()
+        {
+            if (_t < _nextFoodAt) return;
+            _nextFoodAt = _t + DemoFoodSeconds;
+
+            // 아트가 있는 먹이만 놓을 수 있다
+            if (_droppable == null)
+            {
+                var list = new System.Collections.Generic.List<FoodDataRow>();
+                foreach (var f in GameData.FoodData)
+                    if (!string.IsNullOrEmpty(f.ResourceKey)) list.Add(f);
+                _droppable = list.ToArray();
+                if (_droppable.Length == 0)
+                    Say("      경고: ResourceKey 가 있는 먹이가 없어 아무것도 떨어뜨릴 수 없습니다.");
+            }
+            if (_droppable.Length == 0) return;
+
+            var data = _droppable[UnityEngine.Random.Range(0, _droppable.Length)];
+            float x = UnityEngine.Random.Range(_box.Left + 120f, _box.Right - 120f);
+            float y = _box.Top + UnityEngine.Random.Range(60f, 260f);          // 공중에서 떨어뜨린다
+            var dropped = _food.Drop(data, x, y);
+            if (dropped != null) Say($"      먹이 투하: {data.Name} @ x={x:0}");
+        }
+
+        /// <summary>먹이의 화면 좌표를 월드로 옮긴다. 바닥면이 ScreenY 에 오도록 보정한다.</summary>
+        private void UpdateFoodTransforms(float pxPerWorld)
+        {
+            foreach (var f in _food.Items)
+            {
+                if (f.Root == null) continue;
+                float bottomOffsetPx = _food.BottomOffsetOf(f) * pxPerWorld;   // 음수
+                f.Root.position = VirtualToWorld(f.ScreenX, f.ScreenY + bottomOffsetPx);
+            }
+        }
+
         private ScreenRect ResolveBox() =>
             UseActiveWindowAsBox ? ActiveWindowBox.Resolve(TransparentWindow.Hwnd)
                                  : TransparentWindow.VirtualScreen;
@@ -282,7 +367,15 @@ namespace SnailPet
             GUI.color = Color.white;
             GUI.Label(new Rect(32, y + 6,  960, 22), _status, style);
             GUI.Label(new Rect(32, y + 28, 960, 22), _growth.ToString(), style);
-            GUI.Label(new Rect(32, y + 50, 960, 22), "박스: " + boxName + "   벽: " + edgeName, style);
+            string act = _state switch
+            {
+                PetState.Seek => "먹이로 이동 중" + (_target != null ? " (" + _target.Data.Name + ")" : ""),
+                PetState.Eat  => "먹는 중",
+                _             => (_growth.FullPoint < _growth.Current.NeedFullPoint ? "배고픔 (먹이 없음)" : "배회 중"),
+            };
+            if (_t < _eatFlashUntil) act = "냠냠!";
+            GUI.Label(new Rect(32, y + 50, 960, 22),
+                act + "   |   벽: " + edgeName + "   먹이 " + (_food != null ? _food.Count : 0) + "개", style);
             GUI.Label(new Rect(32, y + 72, 960, 22),
                 "자동 종료까지 " + remain.ToString("0.0") + "초 (ESC 로 즉시 종료)", style);
         }

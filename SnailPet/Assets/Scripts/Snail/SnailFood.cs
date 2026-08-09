@@ -1,0 +1,149 @@
+using System.Collections.Generic;
+using SnailPet.Data;
+using SnailPet.Desktop;
+using UnityEngine;
+
+namespace SnailPet.Snail
+{
+    /// <summary>
+    /// 화면에 놓인 먹이 하나. 좌표는 가상 화면 px 이고, ScreenY 는 <b>먹이의 발밑</b>이다.
+    /// 어디에 놓아도 중력으로 바닥까지 떨어진 뒤 그 자리에 머문다.
+    /// </summary>
+    public sealed class FoodItem
+    {
+        public FoodDataRow Data;
+        public Transform Root;
+
+        public float ScreenX;
+        public float ScreenY;      // 먹이 바닥면의 y
+        public float VelocityY;
+        public bool  Landed;
+        public bool  Eaten;
+
+        /// <summary>보이는 부분의 크기(px). 달팽이가 얼마나 가까이 와야 먹는지 판정에 쓴다.</summary>
+        public float HalfWidth;
+
+        public override string ToString() => (Data != null ? Data.Name : "?") + (Landed ? " (착지)" : " (낙하 중)");
+    }
+
+    /// <summary>
+    /// 먹이를 떨어뜨리고 관리한다.
+    ///
+    /// 기획서상 PC 는 화면 어디든 놓을 수 있지만, 중력이 있으므로 최종 위치는 항상 바닥이다.
+    /// 그래서 달팽이 입장에서 먹이는 언제나 「아래 벽 위의 한 점」이고,
+    /// 둘레 좌표 하나로 목표를 표현할 수 있다.
+    /// </summary>
+    public sealed class FoodField
+    {
+        /// <summary>낙하 가속도(px/s^2). 툭 떨어지는 느낌이 나는 값.</summary>
+        public const float Gravity = 1600f;
+
+        /// <summary>화면에 보일 먹이 가로 크기(px).</summary>
+        public const float FoodPixels = 64f;
+
+        private readonly List<FoodItem> _items = new List<FoodItem>();
+        private readonly Transform _parent;
+
+        public FoodField(Transform parent) { _parent = parent; }
+
+        public IReadOnlyList<FoodItem> Items => _items;
+        public int Count => _items.Count;
+
+        /// <summary>화면 어느 지점에 놓아도 아래로 떨어진다.</summary>
+        public FoodItem Drop(FoodDataRow data, float screenX, float screenY)
+        {
+            if (data == null || string.IsNullOrEmpty(data.ResourceKey))
+            {
+                Debug.LogWarning("[SnailPet] 먹이에 ResourceKey 가 없어 표시할 수 없습니다: " +
+                                 (data != null ? data.Name : "null"));
+                return null;
+            }
+
+            var sprite = SnailComposer.Load(SnailComposer.ResourceRoot + "/Food/" + data.ResourceKey);
+            if (sprite == null) return null;
+
+            var go = new GameObject("Food_" + data.ResourceKey);
+            go.transform.SetParent(_parent, false);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.sortingOrder = -100;                   // 달팽이 뒤에 깔린다
+
+            // 보이는 부분 기준으로 크기를 맞추고, 바닥면이 ScreenY 에 오도록 배치할 값을 구한다
+            float scale = 1f, bottomOffset = 0f, halfWidth = FoodPixels * 0.5f;
+            if (SnailMetrics.TryMeasure(sprite, out var e) && e.Width > 0.01f)
+            {
+                scale = FoodPixels / e.Width;
+                bottomOffset = e.Bottom * scale;      // 음수: 루트에서 바닥까지
+                halfWidth = e.Width * scale * 0.5f;
+            }
+            go.transform.localScale = new Vector3(scale, scale, 1f);
+
+            var item = new FoodItem
+            {
+                Data = data,
+                Root = go.transform,
+                ScreenX = screenX,
+                ScreenY = screenY,
+                HalfWidth = halfWidth,
+            };
+            item.Root.SetSiblingIndex(0);
+            _items.Add(item);
+            _bottomOffset[item] = bottomOffset;
+            return item;
+        }
+
+        private readonly Dictionary<FoodItem, float> _bottomOffset = new Dictionary<FoodItem, float>();
+
+        /// <summary>루트에서 먹이 바닥면까지의 오프셋(월드 단위, 보통 음수).</summary>
+        public float BottomOffsetOf(FoodItem item) =>
+            _bottomOffset.TryGetValue(item, out float v) ? v : 0f;
+
+        /// <summary>중력 적용. floorY 는 박스 아래 벽의 화면 y.</summary>
+        public void Tick(float deltaSeconds, float floorY)
+        {
+            foreach (var f in _items)
+            {
+                if (f.Eaten) continue;
+
+                if (f.ScreenY < floorY)
+                {
+                    f.VelocityY += Gravity * deltaSeconds;
+                    f.ScreenY += f.VelocityY * deltaSeconds;
+                    f.Landed = false;
+                }
+                if (f.ScreenY >= floorY)
+                {
+                    f.ScreenY = floorY;      // 바닥에 닿으면 멈춘다. 튕기지 않는다.
+                    f.VelocityY = 0f;
+                    f.Landed = true;
+                }
+            }
+        }
+
+        /// <summary>착지해서 먹을 수 있는 것 중 둘레 거리가 가장 가까운 먹이.</summary>
+        public FoodItem FindNearestLanded(ScreenRect box, float fromPerimeter, out float delta)
+        {
+            FoodItem best = null;
+            delta = 0f;
+            float bestDist = float.MaxValue;
+
+            foreach (var f in _items)
+            {
+                if (f.Eaten || !f.Landed) continue;
+                float p = BoxWalk.BottomXToPerimeter(box, f.ScreenX);
+                float d = BoxWalk.ShortestDelta(box, fromPerimeter, p);
+                if (Mathf.Abs(d) < bestDist) { bestDist = Mathf.Abs(d); best = f; delta = d; }
+            }
+            return best;
+        }
+
+        public void Consume(FoodItem item)
+        {
+            if (item == null || item.Eaten) return;
+            item.Eaten = true;
+            if (item.Root != null) Object.Destroy(item.Root.gameObject);
+            _items.Remove(item);
+            _bottomOffset.Remove(item);
+        }
+    }
+}
