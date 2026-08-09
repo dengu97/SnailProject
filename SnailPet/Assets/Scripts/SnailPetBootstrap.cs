@@ -40,7 +40,15 @@ namespace SnailPet
         private readonly StringBuilder _log = new StringBuilder();
         private Camera _cam;
         private Transform _snail;
+        private SpriteRenderer _sr;
         private float _t;
+
+        // 스프라이트 중심 기준 실제 몸통 경계(월드 단위). 알파 스캔 전에는 스프라이트 전체로 둔다.
+        private float _bodyLeft   = -SnailPixels * 0.5f;
+        private float _bodyRight  =  SnailPixels * 0.5f;
+        private float _bodyBottom = -SnailPixels * 0.5f;
+        private float _bodyTop    =  SnailPixels * 0.5f;
+        private bool  _bodyMeasured;
 
         private int _vLeft, _vTop, _vWidth, _vHeight;
         private float _walkFrom, _walkTo, _walkY;
@@ -143,12 +151,54 @@ namespace SnailPet
 
             var go = new GameObject("Snail");
             go.transform.SetParent(transform, false);
-            var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height),
-                                      new Vector2(0.5f, 0.5f), 1f);
+            _sr = go.AddComponent<SpriteRenderer>();
+            _sr.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height),
+                                       new Vector2(0.5f, 0.5f), 1f);
             float scale = SnailPixels / Mathf.Max(1, tex.width);
             go.transform.localScale = new Vector3(scale, scale, 1f);
             _snail = go.transform;
+
+            if (loaded) MeasureBody(tex, scale);
+        }
+
+        /// <summary>
+        /// 알파를 스캔해 실제로 그려진 영역을 찾는다.
+        /// 파츠 아트가 1200x1200 캔버스에 그려져 있어 투명 여백이 넓기 때문에,
+        /// 스프라이트 크기를 그대로 쓰면 화면 끝에 닿기 한참 전에 멈춘 것처럼 보인다.
+        /// 결과는 스프라이트 중심 기준 월드 단위 오프셋.
+        /// </summary>
+        private void MeasureBody(Texture2D tex, float scale)
+        {
+            var px = tex.GetPixels32();
+            int w = tex.width, h = tex.height;
+            int minX = w, maxX = -1, minY = h, maxY = -1;
+
+            for (int y = 0; y < h; y++)
+            {
+                int row = y * w;
+                for (int x = 0; x < w; x++)
+                {
+                    if (px[row + x].a <= 8) continue;      // 거의 투명한 픽셀은 몸이 아니다
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+            }
+
+            if (maxX < 0) { Say("      경고: 불투명 픽셀이 없습니다. 스프라이트 전체를 몸으로 취급합니다."); return; }
+
+            // GetPixels32 는 y=0 이 아래쪽. 스프라이트 피벗은 중앙.
+            _bodyLeft   = (minX     - w * 0.5f) * scale;
+            _bodyRight  = (maxX + 1 - w * 0.5f) * scale;
+            _bodyBottom = (minY     - h * 0.5f) * scale;
+            _bodyTop    = (maxY + 1 - h * 0.5f) * scale;
+            _bodyMeasured = true;
+
+            Say(string.Format("      몸통 실측 ..... 텍스처 {0}x{1} 중 x={2}..{3}, y={4}..{5} " +
+                              "→ 실제 크기 {6:0}x{7:0}px (스프라이트 {8:0}px)",
+                w, h, minX, maxX, minY, maxY,
+                _bodyRight - _bodyLeft, _bodyTop - _bodyBottom, SnailPixels));
         }
 
         private void Update()
@@ -158,15 +208,35 @@ namespace SnailPet
             // 해상도 변경이 반영되는 시점이 한 프레임 뒤라, 매 프레임 다시 맞춘다
             _cam.orthographicSize = Screen.height * 0.5f;
 
-            // 표면 위를 왕복
-            float phase = Mathf.PingPong(_t / WalkSeconds, 1f);
-            float sx = Mathf.Lerp(_walkFrom, _walkTo, phase);
+            // 월드 단위 → 가상 화면 px 환산 (해상도가 어긋나 있어도 맞도록 매번 계산)
+            float pxPerWorldY = _vHeight / Mathf.Max(1f, 2f * _cam.orthographicSize);
+            float pxPerWorldX = _vWidth  / Mathf.Max(1f, 2f * _cam.orthographicSize * _cam.aspect);
 
-            // 창이 화면 맨 위에 붙어 있으면(y=0) 그 위에 올려놓는 순간 화면 밖으로 나간다.
-            // 항상 보이도록 가상 화면 안으로 가둔다.
-            float half = SnailPixels * 0.5f;
-            float sy = Mathf.Clamp(_walkY - SnailPixels * 0.42f,
-                                   _vTop + half, _vTop + _vHeight - half);
+            // 스프라이트 중심에서 몸 끝까지의 거리 (px)
+            float leftPx   = _bodyLeft   * pxPerWorldX;   // 음수
+            float rightPx  = _bodyRight  * pxPerWorldX;   // 양수
+            float bottomPx = _bodyBottom * pxPerWorldY;   // 음수
+            float topPx    = _bodyTop    * pxPerWorldY;   // 양수
+
+            // ── 가로: 걷는 구간을 몸 크기만큼 안쪽으로 들이고, 화면 밖으로도 못 나가게 ──
+            float screenMinX = _vLeft - leftPx;                      // 왼쪽 끝에 몸이 딱 닿는 중심 x
+            float screenMaxX = _vLeft + _vWidth - rightPx;
+            float from = Mathf.Clamp(_walkFrom - leftPx,  screenMinX, screenMaxX);
+            float to   = Mathf.Clamp(_walkTo   - rightPx, screenMinX, screenMaxX);
+            if (to < from)                                           // 표면이 달팽이보다 좁으면 가운데
+            {
+                float mid = Mathf.Clamp((_walkFrom + _walkTo) * 0.5f, screenMinX, screenMaxX);
+                from = to = mid;
+            }
+
+            float phase = Mathf.PingPong(_t / WalkSeconds, 1f);
+            float sx = Mathf.Lerp(from, to, phase);
+
+            // ── 세로: 발이 표면 위에 놓이도록. 화면 위/아래로도 못 나가게 ──
+            // 화면 y 는 아래로 증가하고 월드 y 는 위로 증가하므로 부호가 뒤집힌다.
+            float sy = Mathf.Clamp(_walkY + bottomPx,
+                                   _vTop + topPx,
+                                   _vTop + _vHeight + bottomPx);
 
             _snail.position = VirtualToWorld(sx, sy);
 
@@ -208,7 +278,6 @@ namespace SnailPet
             float halfH = _cam.orthographicSize;
             float halfW = halfH * _cam.aspect;
             bool inside = Mathf.Abs(p.x) <= halfW && Mathf.Abs(p.y) <= halfH;
-            var sr = _snail.GetComponent<SpriteRenderer>();
 
             Say("");
             Say("[4] 렌더 진단");
@@ -219,7 +288,10 @@ namespace SnailPet
             Say(string.Format("      달팽이 위치   : ({0:0.0}, {1:0.0})  {2}",
                 p.x, p.y, inside ? "화면 안" : "화면 밖 ← 원인"));
             Say(string.Format("      스프라이트    : bounds={0} 보임={1}",
-                sr.bounds.size, sr.isVisible));
+                _sr.bounds.size, _sr.isVisible));
+            Say(string.Format("      몸통 경계     : {0} (중심기준 L{1:0} R{2:0} B{3:0} T{4:0})",
+                _bodyMeasured ? "알파 실측" : "미측정(스프라이트 전체)",
+                _bodyLeft, _bodyRight, _bodyBottom, _bodyTop));
             Say(string.Format("      걷는 구간     : x={0:0}..{1:0}, y={2:0}", _walkFrom, _walkTo, _walkY));
             WriteReport();
         }
