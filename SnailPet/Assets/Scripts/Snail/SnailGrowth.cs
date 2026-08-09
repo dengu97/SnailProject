@@ -42,6 +42,15 @@ namespace SnailPet.Snail
         private double _fullDecayTimer;
         private double _happyDecayTimer;
 
+        /// <summary>이 개체에 걸린 버프.</summary>
+        public readonly SnailBuffs Buffs = new SnailBuffs();
+
+        /// <summary>
+        /// 각 LevelUpAdvantage 행을 직전 틱에 만족했는지.
+        /// 버프는 「조건을 벗어났다가 다시 달성」할 때만 갱신되므로 상승 에지가 필요하다.
+        /// </summary>
+        private bool[] _tierMet;
+
         public SnailGrowth()
         {
             EnsureIndex();
@@ -129,10 +138,16 @@ namespace SnailPet.Snail
         /// 넘치게 먹여 시간을 저금하는 플레이를 막고, 가속 기준의 100% 가 상한이 된다.
         /// 다른 의도라면 상한을 데이터로 빼면 된다.
         /// </summary>
-        public void Feed(double fullPoint, double happyPoint)
+        public void Feed(double fullPoint, double happyPoint, string buffToken = null)
         {
             FullPoint  = Math.Min(Current.NeedFullPoint,  FullPoint  + fullPoint);
             HappyPoint = Math.Min(Current.NeedHappyPoint, HappyPoint + happyPoint);
+
+            // 기획서 「먹이 섭취 시 지정된 BuffId 발동」
+            if (!string.IsNullOrEmpty(buffToken)) Buffs.ApplyToken(buffToken);
+
+            // 먹여서 등급에 올라선 경우도 상승 에지로 잡아야 한다
+            UpdateTierBuffs();
         }
 
         /// <summary>시간 경과. timeScale 을 올리면 데모에서 몇 시간치를 몇 초로 볼 수 있다.</summary>
@@ -140,9 +155,17 @@ namespace SnailPet.Snail
         {
             double dt = deltaSeconds * timeScale;
 
-            // 포만도·행복도 감소. 각자의 주기마다 1 씩 줄어든다.
-            FullPoint  = Decay(FullPoint,  Current.UseFullPointTime,  dt, ref _fullDecayTimer);
+            Buffs.Tick(dt);
+
+            // 포만도 감소. BuffType.Full 이 걸려 있으면 허기가 떨어지지 않는다.
+            if (!Buffs.IsActive(BuffType.Full))
+                FullPoint = Decay(FullPoint, Current.UseFullPointTime, dt, ref _fullDecayTimer);
+            else
+                _fullDecayTimer = 0;   // 버프가 끝난 직후 밀린 감소가 한꺼번에 터지지 않게
+
             HappyPoint = Decay(HappyPoint, Current.UseHappyPointTime, dt, ref _happyDecayTimer);
+
+            UpdateTierBuffs();
 
             // 레벨업 시간 누적 (돌봄 상태에 따라 가속)
             var next = Next;
@@ -157,6 +180,26 @@ namespace SnailPet.Snail
             FullPoint  = Math.Min(FullPoint,  Current.NeedFullPoint);
             HappyPoint = Math.Min(HappyPoint, Current.NeedHappyPoint);
             return true;
+        }
+
+        /// <summary>
+        /// 돌봄 등급의 상승 에지에서 버프를 건다.
+        /// 계속 만족하고 있는 동안에는 다시 걸지 않으므로, 조건을 벗어났다 돌아와야 갱신된다.
+        /// </summary>
+        private void UpdateTierBuffs()
+        {
+            var rows = GameData.LevelUpAdvantage;
+            if (_tierMet == null || _tierMet.Length != rows.Length) _tierMet = new bool[rows.Length];
+
+            for (int i = 0; i < rows.Length; i++)
+            {
+                var a = rows[i];
+                bool met = HappyPercent >= a.NeedHappyPointPercent
+                        && FullPercent  >= a.NeedFullPointPercent;
+
+                if (met && !_tierMet[i] && a.BuffId > 0) Buffs.Apply(a.BuffId);
+                _tierMet[i] = met;
+            }
         }
 
         /// <summary>주기마다 1 씩 깎는다. 한 프레임에 여러 주기가 지나도 그만큼 처리한다.</summary>
@@ -177,6 +220,6 @@ namespace SnailPet.Snail
         public override string ToString() =>
             $"Lv.{Level} 속도 {Current.Speed}({PixelsPerSecond:0}px/s) 크기 {Current.Size}({SizePixels:0}px) " +
             $"포만 {FullPoint:0}/{Current.NeedFullPoint:0} 행복 {HappyPoint:0}/{Current.NeedHappyPoint:0} " +
-            $"성장 {LevelUpRatio * 100:0}% (가속 +{Acceleration * 100:0}%)";
+            $"성장 {LevelUpRatio * 100:0}% (가속 +{Acceleration * 100:0}%) [{Buffs}]";
     }
 }

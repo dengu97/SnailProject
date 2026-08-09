@@ -92,6 +92,7 @@ namespace SnailPet.Pipeline
             CheckEnums(rep, enums);
             CheckColumns(rep, tables, enumByName);
             CheckValues(rep, tables, enumByName, ids);
+            CheckTokenTypedAsString(rep, tables);
             CheckDuplicateIds(rep, tables);
             CheckCrossReferences(rep, tables, ids);
             if (Directory.Exists(resourceDir)) CheckResources(rep, tables, resourceDir, artRoot);
@@ -184,6 +185,34 @@ namespace SnailPet.Pipeline
                                 break;
                         }
                     }
+                }
+        }
+
+        /// <summary>
+        /// [토큰] 만 들어 있는데 타입이 string 인 열을 찾는다.
+        /// 다른 시트에서 같은 이름의 열을 Int 로 선언해 두면 한쪽만 ID 로 변환되어
+        /// 런타임에서 서로 다른 타입으로 다뤄야 한다. 선언을 맞추는 편이 낫다.
+        /// </summary>
+        private static void CheckTokenTypedAsString(Report rep, List<Table> tables)
+        {
+            foreach (var t in tables)
+                foreach (var c in t.Columns)
+                {
+                    if (c.Type.Kind != FieldKind.String) continue;
+
+                    int tokens = 0, others = 0;
+                    foreach (var row in t.Rows)
+                    {
+                        string v = Program.Get(row, c.Index);
+                        if (v.Length == 0) continue;
+                        if (IdRegistry.IsToken(v)) tokens++; else others++;
+                    }
+                    if (tokens == 0 || others > 0) continue;
+
+                    rep.Warn($"{t.Name}.{c.Name}",
+                             $"값이 전부 [토큰]({tokens}건) 인데 타입이 string 입니다. " +
+                             "Int 로 선언하면 다른 시트와 같은 방식으로 ID 가 부여됩니다.",
+                             $"tokenstring:{t.Name}.{c.Name}");
                 }
         }
 

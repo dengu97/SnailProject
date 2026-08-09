@@ -65,6 +65,7 @@ namespace SnailPet
         private FoodDataRow[] _droppable;
         private float _nextFoodAt = 2f;
         private float _eatFlashUntil;
+        private string _lastBuffs = "없음";
 
         private int _vLeft, _vTop, _vWidth, _vHeight;
         private string _status = "";
@@ -170,6 +171,15 @@ namespace SnailPet
                 Say("      레벨업! → " + _growth);
             }
 
+            // 버프가 걸리고 풀리는 순간을 놓치지 않게 변화만 기록한다
+            string buffs = _growth.Buffs.Signature;
+            if (buffs != _lastBuffs)
+            {
+                Say($"      버프 변화: {_lastBuffs} → {buffs}  " +
+                    $"(포만 {_growth.FullPercent * 100:0}% 행복 {_growth.HappyPercent * 100:0}%)");
+                _lastBuffs = buffs;
+            }
+
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             // 매 프레임 다시 읽는다. 창 모드일 때 창을 옮기면 달팽이가 자동으로 따라붙고,
             // 화면 모드일 때는 해상도·모니터 구성이 바뀌어도 알아서 맞춰진다.
@@ -242,7 +252,7 @@ namespace SnailPet
 
         private void Eat(FoodItem item)
         {
-            _growth.Feed(item.Data.FullPoint, item.Data.HappyPoint);
+            _growth.Feed(item.Data.FullPoint, item.Data.HappyPoint, item.Data.BuffId);
             _food.Consume(item);
             _state = PetState.Eat;
             _eatFlashUntil = _t + 1.2f;
