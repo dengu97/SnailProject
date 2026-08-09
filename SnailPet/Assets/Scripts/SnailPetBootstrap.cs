@@ -66,6 +66,12 @@ namespace SnailPet
             Say("Windows 가 아니므로 투명 창을 적용하지 않습니다.");
 #endif
 
+            // 창만 키우고 렌더 해상도를 그대로 두면 백버퍼가 기본값(1280x720)으로 남아
+            // 종횡비가 어긋나고 좌표 매핑이 통째로 틀어진다. 창 크기와 반드시 맞춰야 한다.
+            Screen.SetResolution(_vWidth, _vHeight, FullScreenMode.Windowed);
+            Say(string.Format("해상도 요청: {0}x{1} (현재 {2}x{3}, 실제 적용은 다음 프레임)",
+                _vWidth, _vHeight, Screen.width, Screen.height));
+
             SetupCamera();
             SetupSnail();
 
@@ -110,7 +116,8 @@ namespace SnailPet
             camGo.transform.SetParent(transform, false);
             _cam = camGo.AddComponent<Camera>();
             _cam.orthographic = true;
-            _cam.orthographicSize = _vHeight * 0.5f;      // 1 world unit = 1 px
+            // 1 world unit = 1 px. 해상도 변경은 다음 프레임에 반영되므로 Update 에서 매번 다시 맞춘다.
+            _cam.orthographicSize = Screen.height * 0.5f;
             _cam.transform.position = new Vector3(0, 0, -10f);
             _cam.clearFlags = CameraClearFlags.SolidColor;
             _cam.backgroundColor = new Color(0f, 0f, 0f, 0f);   // 알파 0 이 핵심
@@ -148,15 +155,28 @@ namespace SnailPet
         {
             _t += Time.deltaTime;
 
+            // 해상도 변경이 반영되는 시점이 한 프레임 뒤라, 매 프레임 다시 맞춘다
+            _cam.orthographicSize = Screen.height * 0.5f;
+
             // 표면 위를 왕복
             float phase = Mathf.PingPong(_t / WalkSeconds, 1f);
             float sx = Mathf.Lerp(_walkFrom, _walkTo, phase);
-            _snail.position = ScreenToWorld(sx, _walkY - SnailPixels * 0.42f);
+
+            // 창이 화면 맨 위에 붙어 있으면(y=0) 그 위에 올려놓는 순간 화면 밖으로 나간다.
+            // 항상 보이도록 가상 화면 안으로 가둔다.
+            float half = SnailPixels * 0.5f;
+            float sy = Mathf.Clamp(_walkY - SnailPixels * 0.42f,
+                                   _vTop + half, _vTop + _vHeight - half);
+
+            _snail.position = VirtualToWorld(sx, sy);
+
             // 진행 방향으로 뒤집기 (달팽이 아트는 왼쪽을 본다)
             float dir = Mathf.Sin(Mathf.PI * 2f * (_t / (WalkSeconds * 2f)));
             var s = _snail.localScale;
             s.x = Mathf.Abs(s.x) * (dir >= 0 ? -1f : 1f);
             _snail.localScale = s;
+
+            if (!_diagDone && _t > 1f) { LogDiagnostics(); _diagDone = true; }
 
             if (_t >= AutoQuitSeconds || Input.GetKeyDown(KeyCode.Escape))
             {
@@ -165,12 +185,43 @@ namespace SnailPet
             }
         }
 
-        /// <summary>가상 화면 px → 월드 좌표 (원점은 가상 화면 중앙, y 는 위가 +).</summary>
-        private Vector3 ScreenToWorld(float sx, float sy)
+        /// <summary>
+        /// 가상 화면 px → 월드 좌표.
+        /// 창 크기와 백버퍼 해상도가 어긋나 있어도 화면 안에 들어오도록,
+        /// 절대 픽셀이 아니라 0..1 정규화 좌표를 거쳐 카메라 범위에 매핑한다.
+        /// </summary>
+        private Vector3 VirtualToWorld(float sx, float sy)
         {
-            float cx = _vLeft + _vWidth * 0.5f;
-            float cy = _vTop + _vHeight * 0.5f;
-            return new Vector3(sx - cx, cy - sy, 0f);
+            float u = (sx - _vLeft) / Mathf.Max(1, _vWidth);    // 0..1 (좌 → 우)
+            float v = (sy - _vTop)  / Mathf.Max(1, _vHeight);   // 0..1 (상 → 하)
+            float halfH = _cam.orthographicSize;
+            float halfW = halfH * _cam.aspect;
+            return new Vector3(Mathf.Lerp(-halfW, halfW, u), Mathf.Lerp(halfH, -halfH, v), 0f);
+        }
+
+        private bool _diagDone;
+
+        /// <summary>안 보일 때 원인을 찾을 수 있도록 실제 수치를 남긴다.</summary>
+        private void LogDiagnostics()
+        {
+            var p = _snail.position;
+            float halfH = _cam.orthographicSize;
+            float halfW = halfH * _cam.aspect;
+            bool inside = Mathf.Abs(p.x) <= halfW && Mathf.Abs(p.y) <= halfH;
+            var sr = _snail.GetComponent<SpriteRenderer>();
+
+            Say("");
+            Say("[4] 렌더 진단");
+            Say(string.Format("      Screen        : {0}x{1} (요청 {2}x{3})",
+                Screen.width, Screen.height, _vWidth, _vHeight));
+            Say(string.Format("      카메라        : ortho={0:0.0} aspect={1:0.000} → 가시범위 x±{2:0} y±{3:0}",
+                halfH, _cam.aspect, halfW, halfH));
+            Say(string.Format("      달팽이 위치   : ({0:0.0}, {1:0.0})  {2}",
+                p.x, p.y, inside ? "화면 안" : "화면 밖 ← 원인"));
+            Say(string.Format("      스프라이트    : bounds={0} 보임={1}",
+                sr.bounds.size, sr.isVisible));
+            Say(string.Format("      걷는 구간     : x={0:0}..{1:0}, y={2:0}", _walkFrom, _walkTo, _walkY));
+            WriteReport();
         }
 
         private void OnGUI()
