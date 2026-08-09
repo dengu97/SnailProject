@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Globalization;
 using SnailPet.Data;
 using UnityEngine;
 
@@ -63,10 +62,10 @@ namespace SnailPet.Snail
                 return false;
             }
 
-            // Value1 은 string 으로 선언돼 있어 파싱해서 쓴다 (지속시간, 초)
-            if (!double.TryParse(data.Value1, NumberStyles.Any, CultureInfo.InvariantCulture, out double duration))
+            double duration = data.Value1;      // 지속시간(초)
+            if (duration <= 0)
             {
-                Debug.LogWarning($"[SnailPet] 버프 {buffId} 의 Value1 <{data.Value1}> 을 지속시간으로 읽을 수 없습니다.");
+                Debug.LogWarning($"[SnailPet] 버프 {buffId} 의 지속시간이 {duration} 입니다.");
                 return false;
             }
 
@@ -77,18 +76,6 @@ namespace SnailPet.Snail
                 Id = buffId, Remaining = duration, Duration = duration, Generation = gen
             };
             return true;
-        }
-
-        /// <summary>토큰 문자열로 거는 경로. FoodData.BuffId 가 string 이라 필요하다.</summary>
-        public bool ApplyToken(string token)
-        {
-            if (string.IsNullOrEmpty(token)) return false;
-            if (!GameData.IdByToken.TryGetValue(token, out int id))
-            {
-                Debug.LogWarning("[SnailPet] 알 수 없는 버프 토큰: " + token);
-                return false;
-            }
-            return Apply(id);
         }
 
         public void Tick(double deltaSeconds)

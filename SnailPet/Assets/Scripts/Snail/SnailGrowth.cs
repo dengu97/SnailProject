@@ -138,13 +138,13 @@ namespace SnailPet.Snail
         /// 넘치게 먹여 시간을 저금하는 플레이를 막고, 가속 기준의 100% 가 상한이 된다.
         /// 다른 의도라면 상한을 데이터로 빼면 된다.
         /// </summary>
-        public void Feed(double fullPoint, double happyPoint, string buffToken = null)
+        public void Feed(double fullPoint, double happyPoint, int buffId = 0)
         {
             FullPoint  = Math.Min(Current.NeedFullPoint,  FullPoint  + fullPoint);
             HappyPoint = Math.Min(Current.NeedHappyPoint, HappyPoint + happyPoint);
 
             // 기획서 「먹이 섭취 시 지정된 BuffId 발동」
-            if (!string.IsNullOrEmpty(buffToken)) Buffs.ApplyToken(buffToken);
+            if (buffId > 0) Buffs.Apply(buffId);
 
             // 먹여서 등급에 올라선 경우도 상승 에지로 잡아야 한다
             UpdateTierBuffs();
@@ -197,7 +197,7 @@ namespace SnailPet.Snail
                 bool met = HappyPercent >= a.NeedHappyPointPercent
                         && FullPercent  >= a.NeedFullPointPercent;
 
-                if (met && !_tierMet[i] && a.BuffId > 0) Buffs.Apply(a.BuffId);
+                if (met && !_tierMet[i] && a.BuffId.HasValue) Buffs.Apply(a.BuffId.Value);
                 _tierMet[i] = met;
             }
         }

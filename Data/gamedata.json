@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-10 02:02:01",
+  "generatedAt": "2026-08-10 02:14:47",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -146,10 +146,10 @@
       {"Id": 30, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler04", "IsUseColor": true, "Colors": ["commonfeeler04_c02"], "AppearWeight": 10, "Info": "갈색의 더듬이."}
     ],
     "FoodData": [
-      {"Id": 31, "FoodType": "vegetable", "Name": "상추", "FullPoint": 5, "HappyPoint": 3, "BuffId": null, "Info": null, "ResourceKey": "food_lettuce"},
-      {"Id": 32, "FoodType": "vegetable", "Name": "토마토", "FullPoint": 7, "HappyPoint": 5, "BuffId": null, "Info": null, "ResourceKey": null},
-      {"Id": 33, "FoodType": "vegetable", "Name": "애호박", "FullPoint": 7, "HappyPoint": 5, "BuffId": null, "Info": null, "ResourceKey": null},
-      {"Id": 34, "FoodType": "bean", "Name": "두부", "FullPoint": 15, "HappyPoint": 10, "BuffId": "[포만감01]", "Info": null, "ResourceKey": null}
+      {"Id": 31, "FoodType": "vegetable", "Name": "상추", "FullPoint": 5, "HappyPoint": 3, "BuffId": 0, "Info": null, "ResourceKey": "food_lettuce"},
+      {"Id": 32, "FoodType": "vegetable", "Name": "토마토", "FullPoint": 7, "HappyPoint": 5, "BuffId": 0, "Info": null, "ResourceKey": null},
+      {"Id": 33, "FoodType": "vegetable", "Name": "애호박", "FullPoint": 7, "HappyPoint": 5, "BuffId": 0, "Info": null, "ResourceKey": null},
+      {"Id": 34, "FoodType": "bean", "Name": "두부", "FullPoint": 15, "HappyPoint": 10, "BuffId": 35, "Info": null, "ResourceKey": null}
     ],
     "LevelData": [
       {"Level": 1, "LevelUpTime": 0, "NeedFullPoint": 10, "NeedHappyPoint": 10, "UseFullPointTime": 120, "UseHappyPointTime": 240, "Speed": 1, "Size": 4},
@@ -174,11 +174,11 @@
       {"Level": 20, "LevelUpTime": 3600, "NeedFullPoint": 105, "NeedHappyPoint": 105, "UseFullPointTime": 300, "UseHappyPointTime": 360, "Speed": 10.5, "Size": 11}
     ],
     "LevelUpAdvantage": [
-      {"NeedHappyPointPercent": 0.5, "NeedFullPointPercent": 0.5, "Acceleration": 0.2, "BuffId": 0},
+      {"NeedHappyPointPercent": 0.5, "NeedFullPointPercent": 0.5, "Acceleration": 0.2, "BuffId": null},
       {"NeedHappyPointPercent": 1, "NeedFullPointPercent": 1, "Acceleration": 0.5, "BuffId": 35}
     ],
     "BuffData": [
-      {"Id": 35, "BuffType": "Full", "Value1": "1800", "IconResourceKey": "buff_fullIcon", "Info": "30분간 허기가 떨어지지 않습니다."}
+      {"Id": 35, "BuffType": "Full", "Value1": 1800, "IconResourceKey": "buff_fullIcon", "Info": "30분간 허기가 떨어지지 않습니다."}
     ],
     "ItemData": [
       {"Id": 36, "Info": "팽이코인. 많은 것을 할 수 있다.", "ResourceKey": "pangcoin"}

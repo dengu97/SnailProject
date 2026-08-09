@@ -115,11 +115,11 @@ namespace SnailPet.Data
         public readonly string Name;
         public readonly double FullPoint;
         public readonly double HappyPoint;
-        public readonly string BuffId;
+        public readonly int BuffId;
         public readonly string Info;
         public readonly string ResourceKey;
 
-        public FoodDataRow(int id, FoodType foodType, string name, double fullPoint, double happyPoint, string buffId, string info, string resourceKey)
+        public FoodDataRow(int id, FoodType foodType, string name, double fullPoint, double happyPoint, int buffId, string info, string resourceKey)
         {
             Id = id;
             FoodType = foodType;
@@ -161,9 +161,9 @@ namespace SnailPet.Data
         public readonly double NeedHappyPointPercent;
         public readonly double NeedFullPointPercent;
         public readonly double Acceleration;
-        public readonly int BuffId;
+        public readonly int? BuffId;
 
-        public LevelUpAdvantageRow(double needHappyPointPercent, double needFullPointPercent, double acceleration, int buffId)
+        public LevelUpAdvantageRow(double needHappyPointPercent, double needFullPointPercent, double acceleration, int? buffId)
         {
             NeedHappyPointPercent = needHappyPointPercent;
             NeedFullPointPercent = needFullPointPercent;
@@ -176,11 +176,11 @@ namespace SnailPet.Data
     {
         public readonly int Id;
         public readonly BuffType BuffType;
-        public readonly string Value1;
+        public readonly double Value1;
         public readonly string IconResourceKey;
         public readonly string Info;
 
-        public BuffDataRow(int id, BuffType buffType, string value1, string iconResourceKey, string info)
+        public BuffDataRow(int id, BuffType buffType, double value1, string iconResourceKey, string info)
         {
             Id = id;
             BuffType = buffType;
@@ -429,10 +429,10 @@ namespace SnailPet.Data
 
         public static readonly FoodDataRow[] FoodData = new FoodDataRow[]
         {
-            new FoodDataRow(31, FoodType.vegetable, "상추", 5d, 3d, null, null, "food_lettuce"),
-            new FoodDataRow(32, FoodType.vegetable, "토마토", 7d, 5d, null, null, null),
-            new FoodDataRow(33, FoodType.vegetable, "애호박", 7d, 5d, null, null, null),
-            new FoodDataRow(34, FoodType.bean, "두부", 15d, 10d, "[포만감01]", null, null),
+            new FoodDataRow(31, FoodType.vegetable, "상추", 5d, 3d, 0, null, "food_lettuce"),
+            new FoodDataRow(32, FoodType.vegetable, "토마토", 7d, 5d, 0, null, null),
+            new FoodDataRow(33, FoodType.vegetable, "애호박", 7d, 5d, 0, null, null),
+            new FoodDataRow(34, FoodType.bean, "두부", 15d, 10d, 35, null, null),
         };
 
         public static readonly LevelDataRow[] LevelData = new LevelDataRow[]
@@ -461,13 +461,13 @@ namespace SnailPet.Data
 
         public static readonly LevelUpAdvantageRow[] LevelUpAdvantage = new LevelUpAdvantageRow[]
         {
-            new LevelUpAdvantageRow(0.5d, 0.5d, 0.2d, 0),
+            new LevelUpAdvantageRow(0.5d, 0.5d, 0.2d, null),
             new LevelUpAdvantageRow(1d, 1d, 0.5d, 35),
         };
 
         public static readonly BuffDataRow[] BuffData = new BuffDataRow[]
         {
-            new BuffDataRow(35, BuffType.Full, "1800", "buff_fullIcon", "30분간 허기가 떨어지지 않습니다."),
+            new BuffDataRow(35, BuffType.Full, 1800d, "buff_fullIcon", "30분간 허기가 떨어지지 않습니다."),
         };
 
         public static readonly ItemDataRow[] ItemData = new ItemDataRow[]
