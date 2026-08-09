@@ -1,14 +1,18 @@
+using System;
 using System.Collections.Generic;
 using SnailPet.Data;
 
 namespace SnailPet.Snail
 {
     /// <summary>
-    /// 개체 하나의 성장 상태. LevelData 가 레벨마다 요구치와 능력치를 들고 있다.
+    /// 개체 하나의 성장 상태.
     ///
-    /// 데이터의 Speed / Size 는 단위 없는 추상값(현재 레벨과 같은 1~20)이라,
-    /// 실제 픽셀로 바꾸는 환산 상수를 여기 한 곳에 둔다. 곡선은 데이터가 갖고,
-    /// 코드는 배율만 갖는 구조다.
+    /// 레벨업은 <b>기다리면 된다</b>. LevelData.LevelUpTime(초) 만큼 시간이 쌓이면 오른다.
+    /// 잘 돌봐주면 그 시간이 빨리 간다 — 포만도·행복도가 LevelUpAdvantage 의 기준을
+    /// 넘으면 Acceleration 만큼 진행이 가속된다. 방치형이므로 돌봄은 「필수」가 아니라
+    /// 「단축」으로 작동한다.
+    ///
+    /// 데이터의 Speed / Size 는 단위 없는 추상값이라 픽셀로 바꾸는 환산 상수만 코드가 갖는다.
     /// </summary>
     public sealed class SnailGrowth
     {
@@ -20,8 +24,7 @@ namespace SnailPet.Snail
 
         /// <summary>
         /// UseFullPointTime 마다 포만도가 얼마나 줄어드는지는 데이터에 없다. 1 로 가정한다.
-        /// 레벨 1 기준 UseFullPointTime 120초 · NeedFullPoint 10 이므로
-        /// 가득 찬 상태에서 바닥까지 10회 = 20분이 걸린다.
+        /// 레벨 1 기준 120초 · NeedFullPoint 10 이므로 가득 찬 상태에서 바닥까지 20분이다.
         /// 데이터로 옮길 값이면 LevelData 에 열을 추가하면 된다.
         /// </summary>
         public const double FullPointDecayPerTick = 1.0;
@@ -30,9 +33,11 @@ namespace SnailPet.Snail
         private static int _maxLevel;
 
         public int Level { get; private set; } = 1;
-        public double Exp { get; private set; }
         public double FullPoint { get; private set; }
         public double HappyPoint { get; private set; }
+
+        /// <summary>다음 레벨까지 쌓인 시간(초). 가속이 붙으면 실제 시간보다 빨리 찬다.</summary>
+        public double LevelUpProgress { get; private set; }
 
         private double _decayTimer;
 
@@ -57,75 +62,113 @@ namespace SnailPet.Snail
         public static int MaxLevel { get { EnsureIndex(); return _maxLevel; } }
 
         public LevelDataRow Current => _byLevel.TryGetValue(Level, out var r) ? r : GameData.LevelData[0];
-
-        public LevelDataRow Next => _byLevel.TryGetValue(Level + 1, out var r) ? r : null;
+        public LevelDataRow Next    => _byLevel.TryGetValue(Level + 1, out var r) ? r : null;
 
         public float PixelsPerSecond => (float)(Current.Speed * PixelsPerSpeedUnit);
 
         /// <summary>화면에 보일 달팽이 가로 크기(px).</summary>
         public float SizePixels => (float)(Current.Size * PixelsPerSizeUnit);
 
+        public double FullPercent  => Current.NeedFullPoint  > 0 ? FullPoint  / Current.NeedFullPoint  : 1.0;
+        public double HappyPercent => Current.NeedHappyPoint > 0 ? HappyPoint / Current.NeedHappyPoint : 1.0;
+
         /// <summary>
-        /// 다음 레벨의 요구치를 모두 채웠는가.
-        /// RequiredExp 는 「그 레벨이 되기 위해」 필요한 경험치로 읽는다 (레벨 1 이 0).
+        /// 지금 조건으로 받는 가속. 기준을 만족하는 행 중 가장 좋은 것을 쓴다.
+        /// 예: 둘 다 100% 이면 +50%, 둘 다 50% 이상이면 +20%.
         /// </summary>
-        public bool CanLevelUp
+        public double Acceleration
+        {
+            get
+            {
+                double best = 0.0;
+                foreach (var a in GameData.LevelUpAdvantage)
+                {
+                    if (HappyPercent < a.NeedHappyPointPercent) continue;
+                    if (FullPercent  < a.NeedFullPointPercent)  continue;
+                    if (a.Acceleration > best) best = a.Acceleration;
+                }
+                return best;
+            }
+        }
+
+        /// <summary>다음 레벨까지 남은 실제 시간(초). 지금 가속이 유지된다고 가정한 값.</summary>
+        public double SecondsToNextLevel
         {
             get
             {
                 var next = Next;
-                return next != null
-                    && Exp >= next.RequiredExp
-                    && FullPoint >= Current.NeedFullPoint
-                    && HappyPoint >= Current.NeedHappyPoint;
+                if (next == null) return 0;
+                double remain = Math.Max(0, next.LevelUpTime - LevelUpProgress);
+                return remain / (1.0 + Acceleration);
             }
         }
 
-        public bool TryLevelUp()
+        public double LevelUpRatio
         {
-            if (!CanLevelUp) return false;
-            Level++;
-            return true;
+            get
+            {
+                var next = Next;
+                if (next == null || next.LevelUpTime <= 0) return 1.0;
+                return Math.Min(1.0, LevelUpProgress / next.LevelUpTime);
+            }
         }
 
-        /// <summary>테스트·데모용. 요구치를 무시하고 레벨만 바꾼다.</summary>
+        /// <summary>테스트·데모용. 조건을 무시하고 레벨만 바꾼다.</summary>
         public void ForceLevel(int level)
         {
             EnsureIndex();
             Level = UnityEngine.Mathf.Clamp(level, 1, _maxLevel);
+            LevelUpProgress = 0;
             FullPoint = Current.NeedFullPoint;
             HappyPoint = Current.NeedHappyPoint;
         }
 
-        public void AddExp(double amount)
-        {
-            if (amount <= 0) return;
-            Exp += amount;
-            while (TryLevelUp()) { }
-        }
-
+        /// <summary>
+        /// 먹이 섭취. 요구치를 넘겨 쌓아둘 수는 없다고 본다 —
+        /// 넘치게 먹여 시간을 저금하는 플레이를 막고, 가속 기준의 100% 가 상한이 된다.
+        /// 다른 의도라면 상한을 데이터로 빼면 된다.
+        /// </summary>
         public void Feed(double fullPoint, double happyPoint)
         {
-            FullPoint += fullPoint;
-            HappyPoint += happyPoint;
+            FullPoint  = Math.Min(Current.NeedFullPoint,  FullPoint  + fullPoint);
+            HappyPoint = Math.Min(Current.NeedHappyPoint, HappyPoint + happyPoint);
         }
 
         /// <summary>시간 경과. timeScale 을 올리면 데모에서 몇 시간치를 몇 초로 볼 수 있다.</summary>
-        public void Tick(float deltaSeconds, float timeScale = 1f)
+        public bool Tick(float deltaSeconds, float timeScale = 1f)
         {
-            double interval = Current.UseFullPointTime;
-            if (interval <= 0) return;
+            double dt = deltaSeconds * timeScale;
 
-            _decayTimer += deltaSeconds * timeScale;
-            while (_decayTimer >= interval)
+            // 포만도 감소
+            double interval = Current.UseFullPointTime;
+            if (interval > 0)
             {
-                _decayTimer -= interval;
-                FullPoint = System.Math.Max(0, FullPoint - FullPointDecayPerTick);
+                _decayTimer += dt;
+                while (_decayTimer >= interval)
+                {
+                    _decayTimer -= interval;
+                    FullPoint = Math.Max(0, FullPoint - FullPointDecayPerTick);
+                }
             }
+
+            // 레벨업 시간 누적 (돌봄 상태에 따라 가속)
+            var next = Next;
+            if (next == null) return false;
+
+            LevelUpProgress += dt * (1.0 + Acceleration);
+            if (LevelUpProgress < next.LevelUpTime) return false;
+
+            Level++;
+            LevelUpProgress = 0;
+            // 요구치가 올라가므로 비율이 떨어진다. 값 자체는 유지해 계속 돌봐야 하게 둔다.
+            FullPoint  = Math.Min(FullPoint,  Current.NeedFullPoint);
+            HappyPoint = Math.Min(HappyPoint, Current.NeedHappyPoint);
+            return true;
         }
 
         public override string ToString() =>
             $"Lv.{Level} 속도 {Current.Speed}({PixelsPerSecond:0}px/s) 크기 {Current.Size}({SizePixels:0}px) " +
-            $"포만 {FullPoint:0}/{Current.NeedFullPoint:0} 행복 {HappyPoint:0}/{Current.NeedHappyPoint:0}";
+            $"포만 {FullPoint:0}/{Current.NeedFullPoint:0} 행복 {HappyPoint:0}/{Current.NeedHappyPoint:0} " +
+            $"성장 {LevelUpRatio * 100:0}% (가속 +{Acceleration * 100:0}%)";
     }
 }

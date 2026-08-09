@@ -34,8 +34,8 @@ namespace SnailPet
         /// <summary>데모용. 이 간격마다 먹이를 하나 떨어뜨린다.</summary>
         private const float DemoFoodSeconds = 5f;
 
-        /// <summary>포만도 감소 간격이 120~300초라 데모에서는 시간을 당겨야 보인다. 40초 실행 = 약 40분.</summary>
-        private const float DemoTimeScale = 60f;
+        /// <summary>레벨업 3600초·포만 감소 120초를 눈으로 보려면 시간을 당겨야 한다. 40초 실행 = 약 80분.</summary>
+        private const float DemoTimeScale = 120f;
 
         /// <summary>
         /// 달팽이가 기어다닐 박스를 무엇으로 삼을지.
@@ -164,7 +164,11 @@ namespace SnailPet
             _t += Time.deltaTime;
             _cam.orthographicSize = Screen.height * 0.5f;
 
-            _growth.Tick(Time.deltaTime, DemoTimeScale);
+            if (_growth.Tick(Time.deltaTime, DemoTimeScale))
+            {
+                ApplyGrowth();
+                Say("      레벨업! → " + _growth);
+            }
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             // 매 프레임 다시 읽는다. 창 모드일 때 창을 옮기면 달팽이가 자동으로 따라붙고,
@@ -238,19 +242,12 @@ namespace SnailPet
 
         private void Eat(FoodItem item)
         {
-            int before = _growth.Level;
             _growth.Feed(item.Data.FullPoint, item.Data.HappyPoint);
-
-            // FoodData 에 경험치 열이 없다. 포만도를 그대로 경험치로 준다고 가정한다.
-            // 따로 조절하고 싶으면 FoodData 에 Exp 열을 추가하면 된다.
-            _growth.AddExp(item.Data.FullPoint);
-
             _food.Consume(item);
             _state = PetState.Eat;
             _eatFlashUntil = _t + 1.2f;
 
             Say($"      먹음: {item.Data.Name} (+포만 {item.Data.FullPoint} +행복 {item.Data.HappyPoint}) → {_growth}");
-            if (_growth.Level != before) { ApplyGrowth(); Say($"      레벨업! Lv.{before} → Lv.{_growth.Level}"); }
         }
 
         /// <summary>데모용. 실제로는 유저가 상점에서 사서 원하는 위치에 떨어뜨린다.</summary>
