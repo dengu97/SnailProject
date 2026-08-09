@@ -1,0 +1,52 @@
+# ── Unity ──
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+MemoryCaptures/
+Recordings/
+
+# Unity 가 생성하는 IDE 프로젝트 파일 (에디터 열 때 재생성됨)
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+.vs/
+.idea/
+.consulo/
+
+# 빌드 산출물
+*.apk
+*.aab
+*.unitypackage
+*.app
+sysinfo.txt
+crashlytics-build.properties
+
+# ── .NET (Tools/spike) ──
+bin/
+[Oo]bj/
+
+# ── 작업 중 생기는 부산물 ──
+# Excel 이 파일을 열면 만드는 잠금 파일
+~$*.xlsx
+# 스파이크 실행 리포트 (실행할 때마다 갱신)
+Tools/spike/probe-result.txt
+
+# ── OS ──
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store

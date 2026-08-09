@@ -1,0 +1,39 @@
+# 기본: 텍스트는 자동 판별, 저장소에는 LF 로 정규화
+* text=auto
+
+# ── Unity ──
+# 씬/프리팹/에셋은 YAML 이지만 병합이 까다롭다. Smart Merge 를 쓰려면
+# git config merge.unityyamlmerge.cmd 를 UnityYAMLMerge 로 잡아야 한다.
+*.unity     text eol=lf merge=unityyamlmerge
+*.prefab    text eol=lf merge=unityyamlmerge
+*.asset     text eol=lf merge=unityyamlmerge
+*.mat       text eol=lf merge=unityyamlmerge
+*.anim      text eol=lf merge=unityyamlmerge
+*.controller text eol=lf merge=unityyamlmerge
+*.meta      text eol=lf
+*.cs        text eol=lf diff=csharp
+
+# ── 스크립트/데이터 ──
+*.ps1       text eol=crlf
+*.json      text eol=lf
+*.md        text eol=lf
+*.html      text eol=lf
+*.js        text eol=lf
+*.csproj    text eol=lf
+
+# ── 바이너리 (줄바꿈 변환 금지) ──
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.psd       binary
+*.xlsx      binary
+*.xls       binary
+*.dll       binary
+*.exe       binary
+*.ttf       binary
+*.otf       binary
+*.wav       binary
+*.mp3       binary
+*.ogg       binary
+*.unitypackage binary
