@@ -25,7 +25,6 @@ if ($live) {
 }
 
 $dll = Join-Path $ProjectPath "Build\SnailPet_Data\Managed\Assembly-CSharp.dll"
-$before = if (Test-Path $dll) { (Get-Item $dll).LastWriteTime } else { [datetime]::MinValue }
 
 $log = & $Unity -batchmode -quit -projectPath $ProjectPath -executeMethod $Method -logFile - 2>&1
 
@@ -38,10 +37,17 @@ if ($errors) {
 
 if (-not (Test-Path $dll)) { Write-Output "FAIL: 산출물이 없습니다: $dll"; exit 1 }
 
-$after = (Get-Item $dll).LastWriteTime
-if ($after -le $before) {
-    Write-Output "FAIL: 빌드가 돌지 않았습니다. Assembly-CSharp.dll 이 그대로입니다 ($after)."
+# 「빌드 전보다 새로운가」로 보면 안 된다. 바뀐 게 없으면 유니티가 DLL 을 다시 쓰지 않아
+# 멀쩡한 빌드를 실패로 읽는다. 소스보다 새로운지를 봐야 실제로 최신인지 알 수 있다.
+$dllTime = (Get-Item $dll).LastWriteTime
+$newestSource = Get-ChildItem (Join-Path $ProjectPath "Assets") -Recurse -Include *.cs |
+                Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
+if ($newestSource -and $newestSource.LastWriteTime -gt $dllTime) {
+    Write-Output "FAIL: 빌드가 소스보다 오래됐습니다."
+    Write-Output "  DLL   : $dllTime"
+    Write-Output "  최신 소스: $($newestSource.LastWriteTime)  $($newestSource.Name)"
     exit 1
 }
 
-Write-Output "OK: 빌드 완료 ($after)"
+Write-Output "OK: 빌드 최신 ($dllTime)"

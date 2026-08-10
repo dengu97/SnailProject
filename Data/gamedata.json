@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-10 13:01:26",
+  "generatedAt": "2026-08-10 21:33:33",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -61,7 +61,8 @@
     "[일반뽑기01]": 49,
     "[일반달팽이]": 50,
     "[부드러움]": 51,
-    "[코인]": 52
+    "[코인]": 52,
+    "[일반달팽이_손몸01]": 53
   },
   "tables": {
     "EnumData": [
@@ -137,6 +138,7 @@
       {"Id": 19, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Body", "ResourceKey": "commonbody01", "IsUseColor": true, "Colors": ["commonbody01_c02"], "AppearWeight": 10, "Info": "분홍색의 몸."},
       {"Id": 20, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Body", "ResourceKey": "commonbody01", "IsUseColor": true, "Colors": ["commonbody01_c03"], "AppearWeight": 10, "Info": "갈색의 몸."},
       {"Id": 21, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Body", "ResourceKey": "commonbody02", "IsUseColor": true, "Colors": ["commonbody02_c01"], "AppearWeight": 10, "Info": "느려졌지만, 행복해보인다."},
+      {"Id": 53, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Body", "ResourceKey": "commonbody03", "IsUseColor": true, "Colors": ["commonbody03_c01"], "AppearWeight": 10, "Info": "주인을 안아주고 싶어서 손이 돋아났다."},
       {"Id": 22, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "commoneyes01", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "Info": "일반 달팽이의 눈."},
       {"Id": 23, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "commoneyes02", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "Info": "웃는 달팽이의 눈."},
       {"Id": 24, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "commoneyes03", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "Info": "눈치보는 달팽이의 눈."},
