@@ -92,6 +92,32 @@ namespace SnailPet
 
         private bool SnailFree => _drag == DragTarget.Snail || _snailFalling;
 
+        // ── 벽에서 떼는 연출 ──
+        // 발은 벽에 붙은 채 몸만 딸려오다가, 임계점을 넘으면 툭 떨어진다.
+        // 늘어남·저항·반동을 값 하나(_stretch)에 감쇠 스프링으로 태워 한 번에 처리한다.
+
+        /// <summary>이만큼(px) 당기면 떨어진다.</summary>
+        private const float PeelThreshold = 72f;
+
+        /// <summary>임계점에서의 몸통 신장 비율. 1.35 면 35% 늘어난다.</summary>
+        private const float PeelMaxStretch = 0.35f;
+
+        /// <summary>떨어지는 순간 되튕기는 양. 음수라 잠깐 움츠러든다.</summary>
+        private const float PopRecoil = -0.22f;
+
+        private const float SpringStiffness = 320f;
+        private const float SpringDamping = 12f;
+
+        /// <summary>누르고 있지만 아직 안 떨어진 상태.</summary>
+        private bool _peeling;
+        private Vector2 _grabScreen;
+
+        private float _stretch, _stretchVel, _stretchTarget;   // 0 = 평소, 양수 = 늘어남
+        private float _lean, _leanVel, _leanTarget;            // 벽을 따라 기울어지는 정도(로컬 단위)
+
+        /// <summary>껍질 중심의 로컬 y. 몸이 늘어난 만큼 껍질을 평행이동시킬 때 쓴다.</summary>
+        private float _shellCenterLocalY;
+
         private int _vLeft, _vTop, _vWidth, _vHeight;
         private string _status = "";
 
@@ -167,6 +193,8 @@ namespace SnailPet
             _visibleWidth = _bounds.Right - _bounds.Left;
             if (!_bounds.Measured || _visibleWidth < 0.01f) _visibleWidth = 1f;
 
+            _shellCenterLocalY = MeasureShellCenterY();
+
             _growth = new SnailGrowth();
             ApplyGrowth();
             _food = new FoodField(transform);
@@ -179,6 +207,53 @@ namespace SnailPet
             var top = GameData.LevelData[GameData.LevelData.Length - 1];
             Say(string.Format("      최고 레벨: 속도 {0}px/s, 크기 {1}px",
                 top.Speed * SnailGrowth.PixelsPerSpeedUnit, top.Size * SnailGrowth.PixelsPerSizeUnit));
+        }
+
+        /// <summary>
+        /// 껍질의 세로 중심(로컬). 몸이 늘어나도 껍질은 안 늘어나므로,
+        /// 그 높이에서의 변위만큼 껍질을 통째로 밀어 몸에 붙어 있게 만든다.
+        /// 껍질이 없으면 몸통 중간을 대신 쓴다.
+        /// </summary>
+        private float MeasureShellCenterY()
+        {
+            foreach (var p in _appearance.Parts)
+            {
+                if (p.Type != PartsType.Shell) continue;
+                var sprite = SnailComposer.Load(SnailComposer.LinePath(p.Type, p.ResourceKey));
+                if (sprite != null && SnailMetrics.TryMeasure(sprite, out var e))
+                    return (e.Bottom + e.Top) * 0.5f;
+            }
+            return (_bounds.Foot + _bounds.Top) * 0.5f;
+        }
+
+        /// <summary>
+        /// 늘어남을 실제 트랜스폼에 적용한다.
+        ///
+        /// 발을 피벗으로 세로 스케일을 주면 발 근처는 거의 안 움직이고 멀수록 크게 늘어난다.
+        /// 「발은 붙어 있는데 몸이 딸려온다」가 이 기울기에서 나온다. 뼈대 없이 되는 이유다.
+        /// 껍질은 늘어나지 않고, 그 높이의 변위만큼 평행이동만 한다.
+        /// </summary>
+        private void ApplyDeform()
+        {
+            if (_composed == null) return;
+
+            float s = 1f + _stretch;
+            var soft = _composed.GroupOrNull(PartsLayer.DeformGroupOf(PartsType.Body));
+            if (soft != null)
+            {
+                soft.localScale = new Vector3(1f, s, 1f);
+                // 발(_bounds.Foot)이 제자리에 남도록 보정. p*s + off = p 에서 off = Foot*(1-s).
+                soft.localPosition = new Vector3(_lean, _bounds.Foot * (1f - s), 0f);
+            }
+
+            var rigid = _composed.GroupOrNull(PartsLayer.RigidGroup);
+            if (rigid != null)
+            {
+                // 같은 지점의 변위: d(y) = (s-1) * (y - Foot)
+                float d = (s - 1f) * (_shellCenterLocalY - _bounds.Foot);
+                rigid.localScale = Vector3.one;
+                rigid.localPosition = new Vector3(_lean, d, 0f);
+            }
         }
 
         /// <summary>변형 그룹이 의도대로 나뉘었는지 확인용. 스켈레톤은 이 루트들에 붙는다.</summary>
@@ -237,7 +312,7 @@ namespace SnailPet
             _food.Tick(Time.deltaTime, _box.Bottom);
             UpdateFoodTransforms(px);
 
-            StepDrag(footDepth, halfExtent);
+            StepDrag(footDepth, halfExtent, px);
 
             SnailPose pose;
             if (SnailFree)
@@ -363,7 +438,7 @@ namespace SnailPet
         /// 창이 포커스를 갖지 않으므로 버튼 상태는 전역으로 읽는다.
         /// 놓으면 달팽이든 먹이든 <b>아래로만</b> 떨어진다. 벽에 스냅하지 않는다.
         /// </summary>
-        private void StepDrag(float footDepth, float halfExtent)
+        private void StepDrag(float footDepth, float halfExtent, float px)
         {
             bool down = TransparentWindow.IsLeftMouseDown();
             bool hasCursor = TransparentWindow.TryGetCursor(out int cx, out int cy);
@@ -382,12 +457,13 @@ namespace SnailPet
                         Say($"      선물 수령: {name} x{count}  → 가방: {_inventory}");
                     }
 
-                    _drag = DragTarget.Snail;
-                    _snailFalling = false;
-                    _snailVelY = 0f;
-                    _snailFootScreen = CurrentFootScreen(footDepth, halfExtent);
-                    _grabOffset = _snailFootScreen - cursor;
-                    Say("      달팽이를 집었습니다.");
+                    // 바로 들리지 않는다. 먼저 벽에서 떼어내야 한다.
+                    if (!_snailFalling)
+                    {
+                        _peeling = true;
+                        _grabScreen = cursor;
+                        Say("      달팽이를 잡았습니다. 당기면 떨어집니다.");
+                    }
                 }
                 else
                 {
@@ -400,6 +476,42 @@ namespace SnailPet
                         _grabOffset = new Vector2(f.ScreenX, f.ScreenY) - cursor;
                     }
                 }
+            }
+
+            // ── 저항 단계: 발은 붙어 있고 몸만 딸려온다 ──
+            _stretchTarget = 0f;
+            _leanTarget = 0f;
+
+            if (_peeling && hasCursor)
+            {
+                var n = BoxWalk.OutwardNormal(_anchor.Edge);
+                BoxWalk.EdgeSegment(_box, _anchor.Edge, out _, out var dir, out _);
+                Vector2 pull = cursor - _grabScreen;
+
+                float away  = Vector2.Dot(pull, -n);      // 벽에서 멀어지는 성분
+                float along = Vector2.Dot(pull, dir);     // 벽을 따라가는 성분
+
+                float pxToLocal = 1f / Mathf.Max(0.0001f, px * _scale);
+                _stretchTarget = Mathf.Clamp01(away / PeelThreshold) * PeelMaxStretch;
+                _leanTarget = Mathf.Clamp(along, -PeelThreshold, PeelThreshold) * pxToLocal * 0.4f;
+
+                if (away >= PeelThreshold)
+                {
+                    _peeling = false;
+                    _drag = DragTarget.Snail;
+                    _snailFalling = false;
+                    _snailVelY = 0f;
+                    _snailFootScreen = CurrentFootScreen(footDepth, halfExtent);
+                    _grabOffset = _snailFootScreen - cursor;
+                    _stretchVel += PopRecoil * SpringStiffness * 0.05f;   // 툭 하고 되튕긴다
+                    Say("      벽에서 떨어졌습니다.");
+                }
+            }
+
+            if (!down && _wasMouseDown && _peeling)
+            {
+                _peeling = false;                 // 덜 당기고 놓으면 그대로 붙어 있는다
+                Say("      놓았습니다. 벽에 그대로 붙어 있습니다.");
             }
 
             if (!down && _wasMouseDown && _drag != DragTarget.None)
@@ -434,6 +546,19 @@ namespace SnailPet
             }
 
             _wasMouseDown = down;
+
+            // 저항·늘어남·반동이 전부 이 스프링 하나에서 나온다.
+            // 목표로 곧장 가지 않고 따라붙으므로 당길 때 저항이 생기고,
+            // 목표가 0 으로 돌아가면 지나쳤다 돌아오며 출렁인다.
+            Spring(ref _stretch, ref _stretchVel, _stretchTarget, Time.deltaTime);
+            Spring(ref _lean,    ref _leanVel,    _leanTarget,    Time.deltaTime);
+        }
+
+        private static void Spring(ref float value, ref float velocity, float target, float dt)
+        {
+            velocity += (target - value) * SpringStiffness * dt;
+            velocity *= Mathf.Exp(-SpringDamping * dt);
+            value += velocity * dt;
         }
 
         /// <summary>지금 벽에 붙어 있는 달팽이의 발 지점(가상 화면 px).</summary>
@@ -607,6 +732,7 @@ namespace SnailPet
             if (_drag == DragTarget.Snail)     act = "들려 있음";
             else if (_drag == DragTarget.Food) act = "먹이 옮기는 중";
             else if (_snailFalling)            act = "떨어지는 중";
+            else if (_peeling)                 act = $"떼는 중 ({_stretch / PeelMaxStretch * 100:0}%)";
             GUI.Label(new Rect(32, y + 50, 960, 22),
                 act + "   |   벽: " + edgeName + "   먹이 " + (_food != null ? _food.Count : 0) + "개", style);
             GUI.Label(new Rect(32, y + 72, 960, 22),
