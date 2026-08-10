@@ -161,17 +161,24 @@ namespace SnailPet.Snail
         }
 
         /// <summary>
-        /// 안 휘는 파츠(껍질 등)가 따라갈 자세.
-        /// 기준점 하나를 변형한 자리로 옮기고 몸과 같은 각으로 돌기만 한다.
+        /// 안 휘는 파츠(껍질 등)가 따라갈 자세. 껍질은 절대 변형되지 않고,
+        /// <b>붙어 있는 자리의 변형만</b> 강체로 물려받는다.
+        ///
+        /// 각도를 LeanDeg 로 직접 쓰지 않고 그 지점의 접선을 재서 구한다.
+        /// 그래야 기울기든 모서리 접힘이든 나중에 무엇이 더 붙든 껍질이 저절로 따라간다.
+        /// (예전에는 LeanDeg 만 썼고, 그래서 모서리에서 몸이 휘면 껍질만 남아 벌어졌다.)
         /// </summary>
         public void RigidPose(float anchorLocalY, out Vector3 position, out Quaternion rotation)
         {
-            float deg = Mirrored ? -LeanDeg : LeanDeg;
-            rotation = Quaternion.Euler(0f, 0f, deg);
+            var anchor = new Vector2(0f, anchorLocalY);
+            Vector2 a = Apply(anchor);
 
-            var anchor = new Vector3(0f, anchorLocalY, 0f);
-            Vector2 moved = Apply(new Vector2(0f, anchorLocalY));
-            position = new Vector3(moved.x, moved.y, 0f) - rotation * anchor;
+            float probe = Mathf.Max(1f, FootBand * 0.25f);
+            Vector2 t = Apply(anchor + new Vector2(probe, 0f)) - a;
+
+            float deg = t.sqrMagnitude > 1e-8f ? Mathf.Atan2(t.y, t.x) * Mathf.Rad2Deg : 0f;
+            rotation = Quaternion.Euler(0f, 0f, deg);
+            position = new Vector3(a.x, a.y, 0f) - rotation * new Vector3(anchor.x, anchor.y, 0f);
         }
     }
 }
