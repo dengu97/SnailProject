@@ -31,11 +31,25 @@ namespace SnailPet
         /// </summary>
         private const float AutoQuitSeconds = 40f;
 
+        /// <summary>데모용. 먹이를 자동으로 떨어뜨릴지. 다른 것을 관찰할 때는 꺼 둔다.</summary>
+        private const bool DemoFoodEnabled = false;
+
         /// <summary>데모용. 이 간격마다 먹이를 하나 떨어뜨린다.</summary>
         private const float DemoFoodSeconds = 5f;
 
         /// <summary>레벨업 3600초·포만 감소 120초를 눈으로 보려면 시간을 당겨야 한다. 40초 실행 = 약 80분.</summary>
         private const float DemoTimeScale = 120f;
+
+        /// <summary>
+        /// 데모용 이동 속도 배수.
+        ///
+        /// 실제 속도(24~252px/s)로는 3840px 짜리 화면에서 모서리까지 가는 데만 100초가 넘어
+        /// 40초 실행 안에 모서리 도는 것을 한 번도 볼 수 없다. 관찰용으로만 당긴다.
+        /// </summary>
+        private const float DemoSpeedScale = 5f;
+
+        /// <summary>데모용 시작 위치. 1 에 가까울수록 모서리 바로 앞에서 시작한다.</summary>
+        private const float DemoStartT = 0.94f;
 
         /// <summary>
         /// 달팽이가 기어다닐 박스를 무엇으로 삼을지.
@@ -196,7 +210,7 @@ namespace SnailPet
             Say("[3] 투명 창 적용 ..... " + (ok ? "OK" : "실패: " + TransparentWindow.LastError));
             Say("[4] 클릭 통과 ....... " + (TransparentWindow.IsClickThrough() ? "OK" : "미적용"));
 
-            _anchor = new BoxAnchor { Edge = BoxEdge.Bottom, T = 0.05f, Forward = true };
+            _anchor = new BoxAnchor { Edge = BoxEdge.Bottom, T = DemoStartT, Forward = true };
             _box = ResolveBox();
             Say("[5] 박스 ............ " + BoxName + "  " + _box);
 #endif
@@ -331,6 +345,9 @@ namespace SnailPet
             return sb.ToString();
         }
 
+        /// <summary>실제로 걷는 속도. 데모 배수가 걸려 있으므로 이동과 출렁임이 같은 값을 봐야 한다.</summary>
+        private float WalkSpeed => _growth.PixelsPerSecond * DemoSpeedScale;
+
         /// <summary>레벨이 바뀌면 크기를 다시 맞춘다. 속도는 매 프레임 읽으므로 여기선 안 건드린다.</summary>
         private void ApplyGrowth()
         {
@@ -394,6 +411,7 @@ namespace SnailPet
             {
                 if (!_peeling) StepBehaviour(halfExtent, Time.deltaTime);   // 잡고 있는 동안엔 안 기어간다
                 pose = BoxWalk.Evaluate(_box, _anchor, footDepth, halfExtent);
+                LogTurn();
             }
 
             if (pose.Valid)
@@ -448,7 +466,23 @@ namespace SnailPet
             }
 
             _state = _target != null ? PetState.Seek : PetState.Wander;
-            _anchor = BoxWalk.Advance(_box, _anchor, _growth.PixelsPerSecond, deltaTime, halfExtent);
+            _anchor = BoxWalk.Advance(_box, _anchor, WalkSpeed, deltaTime, halfExtent);
+        }
+
+        /// <summary>모서리를 실제로 돌았는지 리포트에 남긴다. 화면을 못 볼 때 이것으로 확인한다.</summary>
+        private bool _wasTurning;
+        private void LogTurn()
+        {
+            bool turning = _anchor.Turn > 0f;
+            if (turning == _wasTurning) return;
+            _wasTurning = turning;
+
+            if (turning)
+            {
+                var to = _anchor.TurnToNext ? BoxWalk.Next(_anchor.Edge) : BoxWalk.Prev(_anchor.Edge);
+                Say($"      [{_t:0.0}s] 모서리 진입: {_anchor.Edge} → {to}");
+            }
+            else Say($"      [{_t:0.0}s] 모서리 통과 완료 → {_anchor.Edge} 벽");
         }
 
         private void Eat(FoodItem item)
@@ -464,7 +498,7 @@ namespace SnailPet
         /// <summary>데모용. 실제로는 유저가 상점에서 사서 원하는 위치에 떨어뜨린다.</summary>
         private void DemoDropFood()
         {
-            if (_t < _nextFoodAt) return;
+            if (!DemoFoodEnabled || _t < _nextFoodAt) return;
             _nextFoodAt = _t + DemoFoodSeconds;
 
             // 아트가 있는 먹이만 놓을 수 있다
@@ -601,7 +635,7 @@ namespace SnailPet
             else
             {
                 // 벽에 붙어 기어가는 중
-                float speed = _growth.PixelsPerSecond;
+                float speed = WalkSpeed;
                 _wobblePhase += speed * Time.deltaTime / WobbleWavelength;
 
                 float amp = Mathf.Clamp01(speed / WobbleFullSpeed);
