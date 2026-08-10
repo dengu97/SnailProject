@@ -65,6 +65,41 @@ namespace SnailPet.Ui
             public static readonly RectInt Maximize = new RectInt(152,  19, 28, 28);
         }
 
+        /// <summary>
+        /// 최대화 상태에서 왼쪽에 붙는 목록 패널과 탭.
+        ///
+        /// 오른쪽 상세 패널은 디폴트 상태와 <b>완전히 같은 레이아웃</b>이다 (목업에서 확인).
+        /// 그래서 최대화는 「디폴트 패널 왼쪽에 목록을 덧붙이는 것」으로 끝난다.
+        /// 좌표는 목록 패널 왼쪽 위가 원점.
+        /// </summary>
+        public static class Max
+        {
+            /// <summary>탭 4개. 달팽이 정보 · 음식 목록 · 보유중인 알 · 상점.</summary>
+            public static readonly RectInt[] Tabs =
+            {
+                new RectInt( 12, -25, 28, 25),
+                new RectInt( 46, -25, 28, 25),
+                new RectInt( 81, -25, 28, 25),
+                new RectInt(116, -25, 28, 25),
+            };
+
+            public const int RowCount = 4;
+            public static readonly RectInt Row = new RectInt(10, 27, 155, 40);
+            public const int RowStep = 47;
+
+            // 아래는 행 왼쪽 위가 원점
+            public static readonly RectInt RowThumb  = new RectInt(  5,  4, 32, 32);
+            public static readonly RectInt RowName   = new RectInt( 42,  3, 92, 16);
+            public static readonly RectInt RowRarity = new RectInt( 42, 21, 32, 14);
+            public static readonly RectInt RowAge    = new RectInt( 78, 21, 32, 14);
+            public static readonly RectInt RowSwap   = new RectInt(137,  9, 22, 22);
+        }
+
+        // ── 최대화에서 쓰는 색 ──
+        public static readonly Color TabOn   = Hex("FFD966");   // 선택된 탭
+        public static readonly Color TabOff  = Accent;          // 나머지 탭 (설정 버튼과 같은 색)
+        public static readonly Color RowSlot = Hex("4472C4");   // 목록 행의 썸네일 자리
+
         /// <summary>화면 모서리에서 띄우는 여백.</summary>
         public const int ScreenMargin = 16;
     }

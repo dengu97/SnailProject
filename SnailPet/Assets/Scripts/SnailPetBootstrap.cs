@@ -352,6 +352,17 @@ namespace SnailPet
             _ui.Settings += () => Say("      [UI] 설정");
             _ui.Close    += () => Say("      [UI] 최소화");
             _ui.Maximize += () => Say("      [UI] 최대화");
+            _ui.TabChanged += i => Say($"      [UI] 탭 {i}");
+            _ui.SwapTo     += i => Say($"      [UI] {i}번 달팽이로 교체");
+
+            // 목록은 아직 더미다. 보유 달팽이를 들고 있는 곳이 생기면 그걸 넘긴다.
+            _ui.SetRows(new (string, RarityType, int, bool)[]
+            {
+                (null, _rarity,             _growth.Level, true),
+                (null, RarityType.Common,   3,             false),
+                (null, RarityType.Rare,     7,             false),
+                (null, RarityType.Legendary, 12,           false),
+            });
 
             // 패널 가운데의 달팽이 모습. 살아있는 쪽은 벽을 따라 돌아가 있고 변형 중이라
             // 비출 수 없다. 같은 외형으로 정지 복제본을 만들어 전용 카메라로 찍는다.

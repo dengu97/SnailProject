@@ -3,11 +3,16 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using At = SnailPet.Ui.UiTheme.At;
+using Max = SnailPet.Ui.UiTheme.Max;
 
 namespace SnailPet.Ui
 {
     /// <summary>
-    /// 데스크톱 위젯 UI. 지금은 목업의 「디폴트」 상태만 만든다.
+    /// 데스크톱 위젯 UI. 목업의 「디폴트」와 「최대화」 두 상태를 만든다.
+    ///
+    /// 최대화는 상세 패널 왼쪽에 목록 패널과 탭을 덧붙이는 것이다. 오른쪽 상세 패널은
+    /// 디폴트와 완전히 같은 레이아웃이라(목업에서 확인) 그대로 재사용한다.
+    /// 위젯이 화면 오른쪽에 붙어 있어 목록이 열려도 상세 패널은 제자리에 남는다.
     ///
     /// 씬 없이 전부 코드로 만드는 것은 달팽이 쪽과 같은 방침이다.
     /// 글꼴은 TextMeshPro 대신 OS 한글 폰트를 런타임에 잡아 쓴다. TMP 는 한글
@@ -23,6 +28,11 @@ namespace SnailPet.Ui
         {
             public const string Age    = "[레벨]";     // "{0}살"
             public const string NoName = "[이름없음]";
+            public const string SnailList = "[달팽이목록]";
+            public const string FoodList  = "[음식목록]";
+            public const string EggList   = "[보유중인알]";
+            public const string Shop      = "[상점]";
+            public const string Feed      = "[먹이기]";
         }
 
         /// <summary>한 화면에 위젯이 두 개 이상 뜰 일이 없으므로 정렬 순서는 고정.</summary>
@@ -30,6 +40,7 @@ namespace SnailPet.Ui
 
         private Font _font;
         private RectTransform _widget;      // 패널 + 밖으로 걸치는 버튼까지 감싸는 상자
+        private RectTransform _listRoot, _detailRoot;
         private RectTransform _panel;
 
         private Text _nameText, _rarityText, _ageText, _coinText;
@@ -37,6 +48,12 @@ namespace SnailPet.Ui
         private RectTransform _fullFill, _happyFill;
 
         public event Action Rename, Detail, Wardrobe, Gene, Sell, Settings, Close, Maximize;
+        public event Action<int> TabChanged, SwapTo;
+
+        private Image[] _tabs;
+        private ListRow[] _rows;
+        private Text _listTitle;
+        private int _tab;
 
         public static SnailUi Create(Transform parent)
         {
@@ -69,17 +86,28 @@ namespace SnailPet.Ui
             EnsureEventSystem();
 
             // 위젯 상자를 화면 오른쪽 아래에 붙인다. 코인 줄이 패널 위로 올라가므로 그만큼 키운다.
+            // 폭은 최대화 기준으로 잡아 둔다. 오른쪽에 붙어 있으므로 목록이 열려도
+            // 상세 패널은 화면에서 제자리에 남고 왼쪽으로만 자란다.
             _widget = NewRect("Widget", (RectTransform)transform);
             _widget.anchorMin = _widget.anchorMax = _widget.pivot = new Vector2(1f, 0f);
-            _widget.sizeDelta = new Vector2(At.Close.xMax, UiTheme.PanelH - At.Coin.y);
+            _widget.sizeDelta = new Vector2(UiTheme.PanelW + At.Close.xMax, UiTheme.PanelH - At.Coin.y);
             _widget.anchoredPosition = new Vector2(-UiTheme.ScreenMargin, UiTheme.ScreenMargin);
 
-            _panel = Panel(_widget, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
+            _listRoot = NewRect("List", _widget);
+            Place(_listRoot, new RectInt(0, 0, UiTheme.PanelW, UiTheme.PanelH - At.Coin.y));
+
+            _detailRoot = NewRect("Detail", _widget);
+            Place(_detailRoot, new RectInt(UiTheme.PanelW, 0, At.Close.xMax, UiTheme.PanelH - At.Coin.y));
+
+            _panel = Panel(_detailRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
 
             BuildHeader();
             BuildGauges();
             BuildActions();
             BuildOutside();
+            BuildList();
+
+            SetMaximized(false);
 
             SetSnail("달팽이 이름", SnailPet.Data.RarityType.Epic, 0);
             SetGauges(0.62f, 0.28f);
@@ -100,6 +128,7 @@ namespace SnailPet.Ui
             // 아트가 없으면 알약에 enum 이름을 그대로 띄운다 — 비어 보이지 않게 하려는 것이다.
             _rarityBadge = Box(_panel, At.Rarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
             _rarityText  = Label(_panel, At.Rarity, "", 9, UiTheme.OnBadge);
+            Shrink(_rarityText);
 
             var iconRect = new RectInt(At.Rarity.x + (At.Rarity.width - At.Rarity.height) / 2,
                                        At.Rarity.y, At.Rarity.height, At.Rarity.height);
@@ -175,25 +204,133 @@ namespace SnailPet.Ui
         /// <summary>패널 밖으로 걸치는 것들. 설정 · 코인 · 닫기 · 최대화.</summary>
         private void BuildOutside()
         {
-            IconButton(_widget, Above(At.Settings), "icon_settings", "Settings",
+            IconButton(_detailRoot, Above(At.Settings), "icon_settings", "Settings",
                        () => Settings?.Invoke(), UiTheme.Accent);
 
             var coin = Above(At.Coin);
-            Box(_widget, coin, UiTheme.Slot, UiSprites.Shape.Badge, "CoinPill");
-            Icon(_widget, new RectInt(coin.x + 4, coin.y + 6, 22, 22), "icon_coin",
+            Box(_detailRoot, coin, UiTheme.Slot, UiSprites.Shape.Badge, "CoinPill");
+            Icon(_detailRoot, new RectInt(coin.x + 4, coin.y + 6, 22, 22), "icon_coin",
                  Color.white, "CoinIcon").raycastTarget = false;
-            _coinText = Label(_widget, new RectInt(coin.x + 30, coin.y, coin.width - 34, coin.height),
+            _coinText = Label(_detailRoot, new RectInt(coin.x + 30, coin.y, coin.width - 34, coin.height),
                               "5,000", 12, UiTheme.Ink);
 
             // 이 둘은 다른 아이콘과 달리 아트에 색이 들어 있다. 물들이면 안 된다.
-            IconButton(_widget, Above(At.Close),    "btn_close",    "Close",
-                       () => Close?.Invoke(), tint: Color.white);
-            IconButton(_widget, Above(At.Maximize), "btn_maximize", "Maximize",
-                       () => Maximize?.Invoke(), tint: Color.white);
+            IconButton(_detailRoot, Above(At.Close),    "btn_close",    "Close",
+                       () => { SetMaximized(false); Close?.Invoke(); }, tint: Color.white);
+            IconButton(_detailRoot, Above(At.Maximize), "btn_maximize", "Maximize",
+                       () => { SetMaximized(true); Maximize?.Invoke(); }, tint: Color.white);
         }
 
         /// <summary>위젯 상자 기준 좌표로 옮긴다. 목업은 패널 왼쪽 위가 원점이라 코인 줄만큼 내려 준다.</summary>
         private static RectInt Above(RectInt r) => new RectInt(r.x, r.y - At.Coin.y, r.width, r.height);
+
+        /// <summary>
+        /// 최대화에서 왼쪽에 붙는 목록. 탭 4개 + 목록 패널 + 행 4개.
+        /// 행 내용은 아직 더미다. 실제 보유 목록이 생기면 <see cref="SetRows"/> 로 채운다.
+        /// </summary>
+        private void BuildList()
+        {
+            var tabKeys  = new[] { "icon_snail", "icon_food", "icon_egg", "icon_shop" };
+            var tabNames = new[] { "TabSnail", "TabFood", "TabEgg", "TabShop" };
+
+            _tabs = new Image[Max.Tabs.Length];
+            for (int i = 0; i < _tabs.Length; i++)
+            {
+                int index = i;
+                var btn = IconButton(_listRoot, Above(Max.Tabs[i]), tabKeys[i], tabNames[i],
+                                     () => SetTab(index), UiTheme.TabOff);
+                _tabs[i] = btn.GetComponent<Image>();
+            }
+
+            var panel = Panel(_listRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
+            _listTitle = Label(panel, new RectInt(0, 8, UiTheme.PanelW, 16), "", 12, UiTheme.Ink);
+
+            _rows = new ListRow[Max.RowCount];
+            for (int i = 0; i < _rows.Length; i++)
+            {
+                var r = Max.Row;
+                _rows[i] = BuildRow(panel, new RectInt(r.x, r.y + i * Max.RowStep, r.width, r.height), i);
+            }
+
+            SetTab(0);
+        }
+
+        /// <summary>목록 한 줄. 썸네일 · 이름 · 등급 · 나이 · 교체 버튼.</summary>
+        private sealed class ListRow
+        {
+            public Image Thumb;
+            public Text Name, Rarity, Age;
+            public Button Swap;
+        }
+
+        private ListRow BuildRow(RectTransform parent, RectInt at, int index)
+        {
+            var rowRt = NewRect("Row" + index, parent);
+            Place(rowRt, at);
+
+            var bg = rowRt.gameObject.AddComponent<Image>();
+            bg.sprite = UiSprites.Of(UiSprites.Shape.Slot);
+            bg.type = Image.Type.Sliced;
+            bg.color = UiTheme.Slot;
+
+            var row = new ListRow
+            {
+                Thumb  = Box(rowRt, Max.RowThumb, UiTheme.RowSlot, UiSprites.Shape.Slot, "Thumb"),
+                Name   = Label(rowRt, Max.RowName, "", 11, UiTheme.Ink),
+                Rarity = null,
+                Age    = null,
+            };
+
+            Box(rowRt, Max.RowRarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
+            row.Rarity = Label(rowRt, Max.RowRarity, "", 8, UiTheme.OnBadge);
+            Shrink(row.Rarity);
+
+            Box(rowRt, Max.RowAge, UiTheme.Slot, UiSprites.Shape.Badge, "AgeBadge");
+            row.Age = Label(rowRt, Max.RowAge, "", 8, UiTheme.Ink);
+
+            int captured = index;
+            row.Swap = IconButton(rowRt, Max.RowSwap, "icon_swap", "Swap", () => SwapTo?.Invoke(captured));
+            return row;
+        }
+
+        /// <summary>지금 나와 있는 달팽이는 교체 버튼이 없다 (목업 주석).</summary>
+        public void SetRows((string name, SnailPet.Data.RarityType rarity, int age, bool isActive)[] rows)
+        {
+            for (int i = 0; i < _rows.Length; i++)
+            {
+                bool has = rows != null && i < rows.Length;
+                _rows[i].Name.transform.parent.gameObject.SetActive(has);
+                if (!has) continue;
+
+                var r = rows[i];
+                _rows[i].Name.text   = string.IsNullOrWhiteSpace(r.name)
+                                     ? SnailPet.Data.Loc.Text(Keys.NoName) : r.name;
+                _rows[i].Rarity.text = r.rarity.ToString();
+                _rows[i].Age.text    = SnailPet.Data.Loc.Format(Keys.Age, r.age);
+                _rows[i].Swap.gameObject.SetActive(!r.isActive);
+            }
+        }
+
+        /// <summary>탭 선택. 지금은 색만 바뀌고 내용은 그대로다.</summary>
+        public void SetTab(int index)
+        {
+            _tab = Mathf.Clamp(index, 0, _tabs.Length - 1);
+            for (int i = 0; i < _tabs.Length; i++)
+                _tabs[i].color = i == _tab ? UiTheme.TabOn : UiTheme.TabOff;
+
+            string[] titles = { Keys.SnailList, Keys.FoodList, Keys.EggList, Keys.Shop };
+            _listTitle.text = SnailPet.Data.Loc.Text(titles[_tab]);
+            TabChanged?.Invoke(_tab);
+        }
+
+        /// <summary>목록을 펼칠지. 상세 패널은 화면에서 제자리에 남는다.</summary>
+        public void SetMaximized(bool on)
+        {
+            Maximized = on;
+            _listRoot.gameObject.SetActive(on);
+        }
+
+        public bool Maximized { get; private set; }
 
         // ── 값 넣기 ──
 
@@ -244,15 +381,23 @@ namespace SnailPet.Ui
         /// </summary>
         public bool ContainsCursor(int virtualX, int virtualY, int vLeft, int vTop, int vHeight)
         {
-            if (_widget == null) return false;
+            var es = EventSystem.current;
+            if (es == null) return false;
 
-            float x = virtualX - vLeft;
-            float y = vHeight - (virtualY - vTop);     // 유니티 화면 좌표로
+            // 사각형으로 재면 안 된다. 위젯 상자는 최대화 기준으로 잡혀 있어서 목록을 접었을 때
+            // 비어 있는 왼쪽 절반까지 UI 로 잡히고, 그 위에서 바탕화면 클릭이 막힌다.
+            // 레이캐스터에 물어보면 실제로 그려진 것만 걸린다.
+            _pointer ??= new PointerEventData(es);
+            _pointer.position = new Vector2(virtualX - vLeft, vHeight - (virtualY - vTop));
 
-            var c = new Vector3[4];
-            _widget.GetWorldCorners(c);                // 오버레이 캔버스에서는 월드 = 화면 픽셀
-            return x >= c[0].x && x <= c[2].x && y >= c[0].y && y <= c[2].y;
+            _hits.Clear();
+            es.RaycastAll(_pointer, _hits);
+            return _hits.Count > 0;
         }
+
+        private PointerEventData _pointer;
+        private readonly System.Collections.Generic.List<RaycastResult> _hits =
+            new System.Collections.Generic.List<RaycastResult>();
 
         // ── 잡동사니 ──
 
@@ -282,6 +427,15 @@ namespace SnailPet.Ui
 
             Debug.LogWarning("[SnailPet] 한글 글꼴을 찾지 못했습니다. 글자가 네모로 나올 수 있습니다.");
             return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        }
+
+        /// <summary>칸을 넘치는 글자를 줄여 맞춘다. 등급 이름이 아이콘으로 바뀌기 전까지의 임시 표시용.</summary>
+        private static void Shrink(Text t)
+        {
+            t.resizeTextForBestFit = true;
+            t.resizeTextMinSize = 5;
+            t.resizeTextMaxSize = t.fontSize;
+            t.horizontalOverflow = HorizontalWrapMode.Wrap;
         }
 
         private static RectTransform NewRect(string name, RectTransform parent)
