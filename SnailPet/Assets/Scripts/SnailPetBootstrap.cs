@@ -99,8 +99,11 @@ namespace SnailPet
         /// <summary>이만큼(px) 당기면 떨어진다.</summary>
         private const float PeelThreshold = 72f;
 
-        /// <summary>임계점에서의 몸통 신장 비율. 1.35 면 35% 늘어난다.</summary>
+        /// <summary>임계점에서의 몸통 신장 비율. 0.35 면 35% 늘어난다.</summary>
         private const float PeelMaxStretch = 0.35f;
+
+        /// <summary>떼는 동안 벽을 따라 끌려가며 기울어지는 최대 각(도).</summary>
+        private const float PeelMaxLeanDeg = 18f;
 
         /// <summary>떨어지는 순간 되튕기는 양. 음수라 잠깐 움츠러든다.</summary>
         private const float PopRecoil = -0.22f;
@@ -108,12 +111,34 @@ namespace SnailPet
         private const float SpringStiffness = 320f;
         private const float SpringDamping = 12f;
 
+        // ── 들고 다닐 때 ──
+        // 손이 움직이면 몸이 못 따라오고 늘어졌다가 흔들린다.
+        // 속도를 그대로 스프링 목표로 주면 지연도 잔진동도 공짜로 나온다.
+        private const float CarryStretchPerSpeed = 0.00020f;   // 약 1400px/s 에서 최대
+        private const float CarryMaxStretch = 0.28f;
+        private const float CarryLeanPerSpeed = 0.014f;
+        private const float CarryMaxLeanDeg = 22f;
+
+        /// <summary>떨어지는 동안 아래로 늘어지는 정도.</summary>
+        private const float FallStretchPerSpeed = 0.00014f;
+        private const float FallMaxStretch = 0.20f;
+
+        /// <summary>착지 충격 → 찌그러짐. 속도(px/s)에 곱해 스프링에 속도로 꽂는다.</summary>
+        private const float LandingSquashPerSpeed = 0.0028f;
+        private const float LandingSquashMax = 4.5f;
+
+        /// <summary>스프라이트가 뒤집히거나 0 이 되지 않게 막는 한계.</summary>
+        private const float MinStretch = -0.45f, MaxStretch = 0.60f;
+
         /// <summary>누르고 있지만 아직 안 떨어진 상태.</summary>
         private bool _peeling;
         private Vector2 _grabScreen;
 
         private float _stretch, _stretchVel, _stretchTarget;   // 0 = 평소, 양수 = 늘어남
-        private float _lean, _leanVel, _leanTarget;            // 벽을 따라 기울어지는 정도(로컬 단위)
+        private float _lean, _leanVel, _leanTarget;            // 몸통이 기울어지는 각(도)
+
+        private Vector2 _handVel, _lastCursor;
+        private bool _hasLastCursor;
 
         /// <summary>껍질 중심의 로컬 y. 몸이 늘어난 만큼 껍질을 평행이동시킬 때 쓴다.</summary>
         private float _shellCenterLocalY;
@@ -227,32 +252,49 @@ namespace SnailPet
         }
 
         /// <summary>
-        /// 늘어남을 실제 트랜스폼에 적용한다.
+        /// 늘어남과 기울기를 실제 트랜스폼에 적용한다.
         ///
-        /// 발을 피벗으로 세로 스케일을 주면 발 근처는 거의 안 움직이고 멀수록 크게 늘어난다.
-        /// 「발은 붙어 있는데 몸이 딸려온다」가 이 기울기에서 나온다. 뼈대 없이 되는 이유다.
-        /// 껍질은 늘어나지 않고, 그 높이의 변위만큼 평행이동만 한다.
+        /// 발을 피벗으로 삼는 것이 핵심이다. 발 근처는 거의 안 움직이고 멀수록 크게 움직여
+        /// 「발은 붙어 있는데 몸이 딸려온다」가 뼈대 없이 나온다.
+        ///
+        /// 세로로 늘 때 가로를 같은 비율로 줄이는 것(부피 보존)이 「말랑하다」로 읽히게 하는
+        /// 거의 전부다. 이게 없으면 그냥 스프라이트가 커졌다 작아졌다 하는 것으로 보인다.
+        ///
+        /// 껍질은 단단해야 하므로 늘어나지 않는다. 몸이 껍질 높이에서 만든 변위·회전만
+        /// 그대로 받아 통째로 따라간다.
         /// </summary>
         private void ApplyDeform()
         {
             if (_composed == null) return;
 
-            float s = 1f + _stretch;
+            float sy = 1f + _stretch;
+            float sx = 1f / Mathf.Sqrt(Mathf.Max(0.2f, sy));
+
+            // 좌우 반전된 달팽이는 자식의 회전도 거울로 보이므로 각도를 미리 되돌린다
+            float deg = _lean * (_snail != null && _snail.localScale.x < 0f ? -1f : 1f);
+
+            var rot   = Quaternion.Euler(0f, 0f, deg);
+            var scale = new Vector3(sx, sy, 1f);
+            var foot  = new Vector3(0f, _bounds.Foot, 0f);
+
+            // 발 f 를 중심으로 늘리고 기울인다:  p' = R*(S*(p-f)) + f
             var soft = _composed.GroupOrNull(PartsLayer.DeformGroupOf(PartsType.Body));
             if (soft != null)
             {
-                soft.localScale = new Vector3(1f, s, 1f);
-                // 발(_bounds.Foot)이 제자리에 남도록 보정. p*s + off = p 에서 off = Foot*(1-s).
-                soft.localPosition = new Vector3(_lean, _bounds.Foot * (1f - s), 0f);
+                soft.localScale = scale;
+                soft.localRotation = rot;
+                soft.localPosition = foot - rot * Vector3.Scale(scale, foot);
             }
 
             var rigid = _composed.GroupOrNull(PartsLayer.RigidGroup);
             if (rigid != null)
             {
-                // 같은 지점의 변위: d(y) = (s-1) * (y - Foot)
-                float d = (s - 1f) * (_shellCenterLocalY - _bounds.Foot);
+                // 껍질 중심이 몸을 따라간 자리로 강체 이동. 스케일은 주지 않는다.
+                var c = new Vector3(0f, _shellCenterLocalY, 0f);
+                Vector3 moved = rot * Vector3.Scale(scale, c - foot) + foot;
                 rigid.localScale = Vector3.one;
-                rigid.localPosition = new Vector3(_lean, d, 0f);
+                rigid.localRotation = rot;
+                rigid.localPosition = moved - rot * c;
             }
         }
 
@@ -312,7 +354,7 @@ namespace SnailPet
             _food.Tick(Time.deltaTime, _box.Bottom);
             UpdateFoodTransforms(px);
 
-            StepDrag(footDepth, halfExtent, px);
+            StepDrag(footDepth, halfExtent);
 
             SnailPose pose;
             if (SnailFree)
@@ -330,7 +372,7 @@ namespace SnailPet
             }
             else
             {
-                StepBehaviour(halfExtent, Time.deltaTime);
+                if (!_peeling) StepBehaviour(halfExtent, Time.deltaTime);   // 잡고 있는 동안엔 안 기어간다
                 pose = BoxWalk.Evaluate(_box, _anchor, footDepth, halfExtent);
             }
 
@@ -342,6 +384,9 @@ namespace SnailPet
 
                 StepPresent(pose, footDepth, px);
             }
+
+            // 반전 여부를 읽어야 하므로 루트 스케일이 정해진 뒤에 적용한다
+            ApplyDeform();
 #endif
             if (!_diagDone && _t > 1f) { LogDiagnostics(); _diagDone = true; }
 
@@ -438,11 +483,21 @@ namespace SnailPet
         /// 창이 포커스를 갖지 않으므로 버튼 상태는 전역으로 읽는다.
         /// 놓으면 달팽이든 먹이든 <b>아래로만</b> 떨어진다. 벽에 스냅하지 않는다.
         /// </summary>
-        private void StepDrag(float footDepth, float halfExtent, float px)
+        private void StepDrag(float footDepth, float halfExtent)
         {
             bool down = TransparentWindow.IsLeftMouseDown();
             bool hasCursor = TransparentWindow.TryGetCursor(out int cx, out int cy);
             var cursor = new Vector2(cx, cy);
+
+            // 손 속도. 프레임 단위로 튀므로 지수 평활을 한 겹 씌운다.
+            if (hasCursor && _hasLastCursor && Time.deltaTime > 0f)
+            {
+                var raw = (cursor - _lastCursor) / Time.deltaTime;
+                _handVel = Vector2.Lerp(_handVel, raw, 1f - Mathf.Exp(-18f * Time.deltaTime));
+            }
+            else if (!hasCursor) _handVel = Vector2.zero;
+            _lastCursor = cursor;
+            _hasLastCursor = hasCursor;
 
             if (down && !_wasMouseDown && hasCursor)
             {
@@ -491,11 +546,13 @@ namespace SnailPet
                 float away  = Vector2.Dot(pull, -n);      // 벽에서 멀어지는 성분
                 float along = Vector2.Dot(pull, dir);     // 벽을 따라가는 성분
 
-                float pxToLocal = 1f / Mathf.Max(0.0001f, px * _scale);
                 _stretchTarget = Mathf.Clamp01(away / PeelThreshold) * PeelMaxStretch;
-                _leanTarget = Mathf.Clamp(along, -PeelThreshold, PeelThreshold) * pxToLocal * 0.4f;
+                _leanTarget = Mathf.Clamp(along / PeelThreshold, -1f, 1f) * -PeelMaxLeanDeg;
 
-                if (away >= PeelThreshold)
+                // 커서가 얼마나 갔는지가 아니라 몸이 실제로 얼마나 늘어났는지로 판정한다.
+                // 확 잡아채도 스프링이 따라잡을 때까지는 안 떨어지므로
+                // 「쭉 늘어나는 것을 보고 나서 툭」이 항상 보인다.
+                if (away >= PeelThreshold && _stretch >= PeelMaxStretch * 0.9f)
                 {
                     _peeling = false;
                     _drag = DragTarget.Snail;
@@ -506,6 +563,19 @@ namespace SnailPet
                     _stretchVel += PopRecoil * SpringStiffness * 0.05f;   // 툭 하고 되튕긴다
                     Say("      벽에서 떨어졌습니다.");
                 }
+            }
+            else if (_drag == DragTarget.Snail)
+            {
+                // 들고 흔드는 중. 위로 채면 늘어지고, 내리누르면 눌린다.
+                // 화면 y 는 아래가 +, 그래서 위로 가는 손은 -y 다.
+                _stretchTarget = Mathf.Clamp(-_handVel.y * CarryStretchPerSpeed,
+                                             -CarryMaxStretch * 0.7f, CarryMaxStretch);
+                _leanTarget = Mathf.Clamp(_handVel.x * CarryLeanPerSpeed,
+                                          -CarryMaxLeanDeg, CarryMaxLeanDeg);
+            }
+            else if (_snailFalling)
+            {
+                _stretchTarget = Mathf.Clamp(_snailVelY * FallStretchPerSpeed, 0f, FallMaxStretch);
             }
 
             if (!down && _wasMouseDown && _peeling)
@@ -552,6 +622,10 @@ namespace SnailPet
             // 목표가 0 으로 돌아가면 지나쳤다 돌아오며 출렁인다.
             Spring(ref _stretch, ref _stretchVel, _stretchTarget, Time.deltaTime);
             Spring(ref _lean,    ref _leanVel,    _leanTarget,    Time.deltaTime);
+
+            // 세게 튕겼을 때 스프라이트가 뒤집히거나 납작해지지 않게만 막는다
+            if (_stretch < MinStretch) { _stretch = MinStretch; if (_stretchVel < 0f) _stretchVel = 0f; }
+            if (_stretch > MaxStretch) { _stretch = MaxStretch; if (_stretchVel > 0f) _stretchVel = 0f; }
         }
 
         private static void Spring(ref float value, ref float velocity, float target, float dt)
@@ -584,6 +658,9 @@ namespace SnailPet
             _snailFootScreen.y += _snailVelY * Time.deltaTime;
 
             if (_snailFootScreen.y < _box.Bottom) return;
+
+            // 착지 충격을 스프링에 속도로 꽂는다. 빨리 떨어질수록 크게 찌그러졌다 돌아온다.
+            _stretchVel -= Mathf.Min(_snailVelY * LandingSquashPerSpeed, LandingSquashMax);
 
             _snailFootScreen.y = _box.Bottom;
             _snailVelY = 0f;
