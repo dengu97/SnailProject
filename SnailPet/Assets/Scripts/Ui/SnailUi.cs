@@ -15,6 +15,15 @@ namespace SnailPet.Ui
     /// </summary>
     public sealed class SnailUi : MonoBehaviour
     {
+        /// <summary>
+        /// UI 에 나가는 글자의 언어 키. 여기 없는 글자가 화면에 있으면 안 된다.
+        /// 값은 LanguageData 시트에 있고, 없는 키는 토큰이 그대로 화면에 나와 바로 눈에 띈다.
+        /// </summary>
+        private static class Keys
+        {
+            public const string Age = "[레벨]";      // "{0}살"
+        }
+
         /// <summary>한 화면에 위젯이 두 개 이상 뜰 일이 없으므로 정렬 순서는 고정.</summary>
         private const int CanvasSortOrder = 100;
 
@@ -182,7 +191,7 @@ namespace SnailPet.Ui
         {
             _nameText.text = name;
             _rarityText.text = rarity;
-            _ageText.text = age + "살";
+            _ageText.text = SnailPet.Data.Loc.Format(Keys.Age, age);
         }
 
         public void SetGauges(float fullRatio, float happyRatio)

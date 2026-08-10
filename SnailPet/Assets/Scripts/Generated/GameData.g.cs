@@ -168,11 +168,13 @@ namespace SnailPet.Data
     {
         public readonly int Id;
         public readonly string ResourceKey;
+        public readonly double ResourceSize;
 
-        public BubbleDataRow(int id, string resourceKey)
+        public BubbleDataRow(int id, string resourceKey, double resourceSize)
         {
             Id = id;
             ResourceKey = resourceKey;
+            ResourceSize = resourceSize;
         }
     }
 
@@ -356,6 +358,18 @@ namespace SnailPet.Data
         }
     }
 
+    public sealed class LanguageDataRow
+    {
+        public readonly int Id;
+        public readonly string Kr;
+
+        public LanguageDataRow(int id, string kr)
+        {
+            Id = id;
+            Kr = kr;
+        }
+    }
+
     public static class GameData
     {
         public static readonly EnumDataRow[] EnumData = new EnumDataRow[]
@@ -446,14 +460,16 @@ namespace SnailPet.Data
             new PartsDataRow(28, 2, RarityType.Common, PartsType.Feeler, "commonfeeler03", true, new string[] { "commonfeeler03_c01" }, 10, "만두를 먹어보고 싶었던 더듬이."),
             new PartsDataRow(29, 2, RarityType.Common, PartsType.Feeler, "commonfeeler04", true, new string[] { "commonfeeler04_c01" }, 10, "연두색의 더듬이."),
             new PartsDataRow(30, 2, RarityType.Common, PartsType.Feeler, "commonfeeler04", true, new string[] { "commonfeeler04_c02" }, 10, "갈색의 더듬이."),
+            new PartsDataRow(54, 17, RarityType.Common, PartsType.Feeler, "commonfeeler05", true, new string[] { "commonfeeler05_c01" }, 10, "갈색 얼룩 고양이 귀."),
+            new PartsDataRow(55, 17, RarityType.Common, PartsType.Feeler, "commonfeeler05", true, new string[] { "commonfeeler05_c02" }, 10, "분홍 얼룩 고양이 귀."),
         };
 
         public static readonly FoodDataRow[] FoodData = new FoodDataRow[]
         {
             new FoodDataRow(31, FoodType.vegetable, "상추", 5d, 3d, 0, null, "food_lettuce"),
             new FoodDataRow(32, FoodType.vegetable, "토마토", 7d, 5d, 0, null, null),
-            new FoodDataRow(33, FoodType.vegetable, "애호박", 7d, 5d, 0, null, null),
-            new FoodDataRow(34, FoodType.bean, "두부", 15d, 10d, 35, null, null),
+            new FoodDataRow(33, FoodType.vegetable, "애호박", 7d, 5d, 0, null, "food_zucchini"),
+            new FoodDataRow(34, FoodType.bean, "두부", 15d, 10d, 35, null, "food_tofu"),
         };
 
         public static readonly LevelDataRow[] LevelData = new LevelDataRow[]
@@ -482,7 +498,7 @@ namespace SnailPet.Data
 
         public static readonly BubbleDataRow[] BubbleData = new BubbleDataRow[]
         {
-            new BubbleDataRow(52, "bubble_coin"),
+            new BubbleDataRow(52, "bubble_coin", 5d),
         };
 
         public static readonly LevelUpAdvantageRow[] LevelUpAdvantage = new LevelUpAdvantageRow[]
@@ -556,6 +572,11 @@ namespace SnailPet.Data
         public static readonly SnailGuideRow[] SnailGuide = new SnailGuideRow[]
         {
             new SnailGuideRow(50, "일반달팽이", "아주 전형적인 달팽이.", 1, "commonshell01_c08", null, null, null, null, null, null),
+        };
+
+        public static readonly LanguageDataRow[] LanguageData = new LanguageDataRow[]
+        {
+            new LanguageDataRow(56, "{0}살"),
         };
 
         public static readonly Dictionary<int, PartsDataRow> PartsDataById = BuildPartsDataById();
@@ -638,6 +659,14 @@ namespace SnailPet.Data
             return d;
         }
 
+        public static readonly Dictionary<int, LanguageDataRow> LanguageDataById = BuildLanguageDataById();
+        private static Dictionary<int, LanguageDataRow> BuildLanguageDataById()
+        {
+            var d = new Dictionary<int, LanguageDataRow>(LanguageData.Length);
+            foreach (var row in LanguageData) d[row.Id] = row;
+            return d;
+        }
+
         /// <summary>[토큰] → ID. 번호는 세이브 데이터와 묶이므로 재배치 금지.</summary>
         public static readonly Dictionary<string, int> IdByToken = new Dictionary<string, int>
         {
@@ -694,6 +723,9 @@ namespace SnailPet.Data
             { "[부드러움]", 51 },
             { "[코인]", 52 },
             { "[일반달팽이_손몸01]", 53 },
+            { "[일반_고양이더듬이01]", 54 },
+            { "[일반_고양이더듬이02]", 55 },
+            { "[레벨]", 56 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

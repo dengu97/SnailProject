@@ -24,8 +24,8 @@ namespace SnailPet.Snail
         /// </summary>
         public const string CoinBubbleToken = "[코인]";
 
-        /// <summary>토큰 → BubbleData → 리소스 키.</summary>
-        public static string ResolveBubbleResource(string token)
+        /// <summary>토큰 → BubbleData 행.</summary>
+        public static BubbleDataRow ResolveBubble(string token)
         {
             if (!GameData.IdByToken.TryGetValue(token, out int id))
             {
@@ -37,11 +37,19 @@ namespace SnailPet.Snail
                 Debug.LogWarning("[SnailPet] BubbleData 에 없는 말풍선: " + token);
                 return null;
             }
-            return row.ResourceKey;
+            return row;
         }
 
-        /// <summary>화면에 보일 말풍선 가로 크기(px).</summary>
-        public const float BubblePixels = 92f;
+        /// <summary>
+        /// BubbleData.ResourceSize 1 당 화면 픽셀.
+        ///
+        /// 지금 화면에 뜨는 크기를 기준값 10 으로 잡았으므로, 92px / 10 = 9.2 다.
+        /// 데이터에서 20 을 주면 두 배로 커진다.
+        /// </summary>
+        public const float PixelsPerSize = 9.2f;
+
+        /// <summary>ResourceSize 를 못 읽었을 때 쓰는 크기.</summary>
+        public const float DefaultSize = 10f;
 
         /// <summary>달팽이 머리 위로 얼마나 띄울지(px).</summary>
         public const float BubbleGap = 18f;
@@ -58,10 +66,14 @@ namespace SnailPet.Snail
 
         public SnailPresent(Transform parent)
         {
-            string key = ResolveBubbleResource(CoinBubbleToken);
-            var sprite = string.IsNullOrEmpty(key)
+            var row = ResolveBubble(CoinBubbleToken);
+            var sprite = row == null || string.IsNullOrEmpty(row.ResourceKey)
                        ? null
-                       : SnailComposer.Load(SnailComposer.ResourceRoot + "/Ui/" + key);
+                       : SnailComposer.Load(SnailComposer.ResourceRoot + "/Ui/" + row.ResourceKey);
+
+            // 크기는 데이터가 정한다. 값이 없거나 0 이면 지금 크기(10)를 쓴다.
+            float size = row != null && row.ResourceSize > 0 ? (float)row.ResourceSize : DefaultSize;
+            float pixels = size * PixelsPerSize;
 
             var go = new GameObject("PresentBubble");
             go.transform.SetParent(parent, false);
@@ -74,14 +86,14 @@ namespace SnailPet.Snail
 
             if (sprite != null && SnailMetrics.TryMeasure(sprite, out var e) && e.Width > 0.01f)
             {
-                float scale = BubblePixels / e.Width;
+                float scale = pixels / e.Width;
                 go.transform.localScale = new Vector3(scale, scale, 1f);
                 HalfWidthWorld  = e.Width  * scale * 0.5f;
                 HalfHeightWorld = e.Height * scale * 0.5f;
             }
             else
             {
-                HalfWidthWorld = HalfHeightWorld = BubblePixels * 0.5f;
+                HalfWidthWorld = HalfHeightWorld = pixels * 0.5f;
                 if (sprite == null)
                     Debug.LogWarning("[SnailPet] 말풍선 리소스를 찾지 못했습니다: " + CoinBubbleToken);
             }
