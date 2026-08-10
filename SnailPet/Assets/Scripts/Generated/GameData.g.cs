@@ -59,14 +59,16 @@ namespace SnailPet.Data
         public readonly int EnumValue;
         public readonly string IconResourceKey;
         public readonly int? SortOrder;
+        public readonly int? DeformGroup;
 
-        public EnumDataRow(string enumType, string enumName, int enumValue, string iconResourceKey, int? sortOrder)
+        public EnumDataRow(string enumType, string enumName, int enumValue, string iconResourceKey, int? sortOrder, int? deformGroup)
         {
             EnumType = enumType;
             EnumName = enumName;
             EnumValue = enumValue;
             IconResourceKey = iconResourceKey;
             SortOrder = sortOrder;
+            DeformGroup = deformGroup;
         }
     }
 
@@ -340,27 +342,27 @@ namespace SnailPet.Data
     {
         public static readonly EnumDataRow[] EnumData = new EnumDataRow[]
         {
-            new EnumDataRow("BuffType", "Full", 1, null, null),
-            new EnumDataRow("FoodType", "vegetable", 1, null, null),
-            new EnumDataRow("FoodType", "bean", 2, null, null),
-            new EnumDataRow("FoodType", "magic", 3, null, null),
-            new EnumDataRow("PartsType", "Shell", 1, null, 100),
-            new EnumDataRow("PartsType", "Body", 2, null, 200),
-            new EnumDataRow("PartsType", "Eyes", 3, null, 400),
-            new EnumDataRow("PartsType", "Feeler", 4, null, 300),
-            new EnumDataRow("PartsType", "Mucus", 5, null, 50),
-            new EnumDataRow("RarityType", "Common", 1, null, null),
-            new EnumDataRow("RarityType", "Rare", 2, null, null),
-            new EnumDataRow("RarityType", "Epic", 3, null, null),
-            new EnumDataRow("RarityType", "Legendary", 4, null, null),
-            new EnumDataRow("CategoryType", "Food", 1, null, null),
-            new EnumDataRow("CategoryType", "Egg", 2, null, null),
-            new EnumDataRow("CategoryType", "Item", 3, null, null),
-            new EnumDataRow("CategoryType", "Accessories", 4, null, null),
-            new EnumDataRow("CategoryType", "Market", 5, null, null),
-            new EnumDataRow("CategoryType", "Event", 6, null, null),
-            new EnumDataRow("AccessoriesType", "Hat", 1, null, 250),
-            new EnumDataRow("AccessoriesType", "Bag", 2, null, 260),
+            new EnumDataRow("BuffType", "Full", 1, null, null, null),
+            new EnumDataRow("FoodType", "vegetable", 1, null, null, null),
+            new EnumDataRow("FoodType", "bean", 2, null, null, null),
+            new EnumDataRow("FoodType", "magic", 3, null, null, null),
+            new EnumDataRow("PartsType", "Shell", 1, null, 100, null),
+            new EnumDataRow("PartsType", "Body", 2, null, 200, 51),
+            new EnumDataRow("PartsType", "Eyes", 3, null, 400, 51),
+            new EnumDataRow("PartsType", "Feeler", 4, null, 300, 51),
+            new EnumDataRow("PartsType", "Mucus", 5, null, 50, null),
+            new EnumDataRow("RarityType", "Common", 1, null, null, null),
+            new EnumDataRow("RarityType", "Rare", 2, null, null, null),
+            new EnumDataRow("RarityType", "Epic", 3, null, null, null),
+            new EnumDataRow("RarityType", "Legendary", 4, null, null, null),
+            new EnumDataRow("CategoryType", "Food", 1, null, null, null),
+            new EnumDataRow("CategoryType", "Egg", 2, null, null, null),
+            new EnumDataRow("CategoryType", "Item", 3, null, null, null),
+            new EnumDataRow("CategoryType", "Accessories", 4, null, null, null),
+            new EnumDataRow("CategoryType", "Market", 5, null, null, null),
+            new EnumDataRow("CategoryType", "Event", 6, null, null, null),
+            new EnumDataRow("AccessoriesType", "Hat", 1, null, 250, null),
+            new EnumDataRow("AccessoriesType", "Bag", 2, null, 260, null),
         };
 
         public static readonly PartsColorDataRow[] PartsColorData = new PartsColorDataRow[]
@@ -657,6 +659,7 @@ namespace SnailPet.Data
             { "[이벤트07]", 48 },
             { "[일반뽑기01]", 49 },
             { "[일반달팽이]", 50 },
+            { "[부드러움]", 51 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();
