@@ -20,6 +20,61 @@ namespace SnailPet.Ui
     {
         private static readonly Dictionary<int, Sprite> _cache = new Dictionary<int, Sprite>();
 
+        /// <summary>
+        /// UI 도형의 역할. 코드가 만드는 것은 어디까지나 <b>임시</b>이고,
+        /// 같은 이름의 아트가 Resources/Ui/Shape 에 있으면 그쪽이 이긴다.
+        /// 아트를 넣어도 배치 코드는 한 줄도 바뀌지 않는다.
+        /// </summary>
+        public enum Shape
+        {
+            Panel,          // 큰 판
+            PanelBorder,    // 판의 테두리 (판과 따로 물들여야 해서 분리돼 있다)
+            Slot,           // 안쪽 홈 — 이름칸·게이지 트랙·목록 행·음식 슬롯
+            Badge,          // 알약 — 등급·나이·코인
+            Fill,           // 게이지 채우기
+            Button,         // 버튼 배경
+        }
+
+        /// <summary>역할별 기본 모서리 반지름. 아트가 없을 때만 쓴다.</summary>
+        private static int RadiusOf(Shape s) => s switch
+        {
+            Shape.Panel or Shape.PanelBorder => 6,
+            Shape.Slot  => 6,
+            Shape.Badge => 6,
+            Shape.Fill  => 5,
+            _           => 4,
+        };
+
+        private static readonly Dictionary<Shape, Sprite> _art = new Dictionary<Shape, Sprite>();
+
+        /// <summary>
+        /// 역할에 맞는 스프라이트. 아트가 있으면 아트, 없으면 코드 생성.
+        /// </summary>
+        public static Sprite Of(Shape shape)
+        {
+            if (_art.TryGetValue(shape, out var art)) return art;
+
+            art = Resources.Load<Sprite>("Ui/Shape/" + shape.ToString().ToLowerInvariant());
+            if (art == null)
+                art = shape == Shape.PanelBorder ? Border(RadiusOf(shape), 1) : Fill(RadiusOf(shape));
+
+            _art[shape] = art;
+            return art;
+        }
+
+        /// <summary>어떤 도형이 아트이고 어떤 것이 코드 생성인지. 리포트에 남겨 확인용으로 쓴다.</summary>
+        public static string Describe()
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (Shape s in System.Enum.GetValues(typeof(Shape)))
+            {
+                bool fromArt = Resources.Load<Sprite>("Ui/Shape/" + s.ToString().ToLowerInvariant()) != null;
+                if (sb.Length > 0) sb.Append(", ");
+                sb.Append(s).Append(fromArt ? "=아트" : "=생성");
+            }
+            return sb.ToString();
+        }
+
         /// <summary>속이 찬 둥근 사각형.</summary>
         public static Sprite Fill(int radius) => Get(radius, 0);
 

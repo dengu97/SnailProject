@@ -351,6 +351,7 @@ namespace SnailPet
             _ui.Maximize += () => Say("      [UI] 최대화");
 
             Say("[7] UI ............. 디폴트 패널 (더미 데이터)");
+            Say("      도형: " + UiSprites.Describe());
         }
 
         /// <summary>

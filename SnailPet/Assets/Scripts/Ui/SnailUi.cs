@@ -78,21 +78,21 @@ namespace SnailPet.Ui
         /// <summary>이름칸 · 이름 수정 · 등급 뱃지.</summary>
         private void BuildHeader()
         {
-            Box(_panel, At.NameField, UiTheme.Slot, 5, "NameField");
+            Box(_panel, At.NameField, UiTheme.Slot, UiSprites.Shape.Slot, "NameField");
             IconButton(_panel, At.RenameBtn, "icon_rename", "Rename", () => Rename?.Invoke());
 
             var name = At.NameField;
             _nameText = Label(_panel, new RectInt(name.x + 22, name.y, name.width - 26, name.height),
                               "달팽이 이름", 13, UiTheme.Ink);
 
-            Box(_panel, At.Rarity, UiTheme.BadgeDark, 6, "RarityBadge");
+            Box(_panel, At.Rarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
             _rarityText = Label(_panel, At.Rarity, "에픽", 9, UiTheme.OnBadge);
         }
 
         /// <summary>나이 뱃지 · 포만도 · 행복 지수.</summary>
         private void BuildGauges()
         {
-            Box(_panel, At.Age, UiTheme.Slot, 6, "AgeBadge");
+            Box(_panel, At.Age, UiTheme.Slot, UiSprites.Shape.Badge, "AgeBadge");
             _ageText = Label(_panel, At.Age, "00살", 9, UiTheme.Ink);
 
             _fullFill  = Gauge(At.FullBar,  At.FullIcon,  "icon_food",  UiTheme.GaugeFull,  "Full");
@@ -106,12 +106,12 @@ namespace SnailPet.Ui
         /// </summary>
         private RectTransform Gauge(RectInt bar, RectInt icon, string iconKey, Color fillColor, string name)
         {
-            Box(_panel, bar, UiTheme.Slot, 6, name + "Track");
+            Box(_panel, bar, UiTheme.Slot, UiSprites.Shape.Slot, name + "Track");
 
             const int inset = 2;
             var fill = Box(_panel, new RectInt(bar.x + inset, bar.y + inset,
                                                bar.width - inset * 2, bar.height - inset * 2),
-                           fillColor, 5, name + "Fill");
+                           fillColor, UiSprites.Shape.Fill, name + "Fill");
 
             // 왼쪽을 축으로 가로만 줄였다 늘렸다 한다
             var rt = (RectTransform)fill.transform;
@@ -140,7 +140,7 @@ namespace SnailPet.Ui
                        () => Settings?.Invoke(), UiTheme.Accent);
 
             var coin = Above(At.Coin);
-            Box(_widget, coin, UiTheme.Slot, 8, "CoinPill");
+            Box(_widget, coin, UiTheme.Slot, UiSprites.Shape.Badge, "CoinPill");
             Icon(_widget, new RectInt(coin.x + 4, coin.y + 6, 22, 22), "icon_coin",
                  Color.white, "CoinIcon").raycastTarget = false;
             _coinText = Label(_widget, new RectInt(coin.x + 30, coin.y, coin.width - 34, coin.height),
@@ -245,13 +245,13 @@ namespace SnailPet.Ui
             rt.anchoredPosition = new Vector2(r.x, -r.y);
         }
 
-        private Image Box(RectTransform parent, RectInt r, Color color, int radius, string name)
+        private Image Box(RectTransform parent, RectInt r, Color color, UiSprites.Shape shape, string name)
         {
             var rt = NewRect(name, parent);
             Place(rt, r);
 
             var img = rt.gameObject.AddComponent<Image>();
-            img.sprite = UiSprites.Fill(radius);
+            img.sprite = UiSprites.Of(shape);
             img.type = Image.Type.Sliced;
             img.color = color;
             img.raycastTarget = false;
@@ -260,7 +260,7 @@ namespace SnailPet.Ui
 
         private RectTransform Panel(RectTransform parent, RectInt r)
         {
-            var fill = Box(parent, r, UiTheme.PanelFill, UiTheme.PanelRadius, "Panel");
+            var fill = Box(parent, r, UiTheme.PanelFill, UiSprites.Shape.Panel, "Panel");
             fill.raycastTarget = true;      // 패널 위에서는 클릭이 바탕화면으로 새면 안 된다
 
             var line = NewRect("Border", (RectTransform)fill.transform);
@@ -268,7 +268,7 @@ namespace SnailPet.Ui
             line.offsetMin = Vector2.zero; line.offsetMax = Vector2.zero;
 
             var img = line.gameObject.AddComponent<Image>();
-            img.sprite = UiSprites.Border(UiTheme.PanelRadius, UiTheme.PanelBorderPx);
+            img.sprite = UiSprites.Of(UiSprites.Shape.PanelBorder);
             img.type = Image.Type.Sliced;
             img.color = UiTheme.PanelBorder;
             img.raycastTarget = false;
@@ -317,7 +317,7 @@ namespace SnailPet.Ui
             var img = rt.gameObject.AddComponent<Image>();
             if (background.HasValue)
             {
-                img.sprite = UiSprites.Fill(4);
+                img.sprite = UiSprites.Of(UiSprites.Shape.Button);
                 img.type = Image.Type.Sliced;
                 img.color = background.Value;
             }

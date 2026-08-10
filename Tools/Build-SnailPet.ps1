@@ -48,7 +48,7 @@ for ($try = 1; $try -le 2; $try++) {
     if (Test-Path $dll) {
         $out = Get-ChildItem (Join-Path $ProjectPath "Build\SnailPet_Data") -Recurse -File |
                Sort-Object LastWriteTime -Descending | Select-Object -First 1
-        $src = Get-ChildItem (Join-Path $ProjectPath "Assets") -Recurse -Include *.cs |
+        $src = Get-ChildItem (Join-Path $ProjectPath "Assets\Scripts") -Recurse -Include *.cs |
                Sort-Object LastWriteTime -Descending | Select-Object -First 1
         if (-not $src -or -not $out -or $src.LastWriteTime -le $out.LastWriteTime) { break }
     }
@@ -65,7 +65,10 @@ if (-not (Test-Path $dll)) { Write-Output "FAIL: 산출물이 없습니다: $dll
 # 그래서 「빌드 폴더에서 가장 새 파일」과 「소스에서 가장 새 파일」을 견준다.
 $newestOut = Get-ChildItem (Join-Path $ProjectPath "Build\SnailPet_Data") -Recurse -File |
              Sort-Object LastWriteTime -Descending | Select-Object -First 1
-$newestSrc = Get-ChildItem (Join-Path $ProjectPath "Assets") -Recurse -Include *.cs |
+# Assets\Editor 는 제외한다. 에디터 스크립트는 플레이어에 안 들어가므로 그것만 바뀌면
+# 산출물이 그대로인 게 정상인데, 포함시키면 영원히 「오래됐다」로 나온다.
+# (임포트 설정을 바꾼 경우에는 해당 에셋의 .meta 를 지우고 다시 빌드해야 반영된다.)
+$newestSrc = Get-ChildItem (Join-Path $ProjectPath "Assets\Scripts") -Recurse -Include *.cs |
              Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 if ($newestSrc -and $newestOut -and $newestSrc.LastWriteTime -gt $newestOut.LastWriteTime) {
