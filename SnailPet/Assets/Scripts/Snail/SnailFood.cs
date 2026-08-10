@@ -20,6 +20,12 @@ namespace SnailPet.Snail
         public bool  Landed;
         public bool  Eaten;
 
+        /// <summary>유저가 집고 있는 동안은 중력을 받지 않고 달팽이도 먹으러 오지 않는다.</summary>
+        public bool  Held;
+
+        /// <summary>보이는 부분의 세로 크기(px). 집기 판정에 쓴다.</summary>
+        public float Height;
+
         /// <summary>보이는 부분의 크기(px). 달팽이가 얼마나 가까이 와야 먹는지 판정에 쓴다.</summary>
         public float HalfWidth;
 
@@ -85,6 +91,7 @@ namespace SnailPet.Snail
                 ScreenX = screenX,
                 ScreenY = screenY,
                 HalfWidth = halfWidth,
+                Height = (SnailMetrics.TryMeasure(sprite, out var e2) ? e2.Height * scale : FoodPixels),
             };
             item.Root.SetSiblingIndex(0);
             _items.Add(item);
@@ -104,6 +111,7 @@ namespace SnailPet.Snail
             foreach (var f in _items)
             {
                 if (f.Eaten) continue;
+                if (f.Held) { f.VelocityY = 0f; f.Landed = false; continue; }   // 들고 있으면 안 떨어진다
 
                 if (f.ScreenY < floorY)
                 {
@@ -129,12 +137,26 @@ namespace SnailPet.Snail
 
             foreach (var f in _items)
             {
-                if (f.Eaten || !f.Landed) continue;
+                if (f.Eaten || !f.Landed || f.Held) continue;
                 float p = BoxWalk.BottomXToPerimeter(box, f.ScreenX);
                 float d = BoxWalk.ShortestDelta(box, fromPerimeter, p);
                 if (Mathf.Abs(d) < bestDist) { bestDist = Mathf.Abs(d); best = f; delta = d; }
             }
             return best;
+        }
+
+        /// <summary>커서 아래에 있는 먹이. 나중에 놓인 것부터 찾아 위에 있는 것이 먼저 잡힌다.</summary>
+        public FoodItem FindAt(float screenX, float screenY)
+        {
+            for (int i = _items.Count - 1; i >= 0; i--)
+            {
+                var f = _items[i];
+                if (f.Eaten) continue;
+                if (Mathf.Abs(screenX - f.ScreenX) > f.HalfWidth) continue;
+                if (screenY > f.ScreenY || screenY < f.ScreenY - f.Height) continue;
+                return f;
+            }
+            return null;
         }
 
         public void Consume(FoodItem item)

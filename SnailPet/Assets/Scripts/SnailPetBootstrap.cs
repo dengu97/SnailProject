@@ -74,6 +74,24 @@ namespace SnailPet
         private bool _cursorOnSnail;
         private float _claimFlashUntil;
 
+        /// <summary>낙하 가속도(px/s^2). 먹이와 같은 값을 써서 같은 무게감으로 떨어진다.</summary>
+        private const float Gravity = FoodField.Gravity;
+
+        private enum DragTarget { None, Snail, Food }
+        private DragTarget _drag = DragTarget.None;
+        private FoodItem _dragFood;
+        private Vector2 _grabOffset;
+
+        /// <summary>
+        /// 달팽이가 벽을 벗어난 상태. 들려 있거나 떨어지는 중이다.
+        /// 이때는 앵커 대신 이 발 좌표(가상 화면 px)가 위치를 결정한다.
+        /// </summary>
+        private bool _snailFalling;
+        private Vector2 _snailFootScreen;
+        private float _snailVelY;
+
+        private bool SnailFree => _drag == DragTarget.Snail || _snailFalling;
+
         private int _vLeft, _vTop, _vWidth, _vHeight;
         private string _status = "";
 
@@ -111,7 +129,7 @@ namespace SnailPet
             _box = ResolveBox();
             Say("[5] 박스 ............ " + BoxName + "  " + _box);
 #endif
-            _status = "말풍선이 뜨면 달팽이를 눌러 선물을 받으세요.";
+            _status = "달팽이·먹이를 끌어 옮길 수 있습니다. 놓으면 아래로 떨어집니다.";
             Say("");
             Say("→ " + AutoQuitSeconds + "초 뒤 자동 종료.");
             WriteReport();
@@ -219,9 +237,28 @@ namespace SnailPet
             _food.Tick(Time.deltaTime, _box.Bottom);
             UpdateFoodTransforms(px);
 
-            StepBehaviour(halfExtent, Time.deltaTime);
+            StepDrag(footDepth, halfExtent);
 
-            var pose = BoxWalk.Evaluate(_box, _anchor, footDepth, halfExtent);
+            SnailPose pose;
+            if (SnailFree)
+            {
+                UpdateFreeSnail(footDepth, halfExtent);
+
+                // 들려 있거나 떨어지는 동안은 벽에 붙어 있지 않으므로 똑바로 세운다
+                pose = new SnailPose
+                {
+                    RootScreen = _snailFootScreen - new Vector2(0f, footDepth),
+                    RotationDeg = 0f,
+                    FlipX = _anchor.Forward,
+                    Valid = true,
+                };
+            }
+            else
+            {
+                StepBehaviour(halfExtent, Time.deltaTime);
+                pose = BoxWalk.Evaluate(_box, _anchor, footDepth, halfExtent);
+            }
+
             if (pose.Valid)
             {
                 _snail.position = VirtualToWorld(pose.RootScreen.x, pose.RootScreen.y);
@@ -321,6 +358,119 @@ namespace SnailPet
         }
 
         /// <summary>
+        /// 집기·끌기·놓기.
+        ///
+        /// 창이 포커스를 갖지 않으므로 버튼 상태는 전역으로 읽는다.
+        /// 놓으면 달팽이든 먹이든 <b>아래로만</b> 떨어진다. 벽에 스냅하지 않는다.
+        /// </summary>
+        private void StepDrag(float footDepth, float halfExtent)
+        {
+            bool down = TransparentWindow.IsLeftMouseDown();
+            bool hasCursor = TransparentWindow.TryGetCursor(out int cx, out int cy);
+            var cursor = new Vector2(cx, cy);
+
+            if (down && !_wasMouseDown && hasCursor)
+            {
+                if (CursorOnSnail())
+                {
+                    // 선물이 준비돼 있으면 누른 순간 받는다. 그러고도 계속 집어 들 수 있다.
+                    if (_present.Ready
+                        && _present.TryClaim(_growth.Current, _inventory, out int itemId, out int count))
+                    {
+                        _claimFlashUntil = _t + 1.5f;
+                        string name = GameData.TokenById.TryGetValue(itemId, out string t) ? t : itemId.ToString();
+                        Say($"      선물 수령: {name} x{count}  → 가방: {_inventory}");
+                    }
+
+                    _drag = DragTarget.Snail;
+                    _snailFalling = false;
+                    _snailVelY = 0f;
+                    _snailFootScreen = CurrentFootScreen(footDepth, halfExtent);
+                    _grabOffset = _snailFootScreen - cursor;
+                    Say("      달팽이를 집었습니다.");
+                }
+                else
+                {
+                    var f = _food.FindAt(cx, cy);
+                    if (f != null)
+                    {
+                        _drag = DragTarget.Food;
+                        _dragFood = f;
+                        f.Held = true;
+                        _grabOffset = new Vector2(f.ScreenX, f.ScreenY) - cursor;
+                    }
+                }
+            }
+
+            if (!down && _wasMouseDown && _drag != DragTarget.None)
+            {
+                if (_drag == DragTarget.Snail)
+                {
+                    _snailFalling = true;      // 놓으면 아래로 떨어진다
+                    _snailVelY = 0f;
+                }
+                else if (_dragFood != null)
+                {
+                    _dragFood.Held = false;
+                    _dragFood.VelocityY = 0f;
+                }
+                _drag = DragTarget.None;
+                _dragFood = null;
+            }
+
+            if (hasCursor)
+            {
+                if (_drag == DragTarget.Snail)
+                {
+                    _snailFootScreen = ClampFoot(cursor + _grabOffset, halfExtent);
+                }
+                else if (_drag == DragTarget.Food && _dragFood != null)
+                {
+                    var p = cursor + _grabOffset;
+                    _dragFood.ScreenX = Mathf.Clamp(p.x, _box.Left + _dragFood.HalfWidth,
+                                                         _box.Right - _dragFood.HalfWidth);
+                    _dragFood.ScreenY = Mathf.Clamp(p.y, _box.Top + _dragFood.Height, _box.Bottom);
+                }
+            }
+
+            _wasMouseDown = down;
+        }
+
+        /// <summary>지금 벽에 붙어 있는 달팽이의 발 지점(가상 화면 px).</summary>
+        private Vector2 CurrentFootScreen(float footDepth, float halfExtent)
+        {
+            var pose = BoxWalk.Evaluate(_box, _anchor, footDepth, halfExtent);
+            return pose.RootScreen + BoxWalk.OutwardNormal(_anchor.Edge) * footDepth;
+        }
+
+        private Vector2 ClampFoot(Vector2 foot, float halfExtent)
+        {
+            foot.x = Mathf.Clamp(foot.x, _box.Left + halfExtent, _box.Right - halfExtent);
+            foot.y = Mathf.Clamp(foot.y, _box.Top, _box.Bottom);
+            return foot;
+        }
+
+        /// <summary>떨어지는 중이면 중력을 먹이고, 바닥에 닿으면 아래 벽에 다시 붙인다.</summary>
+        private void UpdateFreeSnail(float footDepth, float halfExtent)
+        {
+            if (!_snailFalling) return;
+
+            _snailVelY += Gravity * Time.deltaTime;
+            _snailFootScreen.y += _snailVelY * Time.deltaTime;
+
+            if (_snailFootScreen.y < _box.Bottom) return;
+
+            _snailFootScreen.y = _box.Bottom;
+            _snailVelY = 0f;
+            _snailFalling = false;
+
+            // 떨어진 자리에서 아래 벽에 붙는다
+            float p = BoxWalk.BottomXToPerimeter(_box, _snailFootScreen.x);
+            _anchor = BoxWalk.FromPerimeter(_box, p, _anchor.Forward, halfExtent);
+            Say("      착지 → 아래 벽에 붙었습니다.");
+        }
+
+        /// <summary>
         /// 선물 타이머와 말풍선.
         ///
         /// 말풍선은 달팽이 머리 위 — 즉 벽에서 박스 안쪽으로 — 띄운다.
@@ -340,28 +490,13 @@ namespace SnailPet
             bool visible = _present.Ready;
             _present.Place(VirtualToWorld(bubbleScreen.x, bubbleScreen.y), visible);
 
-            // 받는 것은 말풍선이 아니라 달팽이를 눌러서다. 말풍선은 알림일 뿐이다.
-            bool onSnail = visible && CursorOnSnail();
-            if (onSnail != _cursorOnSnail)
-                Say($"      커서 {(onSnail ? "진입" : "이탈")} (달팽이 {(visible ? "누를 수 있음" : "-")})");
-            _cursorOnSnail = onSnail;
+            // 잡을 수 있는 것 위에 있거나 끌고 있는 동안에만 클릭 통과를 끈다.
+            // 그 외에는 계속 통과시켜 바탕화면 작업을 방해하지 않는다.
+            _cursorOnSnail = CursorOnSnail();
+            bool onFood = TransparentWindow.TryGetCursor(out int cx, out int cy)
+                       && _food.FindAt(cx, cy) != null;
 
-            // 달팽이 위에 있을 때만 클릭 통과를 꺼서, 클릭이 뒤 창으로 새지 않게 한다.
-            // 선물이 없을 때는 계속 통과시켜 바탕화면 작업을 방해하지 않는다.
-            TransparentWindow.SetClickThrough(!_cursorOnSnail);
-
-            // 포커스가 없는 창이라 Unity 의 Input 대신 전역 키 상태를 본다
-            bool down = TransparentWindow.IsLeftMouseDown();
-            if (down && !_wasMouseDown && _cursorOnSnail)
-            {
-                if (_present.TryClaim(_growth.Current, _inventory, out int itemId, out int count))
-                {
-                    _claimFlashUntil = _t + 1.5f;
-                    string name = GameData.TokenById.TryGetValue(itemId, out string t) ? t : itemId.ToString();
-                    Say($"      선물 수령: {name} x{count}  → 가방: {_inventory}");
-                }
-            }
-            _wasMouseDown = down;
+            TransparentWindow.SetClickThrough(!(_cursorOnSnail || onFood || _drag != DragTarget.None));
         }
 
         private const float BubbleGapPx = SnailPresent.BubbleGap;
@@ -469,6 +604,9 @@ namespace SnailPet
             };
             if (_t < _eatFlashUntil) act = "냠냠!";
             if (_t < _claimFlashUntil) act = "선물 획득!";
+            if (_drag == DragTarget.Snail)     act = "들려 있음";
+            else if (_drag == DragTarget.Food) act = "먹이 옮기는 중";
+            else if (_snailFalling)            act = "떨어지는 중";
             GUI.Label(new Rect(32, y + 50, 960, 22),
                 act + "   |   벽: " + edgeName + "   먹이 " + (_food != null ? _food.Count : 0) + "개", style);
             GUI.Label(new Rect(32, y + 72, 960, 22),
