@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-10 12:48:13",
+  "generatedAt": "2026-08-10 13:01:26",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -60,7 +60,8 @@
     "[이벤트07]": 48,
     "[일반뽑기01]": 49,
     "[일반달팽이]": 50,
-    "[부드러움]": 51
+    "[부드러움]": 51,
+    "[코인]": 52
   },
   "tables": {
     "EnumData": [
@@ -153,29 +154,29 @@
       {"Id": 34, "FoodType": "bean", "Name": "두부", "FullPoint": 15, "HappyPoint": 10, "BuffId": 35, "Info": null, "ResourceKey": null}
     ],
     "LevelData": [
-      {"Level": 1, "LevelUpTime": 0, "NeedFullPoint": 10, "NeedHappyPoint": 10, "UseFullPointTime": 120, "UseHappyPointTime": 240, "Speed": 1, "Size": 4, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 1},
-      {"Level": 2, "LevelUpTime": 3600, "NeedFullPoint": 15, "NeedHappyPoint": 15, "UseFullPointTime": 120, "UseHappyPointTime": 240, "Speed": 1.5, "Size": 4, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 2},
-      {"Level": 3, "LevelUpTime": 3600, "NeedFullPoint": 20, "NeedHappyPoint": 20, "UseFullPointTime": 120, "UseHappyPointTime": 240, "Speed": 2, "Size": 5, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 3},
-      {"Level": 4, "LevelUpTime": 3600, "NeedFullPoint": 25, "NeedHappyPoint": 25, "UseFullPointTime": 180, "UseHappyPointTime": 240, "Speed": 2.5, "Size": 5, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 4},
-      {"Level": 5, "LevelUpTime": 3600, "NeedFullPoint": 30, "NeedHappyPoint": 30, "UseFullPointTime": 180, "UseHappyPointTime": 240, "Speed": 3, "Size": 6, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 5},
-      {"Level": 6, "LevelUpTime": 3600, "NeedFullPoint": 35, "NeedHappyPoint": 35, "UseFullPointTime": 180, "UseHappyPointTime": 300, "Speed": 3.5, "Size": 6, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 6},
-      {"Level": 7, "LevelUpTime": 3600, "NeedFullPoint": 40, "NeedHappyPoint": 40, "UseFullPointTime": 180, "UseHappyPointTime": 300, "Speed": 4, "Size": 6, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 7},
-      {"Level": 8, "LevelUpTime": 3600, "NeedFullPoint": 45, "NeedHappyPoint": 45, "UseFullPointTime": 180, "UseHappyPointTime": 300, "Speed": 4.5, "Size": 7, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 8},
-      {"Level": 9, "LevelUpTime": 3600, "NeedFullPoint": 50, "NeedHappyPoint": 50, "UseFullPointTime": 180, "UseHappyPointTime": 300, "Speed": 5, "Size": 7, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 9},
-      {"Level": 10, "LevelUpTime": 3600, "NeedFullPoint": 55, "NeedHappyPoint": 55, "UseFullPointTime": 240, "UseHappyPointTime": 300, "Speed": 5.5, "Size": 7, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 10},
-      {"Level": 11, "LevelUpTime": 3600, "NeedFullPoint": 60, "NeedHappyPoint": 60, "UseFullPointTime": 240, "UseHappyPointTime": 300, "Speed": 6, "Size": 8, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 11},
-      {"Level": 12, "LevelUpTime": 3600, "NeedFullPoint": 65, "NeedHappyPoint": 65, "UseFullPointTime": 240, "UseHappyPointTime": 360, "Speed": 6.5, "Size": 8, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 12},
-      {"Level": 13, "LevelUpTime": 3600, "NeedFullPoint": 70, "NeedHappyPoint": 70, "UseFullPointTime": 240, "UseHappyPointTime": 360, "Speed": 7, "Size": 8, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 13},
-      {"Level": 14, "LevelUpTime": 3600, "NeedFullPoint": 75, "NeedHappyPoint": 75, "UseFullPointTime": 240, "UseHappyPointTime": 360, "Speed": 7.5, "Size": 9, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 14},
-      {"Level": 15, "LevelUpTime": 3600, "NeedFullPoint": 80, "NeedHappyPoint": 80, "UseFullPointTime": 300, "UseHappyPointTime": 360, "Speed": 8, "Size": 9, "CoinCoolTime": 1200, "ItemId": 36, "ItemCount": 15},
-      {"Level": 16, "LevelUpTime": 3600, "NeedFullPoint": 85, "NeedHappyPoint": 85, "UseFullPointTime": 300, "UseHappyPointTime": 360, "Speed": 8.5, "Size": 9, "CoinCoolTime": 1200, "ItemId": 36, "ItemCount": 16},
-      {"Level": 17, "LevelUpTime": 3600, "NeedFullPoint": 90, "NeedHappyPoint": 90, "UseFullPointTime": 300, "UseHappyPointTime": 360, "Speed": 9, "Size": 10, "CoinCoolTime": 1200, "ItemId": 36, "ItemCount": 17},
-      {"Level": 18, "LevelUpTime": 3600, "NeedFullPoint": 95, "NeedHappyPoint": 95, "UseFullPointTime": 300, "UseHappyPointTime": 360, "Speed": 9.5, "Size": 10, "CoinCoolTime": 1200, "ItemId": 36, "ItemCount": 18},
-      {"Level": 19, "LevelUpTime": 3600, "NeedFullPoint": 100, "NeedHappyPoint": 100, "UseFullPointTime": 300, "UseHappyPointTime": 360, "Speed": 10, "Size": 10, "CoinCoolTime": 1200, "ItemId": 36, "ItemCount": 19},
-      {"Level": 20, "LevelUpTime": 3600, "NeedFullPoint": 105, "NeedHappyPoint": 105, "UseFullPointTime": 300, "UseHappyPointTime": 360, "Speed": 10.5, "Size": 11, "CoinCoolTime": 1200, "ItemId": 36, "ItemCount": 20}
+      {"Level": 1, "LevelUpTime": 0, "NeedFullPoint": 10, "NeedHappyPoint": 10, "UseFullPointTime": 120, "UseHappyPointTime": 240, "Speed": 1, "Size": 4, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 10},
+      {"Level": 2, "LevelUpTime": 3600, "NeedFullPoint": 15, "NeedHappyPoint": 15, "UseFullPointTime": 120, "UseHappyPointTime": 240, "Speed": 1.5, "Size": 4, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 11},
+      {"Level": 3, "LevelUpTime": 3600, "NeedFullPoint": 20, "NeedHappyPoint": 20, "UseFullPointTime": 120, "UseHappyPointTime": 240, "Speed": 2, "Size": 5, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 12},
+      {"Level": 4, "LevelUpTime": 3600, "NeedFullPoint": 25, "NeedHappyPoint": 25, "UseFullPointTime": 180, "UseHappyPointTime": 240, "Speed": 2.5, "Size": 5, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 13},
+      {"Level": 5, "LevelUpTime": 3600, "NeedFullPoint": 30, "NeedHappyPoint": 30, "UseFullPointTime": 180, "UseHappyPointTime": 240, "Speed": 3, "Size": 6, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 14},
+      {"Level": 6, "LevelUpTime": 3600, "NeedFullPoint": 35, "NeedHappyPoint": 35, "UseFullPointTime": 180, "UseHappyPointTime": 300, "Speed": 3.5, "Size": 6, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 15},
+      {"Level": 7, "LevelUpTime": 3600, "NeedFullPoint": 40, "NeedHappyPoint": 40, "UseFullPointTime": 180, "UseHappyPointTime": 300, "Speed": 4, "Size": 6, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 16},
+      {"Level": 8, "LevelUpTime": 3600, "NeedFullPoint": 45, "NeedHappyPoint": 45, "UseFullPointTime": 180, "UseHappyPointTime": 300, "Speed": 4.5, "Size": 7, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 17},
+      {"Level": 9, "LevelUpTime": 3600, "NeedFullPoint": 50, "NeedHappyPoint": 50, "UseFullPointTime": 180, "UseHappyPointTime": 300, "Speed": 5, "Size": 7, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 18},
+      {"Level": 10, "LevelUpTime": 3600, "NeedFullPoint": 55, "NeedHappyPoint": 55, "UseFullPointTime": 240, "UseHappyPointTime": 300, "Speed": 5.5, "Size": 7, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 19},
+      {"Level": 11, "LevelUpTime": 3600, "NeedFullPoint": 60, "NeedHappyPoint": 60, "UseFullPointTime": 240, "UseHappyPointTime": 300, "Speed": 6, "Size": 8, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 20},
+      {"Level": 12, "LevelUpTime": 3600, "NeedFullPoint": 65, "NeedHappyPoint": 65, "UseFullPointTime": 240, "UseHappyPointTime": 360, "Speed": 6.5, "Size": 8, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 21},
+      {"Level": 13, "LevelUpTime": 3600, "NeedFullPoint": 70, "NeedHappyPoint": 70, "UseFullPointTime": 240, "UseHappyPointTime": 360, "Speed": 7, "Size": 8, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 22},
+      {"Level": 14, "LevelUpTime": 3600, "NeedFullPoint": 75, "NeedHappyPoint": 75, "UseFullPointTime": 240, "UseHappyPointTime": 360, "Speed": 7.5, "Size": 9, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 23},
+      {"Level": 15, "LevelUpTime": 3600, "NeedFullPoint": 80, "NeedHappyPoint": 80, "UseFullPointTime": 300, "UseHappyPointTime": 360, "Speed": 8, "Size": 9, "CoinCoolTime": 1200, "ItemId": 36, "ItemCount": 24},
+      {"Level": 16, "LevelUpTime": 3600, "NeedFullPoint": 85, "NeedHappyPoint": 85, "UseFullPointTime": 300, "UseHappyPointTime": 360, "Speed": 8.5, "Size": 9, "CoinCoolTime": 1200, "ItemId": 36, "ItemCount": 25},
+      {"Level": 17, "LevelUpTime": 3600, "NeedFullPoint": 90, "NeedHappyPoint": 90, "UseFullPointTime": 300, "UseHappyPointTime": 360, "Speed": 9, "Size": 10, "CoinCoolTime": 1200, "ItemId": 36, "ItemCount": 26},
+      {"Level": 18, "LevelUpTime": 3600, "NeedFullPoint": 95, "NeedHappyPoint": 95, "UseFullPointTime": 300, "UseHappyPointTime": 360, "Speed": 9.5, "Size": 10, "CoinCoolTime": 1200, "ItemId": 36, "ItemCount": 27},
+      {"Level": 19, "LevelUpTime": 3600, "NeedFullPoint": 100, "NeedHappyPoint": 100, "UseFullPointTime": 300, "UseHappyPointTime": 360, "Speed": 10, "Size": 10, "CoinCoolTime": 1200, "ItemId": 36, "ItemCount": 28},
+      {"Level": 20, "LevelUpTime": 3600, "NeedFullPoint": 105, "NeedHappyPoint": 105, "UseFullPointTime": 300, "UseHappyPointTime": 360, "Speed": 10.5, "Size": 11, "CoinCoolTime": 1200, "ItemId": 36, "ItemCount": 30}
     ],
     "BubbleData": [
-      {"ResourceKey": "bubble_coin"}
+      {"Id": 52, "ResourceKey": "bubble_coin"}
     ],
     "LevelUpAdvantage": [
       {"NeedHappyPointPercent": 0.5, "NeedFullPointPercent": 0.5, "Acceleration": 0.2, "BuffId": null},

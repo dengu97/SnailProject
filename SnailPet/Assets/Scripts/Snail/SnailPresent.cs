@@ -13,8 +13,29 @@ namespace SnailPet.Snail
     /// </summary>
     public sealed class SnailPresent
     {
-        /// <summary>BubbleData 에 Id 가 없어 리소스 키로 찾는다. 종류가 늘면 Id 열이 필요하다.</summary>
-        public const string CoinBubbleKey = "bubble_coin";
+        /// <summary>
+        /// 코인 말풍선의 토큰.
+        ///
+        /// 지금은 선물이 항상 코인이라 코드가 이 하나를 직접 고른다. 나중에 선물 종류가
+        /// 늘어나면 LevelData 의 ItemId 옆에 BubbleId 열을 두고 거기서 읽는 것이 자연스럽다.
+        /// </summary>
+        public const string CoinBubbleToken = "[코인]";
+
+        /// <summary>토큰 → BubbleData → 리소스 키.</summary>
+        public static string ResolveBubbleResource(string token)
+        {
+            if (!GameData.IdByToken.TryGetValue(token, out int id))
+            {
+                Debug.LogWarning("[SnailPet] 알 수 없는 말풍선 토큰: " + token);
+                return null;
+            }
+            if (!GameData.BubbleDataById.TryGetValue(id, out var row))
+            {
+                Debug.LogWarning("[SnailPet] BubbleData 에 없는 말풍선: " + token);
+                return null;
+            }
+            return row.ResourceKey;
+        }
 
         /// <summary>화면에 보일 말풍선 가로 크기(px).</summary>
         public const float BubblePixels = 92f;
@@ -34,7 +55,10 @@ namespace SnailPet.Snail
 
         public SnailPresent(Transform parent)
         {
-            var sprite = SnailComposer.Load(SnailComposer.ResourceRoot + "/Ui/" + CoinBubbleKey);
+            string key = ResolveBubbleResource(CoinBubbleToken);
+            var sprite = string.IsNullOrEmpty(key)
+                       ? null
+                       : SnailComposer.Load(SnailComposer.ResourceRoot + "/Ui/" + key);
 
             var go = new GameObject("PresentBubble");
             go.transform.SetParent(parent, false);
@@ -56,7 +80,7 @@ namespace SnailPet.Snail
             {
                 HalfWidthWorld = HalfHeightWorld = BubblePixels * 0.5f;
                 if (sprite == null)
-                    Debug.LogWarning("[SnailPet] 말풍선 리소스를 찾지 못했습니다: " + CoinBubbleKey);
+                    Debug.LogWarning("[SnailPet] 말풍선 리소스를 찾지 못했습니다: " + CoinBubbleToken);
             }
         }
 
