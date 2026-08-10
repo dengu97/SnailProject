@@ -127,6 +127,26 @@ namespace SnailPet
         private const float LandingSquashPerSpeed = 0.0028f;
         private const float LandingSquashMax = 4.5f;
 
+        // ── 기어 다닐 때의 상시 출렁임 ──
+        // 시간이 아니라 <b>이동한 거리</b>로 위상을 돌린다. 그래야 느린 달팽이는 느리게,
+        // 버프로 빨라지면 빠르게 출렁이고, 멈춰 있으면 아예 멈춘다.
+
+        /// <summary>이 거리(px)마다 한 번 출렁인다.</summary>
+        private const float WobbleWavelength = 46f;
+        private const float WobbleStretch = 0.045f;
+        private const float WobbleLeanDeg = 2.2f;
+
+        /// <summary>이 속도(px/s)에서 출렁임이 최대가 된다.</summary>
+        private const float WobbleFullSpeed = 120f;
+
+        /// <summary>모서리를 도는 동안 진행 방향으로 기울어지는 정도. 관성으로 몸이 먼저 넘어간다.</summary>
+        private const float TurnLeanDeg = 14f;
+
+        /// <summary>모서리를 도는 동안 눌리는 정도. 발을 오므리며 몸이 주저앉는다.</summary>
+        private const float TurnSquash = -0.10f;
+
+        private float _wobblePhase;
+
         /// <summary>스프라이트가 뒤집히거나 0 이 되지 않게 막는 한계.</summary>
         private const float MinStretch = -0.45f, MaxStretch = 0.60f;
 
@@ -539,8 +559,9 @@ namespace SnailPet
 
             if (_peeling && hasCursor)
             {
-                var n = BoxWalk.OutwardNormal(_anchor.Edge);
-                BoxWalk.EdgeSegment(_box, _anchor.Edge, out _, out var dir, out _);
+                // 모서리를 도는 중에도 맞도록 벽이 아니라 앵커 기준으로 읽는다
+                var n = BoxWalk.OutwardNormal(_anchor);
+                var dir = BoxWalk.Tangent(_box, _anchor);
                 Vector2 pull = cursor - _grabScreen;
 
                 float away  = Vector2.Dot(pull, -n);      // 벽에서 멀어지는 성분
@@ -576,6 +597,26 @@ namespace SnailPet
             else if (_snailFalling)
             {
                 _stretchTarget = Mathf.Clamp(_snailVelY * FallStretchPerSpeed, 0f, FallMaxStretch);
+            }
+            else
+            {
+                // 벽에 붙어 기어가는 중
+                float speed = _growth.PixelsPerSecond;
+                _wobblePhase += speed * Time.deltaTime / WobbleWavelength;
+
+                float amp = Mathf.Clamp01(speed / WobbleFullSpeed);
+                float w = _wobblePhase * Mathf.PI * 2f;
+                _stretchTarget = Mathf.Sin(w) * WobbleStretch * amp;
+                _leanTarget    = Mathf.Cos(w) * WobbleLeanDeg * amp;
+
+                // 모서리를 도는 동안은 진행 방향으로 기울며 눌린다.
+                // _lean 이 음수면 머리가 진행 방향(+dir)으로 넘어간다.
+                if (_anchor.Turn > 0f)
+                {
+                    float k = Mathf.Sin(Mathf.Clamp01(_anchor.Turn) * Mathf.PI);
+                    _stretchTarget += TurnSquash * k;
+                    _leanTarget    += (_anchor.TurnToNext ? -1f : 1f) * TurnLeanDeg * k;
+                }
             }
 
             if (!down && _wasMouseDown && _peeling)
@@ -639,7 +680,7 @@ namespace SnailPet
         private Vector2 CurrentFootScreen(float footDepth, float halfExtent)
         {
             var pose = BoxWalk.Evaluate(_box, _anchor, footDepth, halfExtent);
-            return pose.RootScreen + BoxWalk.OutwardNormal(_anchor.Edge) * footDepth;
+            return pose.RootScreen + BoxWalk.OutwardNormal(_anchor) * footDepth;
         }
 
         private Vector2 ClampFoot(Vector2 foot, float halfExtent)
@@ -682,7 +723,7 @@ namespace SnailPet
         {
             _present.Tick(Time.deltaTime * DemoTimeScale, _growth.Current);
 
-            var n = BoxWalk.OutwardNormal(_anchor.Edge);
+            var n = BoxWalk.OutwardNormal(_anchor);
             Vector2 foot = pose.RootScreen + n * footDepth;
 
             float bodyDepth = (_bounds.Top - _bounds.Foot) * _scale * px;   // 발에서 등까지
@@ -766,7 +807,10 @@ namespace SnailPet
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             applied = TransparentWindow.Applied;
             boxName = BoxName;
-            edgeName = _anchor.Edge + " (회전 " + BoxWalk.RotationOf(_anchor.Edge) + "도)";
+            edgeName = _anchor.Turn > 0f
+                ? _anchor.Edge + " → " + (_anchor.TurnToNext ? BoxWalk.Next(_anchor.Edge) : BoxWalk.Prev(_anchor.Edge))
+                  + " 모서리 도는 중 " + (_anchor.Turn * 100f).ToString("0") + "%"
+                : _anchor.Edge + " (회전 " + BoxWalk.RotationOf(_anchor.Edge) + "도)";
 #endif
             if (!applied)
             {
