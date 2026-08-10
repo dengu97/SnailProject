@@ -41,6 +41,9 @@ namespace SnailPet.Ui
             public static readonly RectInt Rarity    = new RectInt(67, 29, 35, 12);
             public static readonly RectInt Age       = new RectInt(68, 126, 35, 12);
 
+            /// <summary>지금 나와 있는 달팽이의 모습. 등급 뱃지와 나이 뱃지 사이를 채운다.</summary>
+            public static readonly RectInt Portrait  = new RectInt(16, 44, 141, 80);
+
             public static readonly RectInt FullIcon  = new RectInt(16, 141, 19, 18);
             public static readonly RectInt FullBar   = new RectInt(29, 145, 127, 12);
             public static readonly RectInt HappyIcon = new RectInt(16, 163, 19, 18);

@@ -87,7 +87,27 @@ namespace SnailPet.Ui
 
             Box(_panel, At.Rarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
             _rarityText = Label(_panel, At.Rarity, "에픽", 9, UiTheme.OnBadge);
+
+            // 달팽이 모습이 들어갈 자리. 그림은 부트스트랩이 초상 텍스처를 넘겨 준다.
+            var rt = NewRect("Portrait", _panel);
+            Place(rt, At.Portrait);
+            _portrait = rt.gameObject.AddComponent<RawImage>();
+            _portrait.raycastTarget = false;
+            _portrait.enabled = false;
         }
+
+        private RawImage _portrait;
+
+        /// <summary>패널 가운데에 띄울 달팽이 모습.</summary>
+        public void SetPortrait(Texture texture)
+        {
+            if (_portrait == null) return;
+            _portrait.texture = texture;
+            _portrait.enabled = texture != null;
+        }
+
+        /// <summary>초상 텍스처를 만들 때 쓸 크기(px).</summary>
+        public static Vector2Int PortraitSize => new Vector2Int(At.Portrait.width, At.Portrait.height);
 
         /// <summary>나이 뱃지 · 포만도 · 행복 지수.</summary>
         private void BuildGauges()

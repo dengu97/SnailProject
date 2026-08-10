@@ -331,6 +331,7 @@ namespace SnailPet
         private const int SoleSamples = 48;
 
         private SnailUi _ui;
+        private SnailPortrait _portrait;
         private bool _cursorOnUi;
 
         /// <summary>
@@ -350,8 +351,16 @@ namespace SnailPet
             _ui.Close    += () => Say("      [UI] 최소화");
             _ui.Maximize += () => Say("      [UI] 최대화");
 
+            // 패널 가운데의 달팽이 모습. 살아있는 쪽은 벽을 따라 돌아가 있고 변형 중이라
+            // 비출 수 없다. 같은 외형으로 정지 복제본을 만들어 전용 카메라로 찍는다.
+            var size = SnailUi.PortraitSize;
+            _portrait = new SnailPortrait(transform, _appearance, _bounds, size.x, size.y);
+            SnailPortrait.ExcludeFrom(_cam);
+            _ui.SetPortrait(_portrait.Texture);
+
             Say("[7] UI ............. 디폴트 패널 (더미 데이터)");
             Say("      도형: " + UiSprites.Describe());
+            Say($"      초상: {size.x}x{size.y} (레이어 {SnailPortrait.Layer})");
         }
 
         /// <summary>
