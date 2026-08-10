@@ -21,7 +21,8 @@ namespace SnailPet.Ui
         /// </summary>
         private static class Keys
         {
-            public const string Age = "[레벨]";      // "{0}살"
+            public const string Age    = "[레벨]";     // "{0}살"
+            public const string NoName = "[이름없음]";
         }
 
         /// <summary>한 화면에 위젯이 두 개 이상 뜰 일이 없으므로 정렬 순서는 고정.</summary>
@@ -32,6 +33,7 @@ namespace SnailPet.Ui
         private RectTransform _panel;
 
         private Text _nameText, _rarityText, _ageText, _coinText;
+        private Image _rarityBadge, _rarityIcon;
         private RectTransform _fullFill, _happyFill;
 
         public event Action Rename, Detail, Wardrobe, Gene, Sell, Settings, Close, Maximize;
@@ -79,7 +81,7 @@ namespace SnailPet.Ui
             BuildActions();
             BuildOutside();
 
-            SetSnail("달팽이 이름", "에픽", 0);
+            SetSnail("달팽이 이름", SnailPet.Data.RarityType.Epic, 0);
             SetGauges(0.62f, 0.28f);
             SetCoin(5000);
         }
@@ -94,8 +96,16 @@ namespace SnailPet.Ui
             _nameText = Label(_panel, new RectInt(name.x + 22, name.y, name.width - 26, name.height),
                               "달팽이 이름", 13, UiTheme.Ink);
 
-            Box(_panel, At.Rarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
-            _rarityText = Label(_panel, At.Rarity, "에픽", 9, UiTheme.OnBadge);
+            // 등급은 아이콘으로 보여 준다. 아직 EnumData.IconResourceKey 가 비어 있어
+            // 아트가 없으면 알약에 enum 이름을 그대로 띄운다 — 비어 보이지 않게 하려는 것이다.
+            _rarityBadge = Box(_panel, At.Rarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
+            _rarityText  = Label(_panel, At.Rarity, "", 9, UiTheme.OnBadge);
+
+            var iconRect = new RectInt(At.Rarity.x + (At.Rarity.width - At.Rarity.height) / 2,
+                                       At.Rarity.y, At.Rarity.height, At.Rarity.height);
+            _rarityIcon = Icon(_panel, iconRect, null, Color.white, "RarityIcon");
+            _rarityIcon.raycastTarget = false;
+            _rarityIcon.enabled = false;
 
             // 달팽이 모습이 들어갈 자리. 그림은 부트스트랩이 초상 텍스처를 넘겨 준다.
             var rt = NewRect("Portrait", _panel);
@@ -187,11 +197,30 @@ namespace SnailPet.Ui
 
         // ── 값 넣기 ──
 
-        public void SetSnail(string name, string rarity, int age)
+        /// <param name="name">비어 있으면 「이름 없음」이 나간다.</param>
+        public void SetSnail(string name, SnailPet.Data.RarityType rarity, int age)
         {
-            _nameText.text = name;
-            _rarityText.text = rarity;
+            _nameText.text = string.IsNullOrWhiteSpace(name)
+                           ? SnailPet.Data.Loc.Text(Keys.NoName) : name;
             _ageText.text = SnailPet.Data.Loc.Format(Keys.Age, age);
+
+            SetRarity(rarity);
+        }
+
+        /// <summary>
+        /// 등급 표시. 아이콘이 있으면 아이콘만, 없으면 알약에 enum 이름을 띄운다.
+        /// 아트가 들어오는 대로 자동으로 아이콘 쪽으로 넘어간다.
+        /// </summary>
+        private void SetRarity(SnailPet.Data.RarityType rarity)
+        {
+            string key = SnailPet.Data.Enums.IconOf(rarity);
+            var sprite = string.IsNullOrEmpty(key) ? null : Resources.Load<Sprite>("Ui/Icon/" + key);
+
+            _rarityIcon.sprite = sprite;
+            _rarityIcon.enabled = sprite != null;
+
+            _rarityBadge.enabled = sprite == null;
+            _rarityText.text = sprite == null ? rarity.ToString() : "";
         }
 
         public void SetGauges(float fullRatio, float happyRatio)
@@ -328,11 +357,16 @@ namespace SnailPet.Ui
             Place(rt, r);
 
             var img = rt.gameObject.AddComponent<Image>();
-            img.sprite = Resources.Load<Sprite>("Ui/Icon/" + key);
             img.color = color;
             img.preserveAspect = true;
-            if (img.sprite == null)
-                Debug.LogWarning("[SnailPet] UI 아이콘을 찾지 못했습니다: Ui/Icon/" + key);
+
+            // key 가 null 이면 나중에 채울 자리다. 경고하지 않는다.
+            if (key != null)
+            {
+                img.sprite = Resources.Load<Sprite>("Ui/Icon/" + key);
+                if (img.sprite == null)
+                    Debug.LogWarning("[SnailPet] UI 아이콘을 찾지 못했습니다: Ui/Icon/" + key);
+            }
             return img;
         }
 

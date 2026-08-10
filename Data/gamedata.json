@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-10 23:52:40",
+  "generatedAt": "2026-08-11 00:02:45",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -103,7 +103,13 @@
     "[모자01정보]": 91,
     "[모자02정보]": 92,
     "[가방01정보]": 93,
-    "[도감_일반달팽이]": 94
+    "[도감_일반달팽이]": 94,
+    "[이름없음]": 95,
+    "[달팽이목록]": 96,
+    "[음식목록]": 97,
+    "[보유중인알]": 98,
+    "[상점]": 99,
+    "[먹이기]": 100
   },
   "tables": {
     "EnumData": [
@@ -231,16 +237,16 @@
       {"Id": 35, "BuffType": "Full", "Value1": 1800, "IconResourceKey": "buff_fullIcon", "InfoId": 35}
     ],
     "ItemData": [
-      {"Id": 36, "NameId": 36, "InfoId": "[팽이코인정보]", "ResourceKey": "item_coin"}
+      {"Id": 36, "NameId": 36, "InfoId": 88, "ResourceKey": "item_coin"}
     ],
     "EggData": [
       {"Id": 37, "NameId": 37, "RarityType": "Common", "ResourceKey": "egg_common", "InfoId": 89, "PartsGroupIds": [2]},
       {"Id": 38, "NameId": 38, "RarityType": "Rare", "ResourceKey": "egg_rare", "InfoId": 90, "PartsGroupIds": [2, 17]}
     ],
     "AccessoriesData": [
-      {"Id": 39, "NameId": 39, "AccessoriesType": "Hat", "ResourceKey": "hat01", "InfoId": "[모자01정보]"},
-      {"Id": 40, "NameId": 40, "AccessoriesType": "Hat", "ResourceKey": "hat02", "InfoId": "[모자02정보]"},
-      {"Id": 41, "NameId": 41, "AccessoriesType": "Bag", "ResourceKey": "bag01", "InfoId": "[가방01정보]"}
+      {"Id": 39, "NameId": 39, "AccessoriesType": "Hat", "ResourceKey": "hat01", "InfoId": 91},
+      {"Id": 40, "NameId": 40, "AccessoriesType": "Hat", "ResourceKey": "hat02", "InfoId": 92},
+      {"Id": 41, "NameId": 41, "AccessoriesType": "Bag", "ResourceKey": "bag01", "InfoId": 93}
     ],
     "ShopData": [
       {"CategoryType": "Food", "Id": 31, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 5, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 2.5},
@@ -360,7 +366,13 @@
       {"Id": 54, "Kr": "고양이더듬이01"},
       {"Id": 55, "Kr": "고양이더듬이02"},
       {"Id": 50, "Kr": "일반 달팽이"},
-      {"Id": 94, "Kr": "아주 전형적인 달팽이."}
+      {"Id": 94, "Kr": "아주 전형적인 달팽이."},
+      {"Id": 95, "Kr": "이름 없음"},
+      {"Id": 96, "Kr": "달팽이 목록"},
+      {"Id": 97, "Kr": "음식 목록"},
+      {"Id": 98, "Kr": "보유중인 알"},
+      {"Id": 99, "Kr": "상점"},
+      {"Id": 100, "Kr": "먹이기"}
     ]
   }
 }

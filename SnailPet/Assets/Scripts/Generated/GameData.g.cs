@@ -218,10 +218,10 @@ namespace SnailPet.Data
     {
         public readonly int Id;
         public readonly int NameId;
-        public readonly string InfoId;
+        public readonly int InfoId;
         public readonly string ResourceKey;
 
-        public ItemDataRow(int id, int nameId, string infoId, string resourceKey)
+        public ItemDataRow(int id, int nameId, int infoId, string resourceKey)
         {
             Id = id;
             NameId = nameId;
@@ -256,9 +256,9 @@ namespace SnailPet.Data
         public readonly int NameId;
         public readonly AccessoriesType AccessoriesType;
         public readonly string ResourceKey;
-        public readonly string InfoId;
+        public readonly int InfoId;
 
-        public AccessoriesDataRow(int id, int nameId, AccessoriesType accessoriesType, string resourceKey, string infoId)
+        public AccessoriesDataRow(int id, int nameId, AccessoriesType accessoriesType, string resourceKey, int infoId)
         {
             Id = id;
             NameId = nameId;
@@ -522,7 +522,7 @@ namespace SnailPet.Data
 
         public static readonly ItemDataRow[] ItemData = new ItemDataRow[]
         {
-            new ItemDataRow(36, 36, "[팽이코인정보]", "item_coin"),
+            new ItemDataRow(36, 36, 88, "item_coin"),
         };
 
         public static readonly EggDataRow[] EggData = new EggDataRow[]
@@ -533,9 +533,9 @@ namespace SnailPet.Data
 
         public static readonly AccessoriesDataRow[] AccessoriesData = new AccessoriesDataRow[]
         {
-            new AccessoriesDataRow(39, 39, AccessoriesType.Hat, "hat01", "[모자01정보]"),
-            new AccessoriesDataRow(40, 40, AccessoriesType.Hat, "hat02", "[모자02정보]"),
-            new AccessoriesDataRow(41, 41, AccessoriesType.Bag, "bag01", "[가방01정보]"),
+            new AccessoriesDataRow(39, 39, AccessoriesType.Hat, "hat01", 91),
+            new AccessoriesDataRow(40, 40, AccessoriesType.Hat, "hat02", 92),
+            new AccessoriesDataRow(41, 41, AccessoriesType.Bag, "bag01", 93),
         };
 
         public static readonly ShopDataRow[] ShopData = new ShopDataRow[]
@@ -666,6 +666,12 @@ namespace SnailPet.Data
             new LanguageDataRow(55, "고양이더듬이02"),
             new LanguageDataRow(50, "일반 달팽이"),
             new LanguageDataRow(94, "아주 전형적인 달팽이."),
+            new LanguageDataRow(95, "이름 없음"),
+            new LanguageDataRow(96, "달팽이 목록"),
+            new LanguageDataRow(97, "음식 목록"),
+            new LanguageDataRow(98, "보유중인 알"),
+            new LanguageDataRow(99, "상점"),
+            new LanguageDataRow(100, "먹이기"),
         };
 
         public static readonly Dictionary<int, PartsDataRow> PartsDataById = BuildPartsDataById();
@@ -853,6 +859,12 @@ namespace SnailPet.Data
             { "[모자02정보]", 92 },
             { "[가방01정보]", 93 },
             { "[도감_일반달팽이]", 94 },
+            { "[이름없음]", 95 },
+            { "[달팽이목록]", 96 },
+            { "[음식목록]", 97 },
+            { "[보유중인알]", 98 },
+            { "[상점]", 99 },
+            { "[먹이기]", 100 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

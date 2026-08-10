@@ -292,6 +292,7 @@ namespace SnailPet
             var rng = new System.Random();
             var eggs = GameData.EggData;
             var egg = eggs[rng.Next(eggs.Length)];
+            _rarity = egg.RarityType;
             _appearance = SnailHatchery.Hatch(egg.Id, rng);
 
             Say("[1] 부화 ............. " + GameData.TokenById[egg.Id] + " (" + egg.RarityType + ")");
@@ -331,6 +332,7 @@ namespace SnailPet
         private const int SoleSamples = 48;
 
         private SnailUi _ui;
+        private RarityType _rarity = RarityType.Common;
         private SnailPortrait _portrait;
         private bool _cursorOnUi;
 
@@ -357,6 +359,9 @@ namespace SnailPet
             _portrait = new SnailPortrait(transform, _appearance, _bounds, size.x, size.y);
             SnailPortrait.ExcludeFrom(_cam);
             _ui.SetPortrait(_portrait.Texture);
+
+            // 이름은 아직 지을 방법이 없어 비워 둔다 — UI 가 「이름 없음」으로 채운다.
+            _ui.SetSnail(null, _rarity, _growth.Level);
 
             Say("[7] UI ............. 디폴트 패널 (더미 데이터)");
             Say("      도형: " + UiSprites.Describe());
