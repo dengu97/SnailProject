@@ -436,6 +436,7 @@ namespace SnailPet.Data
             new PartsDataRow(19, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c02" }, 10, "분홍색의 몸."),
             new PartsDataRow(20, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c03" }, 10, "갈색의 몸."),
             new PartsDataRow(21, 2, RarityType.Common, PartsType.Body, "commonbody02", true, new string[] { "commonbody02_c01" }, 10, "느려졌지만, 행복해보인다."),
+            new PartsDataRow(53, 2, RarityType.Common, PartsType.Body, "commonbody03", true, new string[] { "commonbody03_c01" }, 10, "주인을 안아주고 싶어서 손이 돋아났다."),
             new PartsDataRow(22, 2, RarityType.Common, PartsType.Eyes, "commoneyes01", false, System.Array.Empty<string>(), 10, "일반 달팽이의 눈."),
             new PartsDataRow(23, 2, RarityType.Common, PartsType.Eyes, "commoneyes02", false, System.Array.Empty<string>(), 10, "웃는 달팽이의 눈."),
             new PartsDataRow(24, 2, RarityType.Common, PartsType.Eyes, "commoneyes03", false, System.Array.Empty<string>(), 10, "눈치보는 달팽이의 눈."),
@@ -692,6 +693,7 @@ namespace SnailPet.Data
             { "[일반달팽이]", 50 },
             { "[부드러움]", 51 },
             { "[코인]", 52 },
+            { "[일반달팽이_손몸01]", 53 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();
