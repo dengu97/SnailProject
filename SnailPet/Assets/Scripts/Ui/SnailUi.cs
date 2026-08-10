@@ -146,31 +146,15 @@ namespace SnailPet.Ui
             _coinText = Label(_widget, new RectInt(coin.x + 30, coin.y, coin.width - 34, coin.height),
                               "5,000", 12, UiTheme.Ink);
 
-            // 닫기·최대화 아이콘은 아직 없다. 들어오면 IconButton 으로 바꾼다.
-            PlaceholderButton(Above(At.Close),    "Close",    "✕", () => Close?.Invoke());
-            PlaceholderButton(Above(At.Maximize), "Maximize", "＋", () => Maximize?.Invoke());
+            // 이 둘은 다른 아이콘과 달리 아트에 색이 들어 있다. 물들이면 안 된다.
+            IconButton(_widget, Above(At.Close),    "btn_close",    "Close",
+                       () => Close?.Invoke(), tint: Color.white);
+            IconButton(_widget, Above(At.Maximize), "btn_maximize", "Maximize",
+                       () => Maximize?.Invoke(), tint: Color.white);
         }
 
         /// <summary>위젯 상자 기준 좌표로 옮긴다. 목업은 패널 왼쪽 위가 원점이라 코인 줄만큼 내려 준다.</summary>
         private static RectInt Above(RectInt r) => new RectInt(r.x, r.y - At.Coin.y, r.width, r.height);
-
-        /// <summary>아이콘이 아직 없는 버튼. 모양만 맞춰 두고 눌리기는 한다.</summary>
-        private void PlaceholderButton(RectInt r, string name, string glyph, Action fire)
-        {
-            var rt = NewRect(name, _widget);
-            Place(rt, r);
-
-            var img = rt.gameObject.AddComponent<Image>();
-            img.sprite = UiSprites.Fill(6);
-            img.type = Image.Type.Sliced;
-            img.color = UiTheme.PanelBorder;
-
-            Label(rt, new RectInt(0, 0, r.width, r.height), glyph, 16, Color.white);
-
-            var btn = rt.gameObject.AddComponent<Button>();
-            btn.targetGraphic = img;
-            btn.onClick.AddListener(() => fire?.Invoke());
-        }
 
         // ── 값 넣기 ──
 
@@ -323,8 +307,9 @@ namespace SnailPet.Ui
             return img;
         }
 
+        /// <param name="tint">아이콘 색. 실루엣 아이콘은 기본값(먹색), 색이 들어 있는 아트는 흰색.</param>
         private Button IconButton(RectTransform parent, RectInt r, string key, string name,
-                                  Action fire, Color? background = null)
+                                  Action fire, Color? background = null, Color? tint = null)
         {
             var rt = NewRect(name, parent);
             Place(rt, r);
@@ -343,7 +328,7 @@ namespace SnailPet.Ui
 
             int pad = background.HasValue ? 4 : 1;
             Icon(rt, new RectInt(pad, pad, r.width - pad * 2, r.height - pad * 2),
-                 key, UiTheme.Ink, "Glyph").raycastTarget = false;
+                 key, tint ?? UiTheme.Ink, "Glyph").raycastTarget = false;
 
             var btn = rt.gameObject.AddComponent<Button>();
             btn.targetGraphic = img;
