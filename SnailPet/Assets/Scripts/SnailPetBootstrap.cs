@@ -57,6 +57,7 @@ namespace SnailPet
         private float _visibleWidth = 1f; // 스케일 적용 전 몸통 가로 (월드 단위)
         private float _scale = 1f;
         private SnailGrowth _growth;
+        private SnailComposer.Composed _composed;
 
         private enum PetState { Wander, Seek, Eat }
         private PetState _state = PetState.Wander;
@@ -134,9 +135,9 @@ namespace SnailPet
             Say("[1] 부화 ............. " + GameData.TokenById[egg.Id] + " (" + egg.RarityType + ")");
             Say("      " + _appearance);
 
-            var root = SnailComposer.Build(_appearance);
-            root.transform.SetParent(transform, false);
-            _snail = root.transform;
+            _composed = SnailComposer.Build(_appearance);
+            _composed.Root.transform.SetParent(transform, false);
+            _snail = _composed.Root.transform;
 
             _bounds = SnailMetrics.Measure(_appearance);
             _visibleWidth = _bounds.Right - _bounds.Left;
@@ -152,6 +153,19 @@ namespace SnailPet
             var top = GameData.LevelData[GameData.LevelData.Length - 1];
             Say(string.Format("      최고 레벨: 속도 {0}px/s, 크기 {1}px",
                 top.Speed * SnailGrowth.PixelsPerSpeedUnit, top.Size * SnailGrowth.PixelsPerSizeUnit));
+        }
+
+        /// <summary>변형 그룹이 의도대로 나뉘었는지 확인용. 스켈레톤은 이 루트들에 붙는다.</summary>
+        private static string DescribeGroups(SnailComposer.Composed c)
+        {
+            if (c == null) return "(없음)";
+            var sb = new StringBuilder();
+            foreach (var kv in c.Groups)
+            {
+                if (sb.Length > 0) sb.Append(", ");
+                sb.Append(kv.Value.name).Append(' ').Append(kv.Value.childCount).Append("장");
+            }
+            return sb.ToString();
         }
 
         /// <summary>레벨이 바뀌면 크기를 다시 맞춘다. 속도는 매 프레임 읽으므로 여기선 안 건드린다.</summary>
@@ -323,7 +337,7 @@ namespace SnailPet
             Say("");
             Say("[6] 렌더 진단");
             Say($"      Screen        : {Screen.width}x{Screen.height} (요청 {_vWidth}x{_vHeight})");
-            Say($"      레이어 수     : {_snail.childCount}장");
+            Say($"      변형 그룹     : {DescribeGroups(_composed)}");
             Say($"      몸통 경계     : L{_bounds.Left:0} R{_bounds.Right:0} 발{_bounds.Foot:0} T{_bounds.Top:0} (스케일 전)");
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             Say($"      박스          : {BoxName}  {_box}");

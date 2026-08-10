@@ -39,20 +39,41 @@ namespace SnailPet.Snail
     public static class PartsLayer
     {
         private static Dictionary<PartsType, int> _order;
+        private static Dictionary<PartsType, int> _deform;
+
+        /// <summary>DeformGroup 이 비어 있는 파츠. 변형되지 않는 강체다.</summary>
+        public const int RigidGroup = 0;
+
+        private static void EnsureIndex()
+        {
+            if (_order != null) return;
+            _order = new Dictionary<PartsType, int>();
+            _deform = new Dictionary<PartsType, int>();
+
+            foreach (var e in GameData.EnumData)
+            {
+                if (e.EnumType != "PartsType") continue;
+                if (!System.Enum.TryParse(e.EnumName, out PartsType t)) continue;
+                _order[t] = e.SortOrder ?? e.EnumValue;
+                _deform[t] = e.DeformGroup ?? RigidGroup;
+            }
+        }
 
         public static int SortOrderOf(PartsType type)
         {
-            if (_order == null)
-            {
-                _order = new Dictionary<PartsType, int>();
-                foreach (var e in GameData.EnumData)
-                {
-                    if (e.EnumType != "PartsType") continue;
-                    if (!System.Enum.TryParse(e.EnumName, out PartsType t)) continue;
-                    _order[t] = e.SortOrder ?? e.EnumValue;
-                }
-            }
+            EnsureIndex();
             return _order.TryGetValue(type, out int v) ? v : 0;
+        }
+
+        /// <summary>
+        /// 이 파츠가 어느 변형 그룹을 따르는가. 0 이면 강체.
+        /// 같은 그룹의 파츠는 하나의 스켈레톤에 스키닝되어 함께 출렁이고,
+        /// 강체는 뼈에 매달려 위치·회전만 따라간다 (껍질·악세서리).
+        /// </summary>
+        public static int DeformGroupOf(PartsType type)
+        {
+            EnsureIndex();
+            return _deform.TryGetValue(type, out int v) ? v : RigidGroup;
         }
     }
 }
