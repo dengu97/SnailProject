@@ -8,8 +8,11 @@ namespace SnailPet.Snail
     /// 유저가 말풍선을 누르면 ItemId 를 ItemCount 만큼 받는다.
     ///
     /// 준비된 것을 알려주지 않으면 유저가 알 방법이 없으므로 달팽이 위에 말풍선을 띄운다.
-    /// 말풍선은 달팽이가 벽에 매달려 뒤집혀 있어도 <b>똑바로</b> 서 있어야 하므로
-    /// 달팽이 루트에 붙이지 않고 따로 배치한다.
+    /// 말풍선은 달팽이가 붙은 벽을 따라 <b>같이 돌아간다</b>. 옆벽을 탈 때 혼자 똑바로 서 있으면
+    /// 달팽이에 딸린 것으로 안 보인다.
+    ///
+    /// 그래도 달팽이 루트의 자식으로 넣지는 않는다. 루트에는 좌우 반전과 몸통 변형이 걸려 있어
+    /// 말풍선까지 뒤집히고 늘어난다. 위치와 회전만 받아 따로 배치한다.
     /// </summary>
     public sealed class SnailPresent
     {
@@ -122,12 +125,25 @@ namespace SnailPet.Snail
             return true;
         }
 
-        /// <summary>말풍선을 그 위치에 띄운다. 회전은 주지 않는다 (항상 똑바로).</summary>
-        public void Place(Vector3 worldPosition, bool visible)
+        /// <summary>
+        /// 말풍선을 그 위치·각도에 띄운다.
+        /// 각도는 달팽이 자세를 그대로 받으므로 모서리를 도는 동안에도 같이 부드럽게 돌아간다.
+        /// </summary>
+        public void Place(Vector3 worldPosition, float rotationDeg, bool visible)
         {
             _renderer.enabled = visible && _renderer.sprite != null;
-            if (visible) _bubble.position = worldPosition;
+            if (!visible) return;
+
+            _bubble.position = worldPosition;
+            _bubble.localRotation = Quaternion.Euler(0f, 0f, rotationDeg);
         }
+
+        /// <summary>화면에 안 보일 때 원인을 좁히기 위한 진단.</summary>
+        public string Describe() =>
+            $"sprite={( _renderer.sprite != null ? _renderer.sprite.name : "없음")} " +
+            $"enabled={_renderer.enabled} pos={_bubble.position} scale={_bubble.localScale} " +
+            $"rot={_bubble.localRotation.eulerAngles.z:0} order={_renderer.sortingOrder} " +
+            $"halfW={HalfWidthWorld:0.0} halfH={HalfHeightWorld:0.0}";
 
         public override string ToString() =>
             Ready ? "선물 준비됨" : $"다음 선물까지 {Remaining:0}초";

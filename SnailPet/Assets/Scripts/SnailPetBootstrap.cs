@@ -51,6 +51,9 @@ namespace SnailPet
         /// <summary>데모용 시작 위치. 1 에 가까울수록 모서리 바로 앞에서 시작한다.</summary>
         private const float DemoStartT = 0.94f;
 
+        /// <summary>데모용 시작 벽. 특정 벽에서의 모습을 확인할 때 바꾼다.</summary>
+        private const BoxEdge DemoStartEdge = BoxEdge.Bottom;
+
         /// <summary>
         /// 달팽이가 기어다닐 박스를 무엇으로 삼을지.
         ///
@@ -210,7 +213,7 @@ namespace SnailPet
             Say("[3] 투명 창 적용 ..... " + (ok ? "OK" : "실패: " + TransparentWindow.LastError));
             Say("[4] 클릭 통과 ....... " + (TransparentWindow.IsClickThrough() ? "OK" : "미적용"));
 
-            _anchor = new BoxAnchor { Edge = BoxEdge.Bottom, T = DemoStartT, Forward = true };
+            _anchor = new BoxAnchor { Edge = DemoStartEdge, T = DemoStartT, Forward = true };
             _box = ResolveBox();
             Say("[5] 박스 ............ " + BoxName + "  " + _box);
 #endif
@@ -751,7 +754,10 @@ namespace SnailPet
         /// 선물 타이머와 말풍선.
         ///
         /// 말풍선은 달팽이 머리 위 — 즉 벽에서 박스 안쪽으로 — 띄운다.
-        /// 천장에 매달려 있어도 화면 안에 들어오고, 회전은 주지 않아 항상 똑바로 선다.
+        /// 천장에 매달려 있어도 화면 안에 들어온다.
+        ///
+        /// 벽을 따라 같이 회전하므로 띄우는 간격도 항상 말풍선의 세로 반폭이 된다.
+        /// (안 돌리면 옆벽에서는 가로 반폭을 써야 해서 벽마다 간격이 달라졌다.)
         /// </summary>
         private void StepPresent(SnailPose pose, float footDepth, float px)
         {
@@ -765,7 +771,15 @@ namespace SnailPet
             Vector2 bubbleScreen = foot - n * (bodyDepth + BubbleGapPx + bubbleHalf);
 
             bool visible = _present.Ready;
-            _present.Place(VirtualToWorld(bubbleScreen.x, bubbleScreen.y), visible);
+            _present.Place(VirtualToWorld(bubbleScreen.x, bubbleScreen.y), pose.RotationDeg, visible);
+
+            if (visible && !_bubbleLogged)
+            {
+                _bubbleLogged = true;
+                Say($"      [{_t:0.0}s] 말풍선 표시: 발 화면({foot.x:0},{foot.y:0}) → 말풍선 화면({bubbleScreen.x:0},{bubbleScreen.y:0})");
+                Say($"                    몸깊이 {bodyDepth:0} + 간격 {BubbleGapPx:0} + 반높이 {bubbleHalf:0} = {bodyDepth + BubbleGapPx + bubbleHalf:0}px 안쪽");
+                Say($"                    {_present.Describe()}");
+            }
 
             // 잡을 수 있는 것 위에 있거나 끌고 있는 동안에만 클릭 통과를 끈다.
             // 그 외에는 계속 통과시켜 바탕화면 작업을 방해하지 않는다.
@@ -777,6 +791,7 @@ namespace SnailPet
         }
 
         private const float BubbleGapPx = SnailPresent.BubbleGap;
+        private bool _bubbleLogged;
 
         /// <summary>
         /// 커서가 달팽이 몸통 위에 있는가.
