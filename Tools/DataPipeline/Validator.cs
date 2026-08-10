@@ -209,6 +209,18 @@ namespace SnailPet.Pipeline
                     }
                     if (tokens == 0 || others > 0) continue;
 
+                    // 이름이 Id 로 끝나면 경고로 넘길 수 없다. 다른 시트의 같은 이름 열은
+                    // int 로 변환돼 있는데 이 열만 문자열로 남아, 런타임에서 서로 다른 타입이 된다.
+                    // 실제로 ItemData.InfoId 가 이렇게 문자열로 새어 나갔다.
+                    if (c.Name.EndsWith("Id", StringComparison.Ordinal))
+                    {
+                        rep.Error($"{t.Name}.{c.Name}",
+                                  $"이름이 Id 로 끝나는데 타입이 string 입니다. 값은 전부 [토큰]({tokens}건) 입니다. " +
+                                  "Int 로 바꾸세요. 그대로 두면 다른 시트의 같은 열과 타입이 달라집니다.",
+                                  $"tokenstringid:{t.Name}.{c.Name}");
+                        continue;
+                    }
+
                     rep.Warn($"{t.Name}.{c.Name}",
                              $"값이 전부 [토큰]({tokens}건) 인데 타입이 string 입니다. " +
                              "Int 로 선언하면 다른 시트와 같은 방식으로 ID 가 부여됩니다.",

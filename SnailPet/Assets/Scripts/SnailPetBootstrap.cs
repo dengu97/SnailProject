@@ -703,7 +703,7 @@ namespace SnailPet
             _state = PetState.Eat;
             _eatFlashUntil = _t + 1.2f;
 
-            Say($"      먹음: {item.Data.Name} (+포만 {item.Data.FullPoint} +행복 {item.Data.HappyPoint}) → {_growth}");
+            Say($"      먹음: {Loc.ById(item.Data.NameId)} (+포만 {item.Data.FullPoint} +행복 {item.Data.HappyPoint}) → {_growth}");
         }
 
         /// <summary>데모용. 실제로는 유저가 상점에서 사서 원하는 위치에 떨어뜨린다.</summary>
@@ -728,7 +728,7 @@ namespace SnailPet
             float x = UnityEngine.Random.Range(_box.Left + 120f, _box.Right - 120f);
             float y = _box.Top + UnityEngine.Random.Range(60f, 260f);          // 공중에서 떨어뜨린다
             var dropped = _food.Drop(data, x, y);
-            if (dropped != null) Say($"      먹이 투하: {data.Name} @ x={x:0}");
+            if (dropped != null) Say($"      먹이 투하: {Loc.ById(data.NameId)} @ x={x:0}");
         }
 
         /// <summary>먹이의 화면 좌표를 월드로 옮긴다. 바닥면이 ScreenY 에 오도록 보정한다.</summary>
@@ -1113,7 +1113,7 @@ namespace SnailPet
             GUI.Label(new Rect(32, y + 28, 960, 22), _growth.ToString(), style);
             string act = _state switch
             {
-                PetState.Seek => "먹이로 이동 중" + (_target != null ? " (" + _target.Data.Name + ")" : ""),
+                PetState.Seek => "먹이로 이동 중" + (_target != null ? " (" + Loc.ById(_target.Data.NameId) + ")" : ""),
                 PetState.Eat  => "먹는 중",
                 _             => (_growth.FullPoint < _growth.Current.NeedFullPoint ? "배고픔 (먹이 없음)" : "배회 중"),
             };

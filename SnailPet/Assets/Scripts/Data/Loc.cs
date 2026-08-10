@@ -38,6 +38,20 @@ namespace SnailPet.Data
             return string.IsNullOrEmpty(row.Kr) ? token : row.Kr;
         }
 
+        /// <summary>
+        /// 이미 ID 로 들어온 글자. 시트의 NameId · InfoId 열이 이 형태다.
+        /// 못 찾으면 토큰을, 그것도 없으면 `#숫자` 를 돌려준다 — 화면에 뜨면 바로 눈에 띈다.
+        /// </summary>
+        public static string ById(int id)
+        {
+            if (GameData.LanguageDataById.TryGetValue(id, out var row) && !string.IsNullOrEmpty(row.Kr))
+                return row.Kr;
+
+            string token = GameData.TokenById.TryGetValue(id, out string t) ? t : "#" + id;
+            Warn(token, "LanguageData 에 없음 (id " + id + ")");
+            return token;
+        }
+
         /// <summary>자리표시자가 있는 글자. 예: `[레벨]` = "{0}살" → Format("[레벨]", 3) → "3살".</summary>
         public static string Format(string token, params object[] args)
         {

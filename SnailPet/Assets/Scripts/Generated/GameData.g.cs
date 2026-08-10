@@ -87,6 +87,7 @@ namespace SnailPet.Data
     public sealed class PartsDataRow
     {
         public readonly int Id;
+        public readonly int NameId;
         public readonly int PartsGroupId;
         public readonly RarityType RarityType;
         public readonly PartsType PartsType;
@@ -94,11 +95,12 @@ namespace SnailPet.Data
         public readonly bool IsUseColor;
         public readonly string[] Colors;
         public readonly int AppearWeight;
-        public readonly string Info;
+        public readonly int InfoId;
 
-        public PartsDataRow(int id, int partsGroupId, RarityType rarityType, PartsType partsType, string resourceKey, bool isUseColor, string[] colors, int appearWeight, string info)
+        public PartsDataRow(int id, int nameId, int partsGroupId, RarityType rarityType, PartsType partsType, string resourceKey, bool isUseColor, string[] colors, int appearWeight, int infoId)
         {
             Id = id;
+            NameId = nameId;
             PartsGroupId = partsGroupId;
             RarityType = rarityType;
             PartsType = partsType;
@@ -106,7 +108,7 @@ namespace SnailPet.Data
             IsUseColor = isUseColor;
             Colors = colors;
             AppearWeight = appearWeight;
-            Info = info;
+            InfoId = infoId;
         }
     }
 
@@ -114,22 +116,22 @@ namespace SnailPet.Data
     {
         public readonly int Id;
         public readonly FoodType FoodType;
-        public readonly string Name;
+        public readonly int NameId;
         public readonly double FullPoint;
         public readonly double HappyPoint;
         public readonly int BuffId;
-        public readonly string Info;
+        public readonly int InfoId;
         public readonly string ResourceKey;
 
-        public FoodDataRow(int id, FoodType foodType, string name, double fullPoint, double happyPoint, int buffId, string info, string resourceKey)
+        public FoodDataRow(int id, FoodType foodType, int nameId, double fullPoint, double happyPoint, int buffId, int infoId, string resourceKey)
         {
             Id = id;
             FoodType = foodType;
-            Name = name;
+            NameId = nameId;
             FullPoint = fullPoint;
             HappyPoint = happyPoint;
             BuffId = buffId;
-            Info = info;
+            InfoId = infoId;
             ResourceKey = resourceKey;
         }
     }
@@ -200,28 +202,30 @@ namespace SnailPet.Data
         public readonly BuffType BuffType;
         public readonly double Value1;
         public readonly string IconResourceKey;
-        public readonly string Info;
+        public readonly int InfoId;
 
-        public BuffDataRow(int id, BuffType buffType, double value1, string iconResourceKey, string info)
+        public BuffDataRow(int id, BuffType buffType, double value1, string iconResourceKey, int infoId)
         {
             Id = id;
             BuffType = buffType;
             Value1 = value1;
             IconResourceKey = iconResourceKey;
-            Info = info;
+            InfoId = infoId;
         }
     }
 
     public sealed class ItemDataRow
     {
         public readonly int Id;
-        public readonly string Info;
+        public readonly int NameId;
+        public readonly string InfoId;
         public readonly string ResourceKey;
 
-        public ItemDataRow(int id, string info, string resourceKey)
+        public ItemDataRow(int id, int nameId, string infoId, string resourceKey)
         {
             Id = id;
-            Info = info;
+            NameId = nameId;
+            InfoId = infoId;
             ResourceKey = resourceKey;
         }
     }
@@ -229,17 +233,19 @@ namespace SnailPet.Data
     public sealed class EggDataRow
     {
         public readonly int Id;
+        public readonly int NameId;
         public readonly RarityType RarityType;
         public readonly string ResourceKey;
-        public readonly string Info;
+        public readonly int InfoId;
         public readonly int[] PartsGroupIds;
 
-        public EggDataRow(int id, RarityType rarityType, string resourceKey, string info, int[] partsGroupIds)
+        public EggDataRow(int id, int nameId, RarityType rarityType, string resourceKey, int infoId, int[] partsGroupIds)
         {
             Id = id;
+            NameId = nameId;
             RarityType = rarityType;
             ResourceKey = resourceKey;
-            Info = info;
+            InfoId = infoId;
             PartsGroupIds = partsGroupIds;
         }
     }
@@ -247,16 +253,18 @@ namespace SnailPet.Data
     public sealed class AccessoriesDataRow
     {
         public readonly int Id;
+        public readonly int NameId;
         public readonly AccessoriesType AccessoriesType;
         public readonly string ResourceKey;
-        public readonly string Info;
+        public readonly string InfoId;
 
-        public AccessoriesDataRow(int id, AccessoriesType accessoriesType, string resourceKey, string info)
+        public AccessoriesDataRow(int id, int nameId, AccessoriesType accessoriesType, string resourceKey, string infoId)
         {
             Id = id;
+            NameId = nameId;
             AccessoriesType = accessoriesType;
             ResourceKey = resourceKey;
-            Info = info;
+            InfoId = infoId;
         }
     }
 
@@ -331,8 +339,8 @@ namespace SnailPet.Data
     public sealed class SnailGuideRow
     {
         public readonly int Id;
-        public readonly string Name;
-        public readonly string Info;
+        public readonly int NameId;
+        public readonly int InfoId;
         public readonly int PartsId01;
         public readonly string ColorId01;
         public readonly int? PartsId02;
@@ -342,11 +350,11 @@ namespace SnailPet.Data
         public readonly int? PartsId04;
         public readonly string ColorId04;
 
-        public SnailGuideRow(int id, string name, string info, int partsId01, string colorId01, int? partsId02, string colorId02, int? partsId03, string colorId03, int? partsId04, string colorId04)
+        public SnailGuideRow(int id, int nameId, int infoId, int partsId01, string colorId01, int? partsId02, string colorId02, int? partsId03, string colorId03, int? partsId04, string colorId04)
         {
             Id = id;
-            Name = name;
-            Info = info;
+            NameId = nameId;
+            InfoId = infoId;
             PartsId01 = partsId01;
             ColorId01 = colorId01;
             PartsId02 = partsId02;
@@ -431,45 +439,45 @@ namespace SnailPet.Data
 
         public static readonly PartsDataRow[] PartsData = new PartsDataRow[]
         {
-            new PartsDataRow(1, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c01" }, 10, "연두색의 껍질."),
-            new PartsDataRow(3, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c02" }, 10, "갈색의 껍질."),
-            new PartsDataRow(4, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c03" }, 10, "초록색의 껍질."),
-            new PartsDataRow(5, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c04" }, 10, "보라색의 껍질."),
-            new PartsDataRow(6, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c05" }, 10, "파란색의 껍질."),
-            new PartsDataRow(7, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c06" }, 10, "누군가를 열렬히 좋아하다가 생긴 무늬 껍질."),
-            new PartsDataRow(8, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c07" }, 10, "상추가 너무 좋아서 껍질에 새기기로 했다."),
-            new PartsDataRow(9, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c08" }, 10, "명주 달팽이의 껍질."),
-            new PartsDataRow(10, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c01" }, 10, "아프리카 왕달팽이의 껍질. (금와)"),
-            new PartsDataRow(11, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c02" }, 10, "돌맹이를 깎아 만든 껍질. 농담이다."),
-            new PartsDataRow(12, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c03" }, 10, "나쵸칩에 맛들린 달팽이의 일탈 껍질."),
-            new PartsDataRow(13, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c04" }, 10, "갈색의 민무늬 껍질."),
-            new PartsDataRow(14, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c05" }, 10, "파란색의 민무늬 껍질."),
-            new PartsDataRow(15, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c06" }, 10, "주황색의 민무늬 껍질."),
-            new PartsDataRow(16, 17, RarityType.Rare, PartsType.Shell, "rareshell01", true, new string[] { "rareshell01_c01" }, 10, "당근이 너무 좋아서 집으로 삼기로 했다."),
-            new PartsDataRow(18, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c01" }, 10, "연두색의 몸."),
-            new PartsDataRow(19, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c02" }, 10, "분홍색의 몸."),
-            new PartsDataRow(20, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c03" }, 10, "갈색의 몸."),
-            new PartsDataRow(21, 2, RarityType.Common, PartsType.Body, "commonbody02", true, new string[] { "commonbody02_c01" }, 10, "느려졌지만, 행복해보인다."),
-            new PartsDataRow(53, 2, RarityType.Common, PartsType.Body, "commonbody03", true, new string[] { "commonbody03_c01" }, 10, "주인을 안아주고 싶어서 손이 돋아났다."),
-            new PartsDataRow(22, 2, RarityType.Common, PartsType.Eyes, "commoneyes01", false, System.Array.Empty<string>(), 10, "일반 달팽이의 눈."),
-            new PartsDataRow(23, 2, RarityType.Common, PartsType.Eyes, "commoneyes02", false, System.Array.Empty<string>(), 10, "웃는 달팽이의 눈."),
-            new PartsDataRow(24, 2, RarityType.Common, PartsType.Eyes, "commoneyes03", false, System.Array.Empty<string>(), 10, "눈치보는 달팽이의 눈."),
-            new PartsDataRow(25, 2, RarityType.Common, PartsType.Eyes, "commoneyes04", false, System.Array.Empty<string>(), 10, "무념무상의 눈."),
-            new PartsDataRow(26, 2, RarityType.Common, PartsType.Feeler, "commonfeeler01", true, new string[] { "commonfeeler01_c01" }, 10, "정신없이 버섯을 먹다보니 변해있었다."),
-            new PartsDataRow(27, 2, RarityType.Common, PartsType.Feeler, "commonfeeler02", true, new string[] { "commonfeeler02_c01" }, 10, "오글거리는 드라마를 봤더니 변해있었다."),
-            new PartsDataRow(28, 2, RarityType.Common, PartsType.Feeler, "commonfeeler03", true, new string[] { "commonfeeler03_c01" }, 10, "만두를 먹어보고 싶었던 더듬이."),
-            new PartsDataRow(29, 2, RarityType.Common, PartsType.Feeler, "commonfeeler04", true, new string[] { "commonfeeler04_c01" }, 10, "연두색의 더듬이."),
-            new PartsDataRow(30, 2, RarityType.Common, PartsType.Feeler, "commonfeeler04", true, new string[] { "commonfeeler04_c02" }, 10, "갈색의 더듬이."),
-            new PartsDataRow(54, 17, RarityType.Common, PartsType.Feeler, "commonfeeler05", true, new string[] { "commonfeeler05_c01" }, 10, "갈색 얼룩 고양이 귀."),
-            new PartsDataRow(55, 17, RarityType.Common, PartsType.Feeler, "commonfeeler05", true, new string[] { "commonfeeler05_c02" }, 10, "분홍 얼룩 고양이 귀."),
+            new PartsDataRow(1, 1, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c01" }, 10, 57),
+            new PartsDataRow(3, 3, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c02" }, 10, 58),
+            new PartsDataRow(4, 4, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c03" }, 10, 59),
+            new PartsDataRow(5, 5, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c04" }, 10, 60),
+            new PartsDataRow(6, 6, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c05" }, 10, 61),
+            new PartsDataRow(7, 7, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c06" }, 10, 62),
+            new PartsDataRow(8, 8, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c07" }, 10, 63),
+            new PartsDataRow(9, 9, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c08" }, 10, 64),
+            new PartsDataRow(10, 10, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c01" }, 10, 65),
+            new PartsDataRow(11, 11, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c02" }, 10, 66),
+            new PartsDataRow(12, 12, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c03" }, 10, 67),
+            new PartsDataRow(13, 13, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c04" }, 10, 68),
+            new PartsDataRow(14, 14, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c05" }, 10, 69),
+            new PartsDataRow(15, 15, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c06" }, 10, 70),
+            new PartsDataRow(16, 16, 17, RarityType.Rare, PartsType.Shell, "rareshell01", true, new string[] { "rareshell01_c01" }, 10, 71),
+            new PartsDataRow(18, 18, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c01" }, 10, 72),
+            new PartsDataRow(19, 19, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c02" }, 10, 73),
+            new PartsDataRow(20, 20, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c03" }, 10, 74),
+            new PartsDataRow(21, 21, 2, RarityType.Common, PartsType.Body, "commonbody02", true, new string[] { "commonbody02_c01" }, 10, 75),
+            new PartsDataRow(53, 53, 2, RarityType.Common, PartsType.Body, "commonbody03", true, new string[] { "commonbody03_c01" }, 10, 76),
+            new PartsDataRow(22, 22, 2, RarityType.Common, PartsType.Eyes, "commoneyes01", false, System.Array.Empty<string>(), 10, 77),
+            new PartsDataRow(23, 23, 2, RarityType.Common, PartsType.Eyes, "commoneyes02", false, System.Array.Empty<string>(), 10, 78),
+            new PartsDataRow(24, 24, 2, RarityType.Common, PartsType.Eyes, "commoneyes03", false, System.Array.Empty<string>(), 10, 79),
+            new PartsDataRow(25, 25, 2, RarityType.Common, PartsType.Eyes, "commoneyes04", false, System.Array.Empty<string>(), 10, 80),
+            new PartsDataRow(26, 26, 2, RarityType.Common, PartsType.Feeler, "commonfeeler01", true, new string[] { "commonfeeler01_c01" }, 10, 81),
+            new PartsDataRow(27, 27, 2, RarityType.Common, PartsType.Feeler, "commonfeeler02", true, new string[] { "commonfeeler02_c01" }, 10, 82),
+            new PartsDataRow(28, 28, 2, RarityType.Common, PartsType.Feeler, "commonfeeler03", true, new string[] { "commonfeeler03_c01" }, 10, 83),
+            new PartsDataRow(29, 29, 2, RarityType.Common, PartsType.Feeler, "commonfeeler04", true, new string[] { "commonfeeler04_c01" }, 10, 84),
+            new PartsDataRow(30, 30, 2, RarityType.Common, PartsType.Feeler, "commonfeeler04", true, new string[] { "commonfeeler04_c02" }, 10, 85),
+            new PartsDataRow(54, 54, 17, RarityType.Common, PartsType.Feeler, "commonfeeler05", true, new string[] { "commonfeeler05_c01" }, 10, 86),
+            new PartsDataRow(55, 55, 17, RarityType.Common, PartsType.Feeler, "commonfeeler05", true, new string[] { "commonfeeler05_c02" }, 10, 87),
         };
 
         public static readonly FoodDataRow[] FoodData = new FoodDataRow[]
         {
-            new FoodDataRow(31, FoodType.vegetable, "상추", 5d, 3d, 0, null, "food_lettuce"),
-            new FoodDataRow(32, FoodType.vegetable, "토마토", 7d, 5d, 0, null, null),
-            new FoodDataRow(33, FoodType.vegetable, "애호박", 7d, 5d, 0, null, "food_zucchini"),
-            new FoodDataRow(34, FoodType.bean, "두부", 15d, 10d, 35, null, "food_tofu"),
+            new FoodDataRow(31, FoodType.vegetable, 31, 5d, 3d, 0, 0, "food_lettuce"),
+            new FoodDataRow(32, FoodType.vegetable, 32, 7d, 5d, 0, 0, null),
+            new FoodDataRow(33, FoodType.vegetable, 33, 7d, 5d, 0, 0, "food_zucchini"),
+            new FoodDataRow(34, FoodType.bean, 34, 15d, 10d, 35, 0, "food_tofu"),
         };
 
         public static readonly LevelDataRow[] LevelData = new LevelDataRow[]
@@ -509,25 +517,25 @@ namespace SnailPet.Data
 
         public static readonly BuffDataRow[] BuffData = new BuffDataRow[]
         {
-            new BuffDataRow(35, BuffType.Full, 1800d, "buff_fullIcon", "30분간 허기가 떨어지지 않습니다."),
+            new BuffDataRow(35, BuffType.Full, 1800d, "buff_fullIcon", 35),
         };
 
         public static readonly ItemDataRow[] ItemData = new ItemDataRow[]
         {
-            new ItemDataRow(36, "팽이코인. 많은 것을 할 수 있다.", "item_coin"),
+            new ItemDataRow(36, 36, "[팽이코인정보]", "item_coin"),
         };
 
         public static readonly EggDataRow[] EggData = new EggDataRow[]
         {
-            new EggDataRow(37, RarityType.Common, "egg_common", "일반 알이다. 온기가 느껴진다.", new int[] { 2 }),
-            new EggDataRow(38, RarityType.Rare, "egg_rare", "레어 알이다. 온기가 느껴진다.", new int[] { 2, 17 }),
+            new EggDataRow(37, 37, RarityType.Common, "egg_common", 89, new int[] { 2 }),
+            new EggDataRow(38, 38, RarityType.Rare, "egg_rare", 90, new int[] { 2, 17 }),
         };
 
         public static readonly AccessoriesDataRow[] AccessoriesData = new AccessoriesDataRow[]
         {
-            new AccessoriesDataRow(39, AccessoriesType.Hat, "hat01", "근엄해지고 싶었다."),
-            new AccessoriesDataRow(40, AccessoriesType.Hat, "hat02", "생일인 모양이다."),
-            new AccessoriesDataRow(41, AccessoriesType.Bag, "bag01", "공부를 하려는 걸까?"),
+            new AccessoriesDataRow(39, 39, AccessoriesType.Hat, "hat01", "[모자01정보]"),
+            new AccessoriesDataRow(40, 40, AccessoriesType.Hat, "hat02", "[모자02정보]"),
+            new AccessoriesDataRow(41, 41, AccessoriesType.Bag, "bag01", "[가방01정보]"),
         };
 
         public static readonly ShopDataRow[] ShopData = new ShopDataRow[]
@@ -571,12 +579,93 @@ namespace SnailPet.Data
 
         public static readonly SnailGuideRow[] SnailGuide = new SnailGuideRow[]
         {
-            new SnailGuideRow(50, "일반달팽이", "아주 전형적인 달팽이.", 1, "commonshell01_c08", null, null, null, null, null, null),
+            new SnailGuideRow(50, 50, 94, 1, "commonshell01_c08", null, null, null, null, null, null),
         };
 
         public static readonly LanguageDataRow[] LanguageData = new LanguageDataRow[]
         {
             new LanguageDataRow(56, "{0}살"),
+            new LanguageDataRow(31, "상추"),
+            new LanguageDataRow(32, "토마토"),
+            new LanguageDataRow(33, "애호박"),
+            new LanguageDataRow(34, "두부"),
+            new LanguageDataRow(35, "30분간 허기가 떨어지지 않습니다."),
+            new LanguageDataRow(88, "팽이코인. 많은 것을 할 수 있다."),
+            new LanguageDataRow(36, "팽이코인"),
+            new LanguageDataRow(89, "일반 알이다. 온기가 느껴진다."),
+            new LanguageDataRow(90, "레어 알이다. 온기가 느껴진다."),
+            new LanguageDataRow(37, "일반 알"),
+            new LanguageDataRow(38, "레어 알"),
+            new LanguageDataRow(91, "근엄해지고 싶었다."),
+            new LanguageDataRow(92, "생일인 모양이다."),
+            new LanguageDataRow(93, "공부를 하려는 걸까?"),
+            new LanguageDataRow(39, "모자1"),
+            new LanguageDataRow(40, "모자2"),
+            new LanguageDataRow(41, "가방1"),
+            new LanguageDataRow(57, "연두색의 껍질."),
+            new LanguageDataRow(58, "갈색의 껍질."),
+            new LanguageDataRow(59, "초록색의 껍질."),
+            new LanguageDataRow(60, "보라색의 껍질."),
+            new LanguageDataRow(61, "파란색의 껍질."),
+            new LanguageDataRow(62, "누군가를 열렬히 좋아하다가 생긴 무늬 껍질."),
+            new LanguageDataRow(63, "상추가 너무 좋아서 껍질에 새기기로 했다."),
+            new LanguageDataRow(64, "명주 달팽이의 껍질."),
+            new LanguageDataRow(65, "아프리카 왕달팽이의 껍질. (금와)"),
+            new LanguageDataRow(66, "돌맹이를 깎아 만든 껍질. 농담이다."),
+            new LanguageDataRow(67, "나쵸칩에 맛들린 달팽이의 일탈 껍질."),
+            new LanguageDataRow(68, "갈색의 민무늬 껍질."),
+            new LanguageDataRow(69, "파란색의 민무늬 껍질."),
+            new LanguageDataRow(70, "주황색의 민무늬 껍질."),
+            new LanguageDataRow(71, "당근이 너무 좋아서 집으로 삼기로 했다."),
+            new LanguageDataRow(72, "연두색의 몸."),
+            new LanguageDataRow(73, "분홍색의 몸."),
+            new LanguageDataRow(74, "갈색의 몸."),
+            new LanguageDataRow(75, "느려졌지만, 행복해보인다."),
+            new LanguageDataRow(76, "주인을 안아주고 싶어서 손이 돋아났다."),
+            new LanguageDataRow(77, "일반 달팽이의 눈."),
+            new LanguageDataRow(78, "웃는 달팽이의 눈."),
+            new LanguageDataRow(79, "눈치보는 달팽이의 눈."),
+            new LanguageDataRow(80, "무념무상의 눈."),
+            new LanguageDataRow(81, "정신없이 버섯을 먹다보니 변해있었다."),
+            new LanguageDataRow(82, "오글거리는 드라마를 봤더니 변해있었다."),
+            new LanguageDataRow(83, "만두를 먹어보고 싶었던 더듬이."),
+            new LanguageDataRow(84, "연두색의 더듬이."),
+            new LanguageDataRow(85, "갈색의 더듬이."),
+            new LanguageDataRow(86, "갈색 얼룩 고양이 귀."),
+            new LanguageDataRow(87, "분홍 얼룩 고양이 귀."),
+            new LanguageDataRow(1, "껍질01"),
+            new LanguageDataRow(3, "껍질02"),
+            new LanguageDataRow(4, "껍질03"),
+            new LanguageDataRow(5, "껍질04"),
+            new LanguageDataRow(6, "껍질05"),
+            new LanguageDataRow(7, "껍질06"),
+            new LanguageDataRow(8, "껍질07"),
+            new LanguageDataRow(9, "명주달팽이껍질"),
+            new LanguageDataRow(10, "긴껍질01"),
+            new LanguageDataRow(11, "긴껍질02"),
+            new LanguageDataRow(12, "긴껍질03"),
+            new LanguageDataRow(13, "긴껍질04"),
+            new LanguageDataRow(14, "긴껍질05"),
+            new LanguageDataRow(15, "긴껍질06"),
+            new LanguageDataRow(16, "레어_당근껍질"),
+            new LanguageDataRow(18, "일반달팽이_몸01"),
+            new LanguageDataRow(19, "일반달팽이_몸02"),
+            new LanguageDataRow(20, "일반달팽이_몸03"),
+            new LanguageDataRow(21, "일반달팽이_뚱뚱몸01"),
+            new LanguageDataRow(53, "일반달팽이_손몸01"),
+            new LanguageDataRow(22, "일반달팽이_눈01"),
+            new LanguageDataRow(23, "일반달팽이_눈02"),
+            new LanguageDataRow(24, "일반달팽이_눈03"),
+            new LanguageDataRow(25, "일반달팽이_눈04"),
+            new LanguageDataRow(26, "버섯더듬이"),
+            new LanguageDataRow(27, "뱅글더듬이"),
+            new LanguageDataRow(28, "만두더듬이"),
+            new LanguageDataRow(29, "일반더듬이01"),
+            new LanguageDataRow(30, "일반더듬이02"),
+            new LanguageDataRow(54, "고양이더듬이01"),
+            new LanguageDataRow(55, "고양이더듬이02"),
+            new LanguageDataRow(50, "일반 달팽이"),
+            new LanguageDataRow(94, "아주 전형적인 달팽이."),
         };
 
         public static readonly Dictionary<int, PartsDataRow> PartsDataById = BuildPartsDataById();
@@ -726,6 +815,44 @@ namespace SnailPet.Data
             { "[일반_고양이더듬이01]", 54 },
             { "[일반_고양이더듬이02]", 55 },
             { "[레벨]", 56 },
+            { "[일반_껍질01정보]", 57 },
+            { "[일반_껍질02정보]", 58 },
+            { "[일반_껍질03정보]", 59 },
+            { "[일반_껍질04정보]", 60 },
+            { "[일반_껍질05정보]", 61 },
+            { "[일반_껍질06정보]", 62 },
+            { "[일반_껍질07정보]", 63 },
+            { "[일반_명주달팽이껍질정보]", 64 },
+            { "[일반_긴껍질01정보]", 65 },
+            { "[일반_긴껍질02정보]", 66 },
+            { "[일반_긴껍질03정보]", 67 },
+            { "[일반_긴껍질04정보]", 68 },
+            { "[일반_긴껍질05정보]", 69 },
+            { "[일반_긴껍질06정보]", 70 },
+            { "[레어_당근껍질정보]", 71 },
+            { "[일반달팽이_몸01정보]", 72 },
+            { "[일반달팽이_몸02정보]", 73 },
+            { "[일반달팽이_몸03정보]", 74 },
+            { "[일반달팽이_뚱뚱몸01정보]", 75 },
+            { "[일반달팽이_손몸01정보]", 76 },
+            { "[일반달팽이_눈01정보]", 77 },
+            { "[일반달팽이_눈02정보]", 78 },
+            { "[일반달팽이_눈03정보]", 79 },
+            { "[일반달팽이_눈04정보]", 80 },
+            { "[일반_버섯더듬이정보]", 81 },
+            { "[일반_뱅글더듬이정보]", 82 },
+            { "[일반_만두더듬이정보]", 83 },
+            { "[일반_일반더듬이01정보]", 84 },
+            { "[일반_일반더듬이02정보]", 85 },
+            { "[일반_고양이더듬이01정보]", 86 },
+            { "[일반_고양이더듬이02정보]", 87 },
+            { "[팽이코인정보]", 88 },
+            { "[일반알01정보]", 89 },
+            { "[레어알01정보]", 90 },
+            { "[모자01정보]", 91 },
+            { "[모자02정보]", 92 },
+            { "[가방01정보]", 93 },
+            { "[도감_일반달팽이]", 94 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

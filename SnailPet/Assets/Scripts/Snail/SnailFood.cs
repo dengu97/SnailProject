@@ -29,7 +29,7 @@ namespace SnailPet.Snail
         /// <summary>보이는 부분의 크기(px). 달팽이가 얼마나 가까이 와야 먹는지 판정에 쓴다.</summary>
         public float HalfWidth;
 
-        public override string ToString() => (Data != null ? Data.Name : "?") + (Landed ? " (착지)" : " (낙하 중)");
+        public override string ToString() => (Data != null ? SnailPet.Data.Loc.ById(Data.NameId) : "?") + (Landed ? " (착지)" : " (낙하 중)");
     }
 
     /// <summary>
@@ -61,7 +61,7 @@ namespace SnailPet.Snail
             if (data == null || string.IsNullOrEmpty(data.ResourceKey))
             {
                 Debug.LogWarning("[SnailPet] 먹이에 ResourceKey 가 없어 표시할 수 없습니다: " +
-                                 (data != null ? data.Name : "null"));
+                                 (data != null ? SnailPet.Data.Loc.ById(data.NameId) : "null"));
                 return null;
             }
 
