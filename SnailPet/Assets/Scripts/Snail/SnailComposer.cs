@@ -41,6 +41,12 @@ namespace SnailPet.Snail
             /// <summary>DeformGroup id → 루트. 0 은 강체(껍질·악세서리).</summary>
             public readonly Dictionary<int, Transform> Groups = new Dictionary<int, Transform>();
 
+            /// <summary>
+            /// 말랑한 파츠들. 트랜스폼이 아니라 정점을 직접 밀어 변형하므로 따로 들고 있는다.
+            /// 전부 같은 캔버스를 공유해 <see cref="SnailDeform"/> 하나로 한꺼번에 처리된다.
+            /// </summary>
+            public readonly List<DeformableSprite> Soft = new List<DeformableSprite>();
+
             public Transform GroupOrNull(int id) =>
                 Groups.TryGetValue(id, out var t) ? t : null;
         }
@@ -64,15 +70,17 @@ namespace SnailPet.Snail
 
             foreach (var p in parts)
             {
-                var parent = GroupRoot(composed, PartsLayer.DeformGroupOf(p.Type));
+                int group = PartsLayer.DeformGroupOf(p.Type);
+                var parent = GroupRoot(composed, group);
+                bool soft = group != PartsLayer.RigidGroup;
 
                 // 색상과 선화가 같은 순서 공간을 쓰되 항상 색상이 아래로 가도록 2칸씩 벌린다
                 int baseOrder = PartsLayer.SortOrderOf(p.Type) * 2;
 
                 if (!string.IsNullOrEmpty(p.ColorKey))
-                    AddLayer(parent, ColorPath(p.Type, p.ColorKey), baseOrder, p.Type + "_color");
+                    AddLayer(composed, parent, soft, ColorPath(p.Type, p.ColorKey), baseOrder, p.Type + "_color");
 
-                AddLayer(parent, LinePath(p.Type, p.ResourceKey), baseOrder + 1, p.Type + "_line");
+                AddLayer(composed, parent, soft, LinePath(p.Type, p.ResourceKey), baseOrder + 1, p.Type + "_line");
             }
             return composed;
         }
@@ -87,10 +95,22 @@ namespace SnailPet.Snail
             return go.transform;
         }
 
-        private static void AddLayer(Transform parent, string path, int sortingOrder, string name)
+        /// <summary>
+        /// 말랑한 파츠는 격자 메시로, 단단한 파츠는 그냥 SpriteRenderer 로 만든다.
+        /// 안 휘는 것까지 메시로 깔 이유가 없다.
+        /// </summary>
+        private static void AddLayer(Composed composed, Transform parent, bool soft,
+                                     string path, int sortingOrder, string name)
         {
             var sprite = Load(path);
             if (sprite == null) return;
+
+            if (soft)
+            {
+                var d = DeformableSprite.Create(parent, sprite, sortingOrder, name);
+                if (d != null) composed.Soft.Add(d);
+                return;
+            }
 
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);

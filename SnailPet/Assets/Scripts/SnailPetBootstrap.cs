@@ -164,6 +164,20 @@ namespace SnailPet
 
         private float _wobblePhase;
 
+        // ── 발바닥 ──
+        // 전부 몸 크기에 대한 비율로 둔다. 레벨이 올라 몸이 커져도 상대 비율이 유지된다.
+
+        /// <summary>몸 높이 중 발바닥으로 볼 비율. 이 위로는 발 변형이 안 간다.</summary>
+        private const float FootBandFraction = 0.18f;
+
+        /// <summary>물결 하나의 길이. 몸통 가로폭 대비.</summary>
+        private const float WaveLengthFraction = 0.30f;
+
+        /// <summary>물결이 부푸는 높이. 몸통 가로폭 대비.</summary>
+        private const float WaveAmplitudeFraction = 0.045f;
+
+        private SnailDeform _deform;
+
         /// <summary>스프라이트가 뒤집히거나 0 이 되지 않게 막는 한계.</summary>
         private const float MinStretch = -0.45f, MaxStretch = 0.60f;
 
@@ -257,6 +271,7 @@ namespace SnailPet
 
             _shellCenterLocalY = MeasureShellCenterY();
 
+            _deform = new SnailDeform { Foot = _bounds.Foot };
             _growth = new SnailGrowth();
             ApplyGrowth();
             _food = new FoodField(transform);
@@ -302,37 +317,49 @@ namespace SnailPet
         /// </summary>
         private void ApplyDeform()
         {
-            if (_composed == null) return;
+            if (_composed == null || _deform == null) return;
 
-            float sy = 1f + _stretch;
-            float sx = 1f / Mathf.Sqrt(Mathf.Max(0.2f, sy));
+            _deform.Foot = _bounds.Foot;
+            _deform.Stretch = _stretch;
+            _deform.LeanDeg = _lean;
 
             // 좌우 반전된 달팽이는 자식의 회전도 거울로 보이므로 각도를 미리 되돌린다
-            float deg = _lean * (_snail != null && _snail.localScale.x < 0f ? -1f : 1f);
+            _deform.Mirrored = _snail != null && _snail.localScale.x < 0f;
 
-            var rot   = Quaternion.Euler(0f, 0f, deg);
-            var scale = new Vector3(sx, sy, 1f);
-            var foot  = new Vector3(0f, _bounds.Foot, 0f);
-
-            // 발 f 를 중심으로 늘리고 기울인다:  p' = R*(S*(p-f)) + f
-            var soft = _composed.GroupOrNull(PartsLayer.DeformGroupOf(PartsType.Body));
-            if (soft != null)
-            {
-                soft.localScale = scale;
-                soft.localRotation = rot;
-                soft.localPosition = foot - rot * Vector3.Scale(scale, foot);
-            }
+            foreach (var s in _composed.Soft) s.Apply(_deform);
 
             var rigid = _composed.GroupOrNull(PartsLayer.RigidGroup);
             if (rigid != null)
             {
-                // 껍질 중심이 몸을 따라간 자리로 강체 이동. 스케일은 주지 않는다.
-                var c = new Vector3(0f, _shellCenterLocalY, 0f);
-                Vector3 moved = rot * Vector3.Scale(scale, c - foot) + foot;
+                // 껍질은 안 휜다. 껍질 중심이 간 자리로 통째로 옮기고 같이 기울기만 한다.
+                _deform.RigidPose(_shellCenterLocalY, out var pos, out var rot);
                 rigid.localScale = Vector3.one;
                 rigid.localRotation = rot;
-                rigid.localPosition = moved - rot * c;
+                rigid.localPosition = pos;
             }
+        }
+
+        /// <summary>
+        /// 발바닥 물결. 기어갈 때 발바닥을 따라 근육 파동이 지나간다.
+        ///
+        /// 위상을 시간이 아니라 <b>이동 거리</b>로 돌리므로, 물결이 지나가는 속도와
+        /// 달팽이가 나아가는 속도가 저절로 맞는다. 멈추면 물결도 멈춘다.
+        /// </summary>
+        private void StepFootWave(bool crawling, float deltaTime)
+        {
+            float speed = crawling ? WalkSpeed : 0f;
+
+            // 로컬 단위로 환산해서 몸 크기가 바뀌어도 물결의 상대 크기가 유지되게 한다
+            _deform.FootBand      = (_bounds.Top - _bounds.Foot) * FootBandFraction;
+            _deform.WaveLength    = _visibleWidth * WaveLengthFraction;
+            _deform.WaveDirection = _anchor.Forward ? 1f : -1f;
+
+            float want = crawling ? _visibleWidth * WaveAmplitudeFraction : 0f;
+            _deform.WaveAmplitude = Mathf.MoveTowards(_deform.WaveAmplitude, want,
+                                                      _visibleWidth * 0.12f * deltaTime);
+
+            if (speed > 0f && _deform.WaveLength > 0f)
+                _deform.WavePhase += speed / (_scale * _deform.WaveLength) * deltaTime;
         }
 
         /// <summary>변형 그룹이 의도대로 나뉘었는지 확인용. 스켈레톤은 이 루트들에 붙는다.</summary>
@@ -416,6 +443,9 @@ namespace SnailPet
                 pose = BoxWalk.Evaluate(_box, _anchor, footDepth, halfExtent);
                 LogTurn();
             }
+
+            // 벽에 붙어 실제로 나아가고 있을 때만 발바닥에 물결이 지나간다
+            StepFootWave(!SnailFree && !_peeling, Time.deltaTime);
 
             if (pose.Valid)
             {

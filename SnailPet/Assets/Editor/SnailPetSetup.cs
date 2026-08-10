@@ -32,6 +32,9 @@ namespace SnailPet.EditorTools
         [MenuItem("SnailPet/1. 프로젝트 셋업", priority = 1)]
         public static void ApplyMenu() { Apply(silent: false); }
 
+        /// <summary>batchmode 용. 대화상자를 띄우지 않는다.</summary>
+        public static void ApplyBatch() { Apply(silent: true); }
+
         public static void Apply(bool silent)
         {
             PlayerSettings.companyName = "SnailTown";
@@ -59,6 +62,7 @@ namespace SnailPet.EditorTools
             PlayerSettings.SetGraphicsAPIs(BuildTarget.StandaloneWindows64,
                 new[] { GraphicsDeviceType.Direct3D11 });
 
+            EnsureAlwaysIncludedShader("Sprites/Default");
             EnsureScene();
 
             EditorPrefs.SetBool(AppliedKey + "." + Application.dataPath, true);
@@ -72,6 +76,38 @@ namespace SnailPet.EditorTools
                          "· 씬: " + ScenePath;
             Debug.Log("[SnailPet] " + msg);
             if (!silent) EditorUtility.DisplayDialog("SnailPet", msg, "확인");
+        }
+
+        /// <summary>
+        /// 셰이더를 Graphics 설정의 Always Included Shaders 에 넣는다.
+        ///
+        /// 말랑한 파츠는 코드에서 Shader.Find 로 머티리얼을 만드는데, 빌드에는
+        /// <b>에셋이 참조하는</b> 셰이더만 담긴다. 씬이 비어 있어 아무도 참조하지 않으면
+        /// 빌드된 플레이어에서 Find 가 null 을 돌려주고 달팽이가 분홍색으로 나온다.
+        /// </summary>
+        private static void EnsureAlwaysIncludedShader(string shaderName)
+        {
+            var shader = Shader.Find(shaderName);
+            if (shader == null)
+            {
+                Debug.LogWarning("[SnailPet] 셰이더를 찾지 못했습니다: " + shaderName);
+                return;
+            }
+
+            var graphics = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset");
+            if (graphics == null || graphics.Length == 0) return;
+
+            var so = new SerializedObject(graphics[0]);
+            var list = so.FindProperty("m_AlwaysIncludedShaders");
+            if (list == null) return;
+
+            for (int i = 0; i < list.arraySize; i++)
+                if (list.GetArrayElementAtIndex(i).objectReferenceValue == shader) return;
+
+            list.InsertArrayElementAtIndex(list.arraySize);
+            list.GetArrayElementAtIndex(list.arraySize - 1).objectReferenceValue = shader;
+            so.ApplyModifiedProperties();
+            Debug.Log("[SnailPet] Always Included Shaders 에 추가: " + shaderName);
         }
 
         /// <summary>
