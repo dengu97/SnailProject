@@ -76,6 +76,64 @@ namespace SnailPet.Snail
             return result;
         }
 
+        /// <summary>
+        /// 몸통의 <b>발바닥 선</b>을 x 를 따라 재서 돌려준다.
+        ///
+        /// 발선을 최하단 한 점으로만 잡으면, 머리 쪽이 들려 있는 몸통에서는
+        /// 「발바닥에서의 높이」가 실제보다 크게 나와 그 부분만 변형이 약해진다.
+        /// (commonbody03 은 머리 쪽이 87px 들려 있다.)
+        /// 열마다 실제 아래끝을 재 두면 어떤 몸통 모양이든 발바닥 전체가 고르게 변형된다.
+        ///
+        /// 값은 스프라이트 로컬(피벗 기준). 불투명 픽셀이 없는 열은 양옆 값으로 메운다.
+        /// </summary>
+        public static bool TryMeasureSole(Sprite sprite, int samples, out float[] sole,
+                                          out float minX, out float maxX)
+        {
+            sole = null; minX = maxX = 0f;
+            if (sprite == null || samples < 2) return false;
+            if (!TryGetExtents(sprite, out var e)) return false;
+
+            var tex = sprite.texture;
+            Color32[] px;
+            try { px = tex.GetPixels32(); } catch (UnityException) { return false; }
+
+            int w = tex.width, h = tex.height;
+            float ppu = sprite.pixelsPerUnit;
+            Vector2 pivot = sprite.pivot;
+
+            minX = e.Left; maxX = e.Right;
+            sole = new float[samples];
+            var found = new bool[samples];
+
+            for (int i = 0; i < samples; i++)
+            {
+                // 샘플 하나가 담당하는 픽셀 구간 전체에서 가장 아래를 취한다.
+                // 한 열만 찍으면 선화의 빈틈에 걸려 값이 튄다.
+                float u0 = i / (float)samples, u1 = (i + 1) / (float)samples;
+                int px0 = Mathf.Clamp(Mathf.FloorToInt(Mathf.Lerp(minX, maxX, u0) * ppu + pivot.x), 0, w - 1);
+                int px1 = Mathf.Clamp(Mathf.CeilToInt (Mathf.Lerp(minX, maxX, u1) * ppu + pivot.x), 0, w - 1);
+
+                int lowest = -1;
+                for (int y = 0; y < h && lowest < 0; y++)
+                {
+                    int row = y * w;
+                    for (int x = px0; x <= px1; x++)
+                        if (px[row + x].a > 8) { lowest = y; break; }
+                }
+
+                found[i] = lowest >= 0;
+                if (found[i]) sole[i] = (lowest - pivot.y) / ppu;
+            }
+
+            // 빈 칸 메우기. 앞뒤로 훑어 가장 가까운 실측값을 끌어온다.
+            float last = e.Bottom;
+            for (int i = 0; i < samples; i++) { if (found[i]) last = sole[i]; else sole[i] = last; }
+            last = e.Bottom;
+            for (int i = samples - 1; i >= 0; i--) { if (found[i]) last = sole[i]; else sole[i] = last; }
+
+            return true;
+        }
+
         /// <summary>스프라이트의 불투명 영역을 피벗 기준 월드 단위로 돌려준다.</summary>
         private static bool TryGetExtents(Sprite sprite, out Extents e)
         {

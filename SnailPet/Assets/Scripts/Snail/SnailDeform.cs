@@ -33,6 +33,35 @@ namespace SnailPet.Snail
         /// <summary>이 높이(로컬)까지가 발바닥. 위로 갈수록 발 변형이 사라진다.</summary>
         public float FootBand = 1f;
 
+        // ── 발바닥 선 ──
+        // 「발바닥에서의 높이」를 최하단 한 점에서 재면, 머리 쪽이 들려 있는 몸통에서는
+        // 그 부분만 실제보다 높게 나와 변형이 약해진다. 실측한 발바닥 선을 기준으로 삼는다.
+        // 비워 두면 Foot 한 줄을 쓴다 — 예전 동작과 같다.
+
+        private float[] _sole;
+        private float _soleMinX, _soleMaxX;
+
+        public void SetSole(float[] profile, float minX, float maxX)
+        {
+            _sole = (profile != null && profile.Length >= 2 && maxX > minX) ? profile : null;
+            _soleMinX = minX; _soleMaxX = maxX;
+        }
+
+        public bool HasSole => _sole != null;
+
+        /// <summary>그 x 에서의 발바닥 높이. 샘플 사이는 선형 보간한다.</summary>
+        public float SoleY(float x)
+        {
+            if (_sole == null) return Foot;
+
+            float u = (x - _soleMinX) / (_soleMaxX - _soleMinX) * (_sole.Length - 1);
+            if (u <= 0f) return _sole[0];
+            if (u >= _sole.Length - 1) return _sole[_sole.Length - 1];
+
+            int i = (int)u;
+            return Mathf.Lerp(_sole[i], _sole[i + 1], u - i);
+        }
+
         /// <summary>기어갈 때 발바닥을 지나가는 물결. 이동 거리로 도는 위상.</summary>
         public float WavePhase;
         public float WaveAmplitude;
@@ -83,12 +112,12 @@ namespace SnailPet.Snail
         public float HalfWidth = 1f;
 
         /// <summary>
-        /// 발바닥 높이 가중치. 발바닥에서 1, FootBand 위로는 0.
+        /// 발바닥 높이 가중치. 그 x 의 발바닥에서 1, FootBand 위로는 0.
         /// 부드럽게 떨어져야 발과 몸통 사이에 접힌 자국이 안 생긴다.
         /// </summary>
-        public float FootWeight(float localY)
+        public float FootWeight(float localX, float localY)
         {
-            float h = (localY - Foot) / Mathf.Max(0.0001f, FootBand);
+            float h = (localY - SoleY(localX)) / Mathf.Max(0.0001f, FootBand);
             if (h <= 0f) return 1f;
             if (h >= 1f) return 0f;
             return 1f - h * h * (3f - 2f * h);      // smoothstep
@@ -103,7 +132,7 @@ namespace SnailPet.Snail
         /// </summary>
         public Vector2 Apply(Vector2 p)
         {
-            float w = FootWeight(p.y);
+            float w = FootWeight(p.x, p.y);
             float x = p.x, y = p.y;
 
             // 1) 모서리에서 접기. 모서리 점을 축으로 양쪽을 각자의 벽에 눕힌다.

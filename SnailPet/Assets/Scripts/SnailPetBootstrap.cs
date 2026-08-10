@@ -306,6 +306,8 @@ namespace SnailPet
             _shellCenterLocalY = MeasureShellCenterY();
 
             _deform = new SnailDeform { Foot = _bounds.Foot };
+            MeasureSole();
+
             _growth = new SnailGrowth();
             ApplyGrowth();
             _food = new FoodField(transform);
@@ -318,6 +320,40 @@ namespace SnailPet
             var top = GameData.LevelData[GameData.LevelData.Length - 1];
             Say(string.Format("      최고 레벨: 속도 {0}px/s, 크기 {1}px",
                 top.Speed * SnailGrowth.PixelsPerSpeedUnit, top.Size * SnailGrowth.PixelsPerSizeUnit));
+        }
+
+        /// <summary>
+        /// 발바닥 선을 몇 등분해서 잴지. 부화할 때 한 번만 재므로 넉넉히 잡아도 된다.
+        /// 격자 정점(가로 25줄)뿐 아니라 껍질 자세 계산에서도 임의의 x 로 조회한다.
+        /// </summary>
+        private const int SoleSamples = 48;
+
+        /// <summary>
+        /// 몸통의 발바닥 선을 실측해 변형에 물린다.
+        ///
+        /// 최하단 한 점을 발선으로 쓰면 머리 쪽이 들린 몸통에서 그 부분만 변형이 약해진다.
+        /// 실측한 선을 기준으로 삼으면 몸통 모양과 무관하게 발바닥 전체가 고르게 접힌다.
+        /// </summary>
+        private void MeasureSole()
+        {
+            foreach (var p in _appearance.Parts)
+            {
+                if (p.Type != PartsType.Body) continue;
+
+                var sprite = SnailComposer.Load(SnailComposer.LinePath(p.Type, p.ResourceKey));
+                if (sprite == null) continue;
+                if (!SnailMetrics.TryMeasureSole(sprite, SoleSamples, out var sole,
+                                                 out float minX, out float maxX)) continue;
+
+                _deform.SetSole(sole, minX, maxX);
+
+                float lo = float.MaxValue, hi = float.MinValue;
+                foreach (var v in sole) { if (v < lo) lo = v; if (v > hi) hi = v; }
+                Say($"      발바닥 선: {p.ResourceKey} 기복 {hi - lo:0}  (기준 발선 {_bounds.Foot:0})");
+                return;
+            }
+
+            Say("      경고: 발바닥 선을 재지 못해 최하단 한 줄을 씁니다.");
         }
 
         /// <summary>
