@@ -69,6 +69,18 @@ namespace SnailPet.Desktop
         [DllImport("user32.dll")]
         public static extern IntPtr WindowFromPoint(POINT p);
 
+        [DllImport("user32.dll")]
+        public static extern bool GetCursorPos(out POINT lpPoint);
+
+        public const int VK_LBUTTON = 0x01;
+
+        /// <summary>
+        /// 창에 포커스가 없어도 눌림을 읽을 수 있다.
+        /// 펫 창은 WS_EX_NOACTIVATE 라 포커스를 갖지 않으므로 Unity 의 Input 대신 이쪽을 쓴다.
+        /// </summary>
+        [DllImport("user32.dll")]
+        public static extern short GetAsyncKeyState(int vKey);
+
         [DllImport("dwmapi.dll")]
         public static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS pMarInset);
 

@@ -90,6 +90,38 @@ namespace SnailPet.Desktop
             if (Hwnd == IntPtr.Zero) return false;
             return (Win32.GetWindowLong(Hwnd, Win32.GWL_EXSTYLE) & Win32.WS_EX_TRANSPARENT) != 0;
         }
+
+        /// <summary>
+        /// 클릭 통과를 켜고 끈다.
+        ///
+        /// 펫은 평소 클릭이 전부 뒤로 통과해야 바탕화면 작업을 방해하지 않는다.
+        /// 하지만 말풍선처럼 눌러야 하는 것이 떠 있는 동안에는 그 위에서만 통과를 꺼서
+        /// 클릭이 뒤 창으로 새지 않게 해야 한다. 매 프레임 커서 위치로 판단해 토글한다.
+        /// </summary>
+        public static void SetClickThrough(bool enabled)
+        {
+            if (Hwnd == IntPtr.Zero) return;
+
+            int ex = Win32.GetWindowLong(Hwnd, Win32.GWL_EXSTYLE);
+            bool now = (ex & Win32.WS_EX_TRANSPARENT) != 0;
+            if (now == enabled) return;                 // 매 프레임 SetWindowLong 을 때리지 않는다
+
+            if (enabled) ex |=  Win32.WS_EX_TRANSPARENT;
+            else         ex &= ~Win32.WS_EX_TRANSPARENT;
+            Win32.SetWindowLong(Hwnd, Win32.GWL_EXSTYLE, ex);
+        }
+
+        /// <summary>커서의 가상 화면 좌표.</summary>
+        public static bool TryGetCursor(out int x, out int y)
+        {
+            x = y = 0;
+            if (!Win32.GetCursorPos(out var p)) return false;
+            x = p.x; y = p.y;
+            return true;
+        }
+
+        /// <summary>왼쪽 버튼이 지금 눌려 있는가. 포커스가 없어도 읽힌다.</summary>
+        public static bool IsLeftMouseDown() => (Win32.GetAsyncKeyState(Win32.VK_LBUTTON) & 0x8000) != 0;
     }
 }
 #endif

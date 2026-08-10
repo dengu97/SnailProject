@@ -144,8 +144,11 @@ namespace SnailPet.Data
         public readonly double UseHappyPointTime;
         public readonly double Speed;
         public readonly double Size;
+        public readonly double CoinCoolTime;
+        public readonly int ItemId;
+        public readonly int ItemCount;
 
-        public LevelDataRow(int level, double levelUpTime, double needFullPoint, double needHappyPoint, double useFullPointTime, double useHappyPointTime, double speed, double size)
+        public LevelDataRow(int level, double levelUpTime, double needFullPoint, double needHappyPoint, double useFullPointTime, double useHappyPointTime, double speed, double size, double coinCoolTime, int itemId, int itemCount)
         {
             Level = level;
             LevelUpTime = levelUpTime;
@@ -155,6 +158,19 @@ namespace SnailPet.Data
             UseHappyPointTime = useHappyPointTime;
             Speed = speed;
             Size = size;
+            CoinCoolTime = coinCoolTime;
+            ItemId = itemId;
+            ItemCount = itemCount;
+        }
+    }
+
+    public sealed class BubbleDataRow
+    {
+        public readonly string ResourceKey;
+
+        public BubbleDataRow(string resourceKey)
+        {
+            ResourceKey = resourceKey;
         }
     }
 
@@ -439,26 +455,31 @@ namespace SnailPet.Data
 
         public static readonly LevelDataRow[] LevelData = new LevelDataRow[]
         {
-            new LevelDataRow(1, 0d, 10d, 10d, 120d, 240d, 1d, 4d),
-            new LevelDataRow(2, 3600d, 15d, 15d, 120d, 240d, 1.5d, 4d),
-            new LevelDataRow(3, 3600d, 20d, 20d, 120d, 240d, 2d, 5d),
-            new LevelDataRow(4, 3600d, 25d, 25d, 180d, 240d, 2.5d, 5d),
-            new LevelDataRow(5, 3600d, 30d, 30d, 180d, 240d, 3d, 6d),
-            new LevelDataRow(6, 3600d, 35d, 35d, 180d, 300d, 3.5d, 6d),
-            new LevelDataRow(7, 3600d, 40d, 40d, 180d, 300d, 4d, 6d),
-            new LevelDataRow(8, 3600d, 45d, 45d, 180d, 300d, 4.5d, 7d),
-            new LevelDataRow(9, 3600d, 50d, 50d, 180d, 300d, 5d, 7d),
-            new LevelDataRow(10, 3600d, 55d, 55d, 240d, 300d, 5.5d, 7d),
-            new LevelDataRow(11, 3600d, 60d, 60d, 240d, 300d, 6d, 8d),
-            new LevelDataRow(12, 3600d, 65d, 65d, 240d, 360d, 6.5d, 8d),
-            new LevelDataRow(13, 3600d, 70d, 70d, 240d, 360d, 7d, 8d),
-            new LevelDataRow(14, 3600d, 75d, 75d, 240d, 360d, 7.5d, 9d),
-            new LevelDataRow(15, 3600d, 80d, 80d, 300d, 360d, 8d, 9d),
-            new LevelDataRow(16, 3600d, 85d, 85d, 300d, 360d, 8.5d, 9d),
-            new LevelDataRow(17, 3600d, 90d, 90d, 300d, 360d, 9d, 10d),
-            new LevelDataRow(18, 3600d, 95d, 95d, 300d, 360d, 9.5d, 10d),
-            new LevelDataRow(19, 3600d, 100d, 100d, 300d, 360d, 10d, 10d),
-            new LevelDataRow(20, 3600d, 105d, 105d, 300d, 360d, 10.5d, 11d),
+            new LevelDataRow(1, 0d, 10d, 10d, 120d, 240d, 1d, 4d, 1800d, 36, 1),
+            new LevelDataRow(2, 3600d, 15d, 15d, 120d, 240d, 1.5d, 4d, 1800d, 36, 2),
+            new LevelDataRow(3, 3600d, 20d, 20d, 120d, 240d, 2d, 5d, 1800d, 36, 3),
+            new LevelDataRow(4, 3600d, 25d, 25d, 180d, 240d, 2.5d, 5d, 1800d, 36, 4),
+            new LevelDataRow(5, 3600d, 30d, 30d, 180d, 240d, 3d, 6d, 1800d, 36, 5),
+            new LevelDataRow(6, 3600d, 35d, 35d, 180d, 300d, 3.5d, 6d, 1800d, 36, 6),
+            new LevelDataRow(7, 3600d, 40d, 40d, 180d, 300d, 4d, 6d, 1800d, 36, 7),
+            new LevelDataRow(8, 3600d, 45d, 45d, 180d, 300d, 4.5d, 7d, 1800d, 36, 8),
+            new LevelDataRow(9, 3600d, 50d, 50d, 180d, 300d, 5d, 7d, 1800d, 36, 9),
+            new LevelDataRow(10, 3600d, 55d, 55d, 240d, 300d, 5.5d, 7d, 1800d, 36, 10),
+            new LevelDataRow(11, 3600d, 60d, 60d, 240d, 300d, 6d, 8d, 1800d, 36, 11),
+            new LevelDataRow(12, 3600d, 65d, 65d, 240d, 360d, 6.5d, 8d, 1800d, 36, 12),
+            new LevelDataRow(13, 3600d, 70d, 70d, 240d, 360d, 7d, 8d, 1800d, 36, 13),
+            new LevelDataRow(14, 3600d, 75d, 75d, 240d, 360d, 7.5d, 9d, 1800d, 36, 14),
+            new LevelDataRow(15, 3600d, 80d, 80d, 300d, 360d, 8d, 9d, 1200d, 36, 15),
+            new LevelDataRow(16, 3600d, 85d, 85d, 300d, 360d, 8.5d, 9d, 1200d, 36, 16),
+            new LevelDataRow(17, 3600d, 90d, 90d, 300d, 360d, 9d, 10d, 1200d, 36, 17),
+            new LevelDataRow(18, 3600d, 95d, 95d, 300d, 360d, 9.5d, 10d, 1200d, 36, 18),
+            new LevelDataRow(19, 3600d, 100d, 100d, 300d, 360d, 10d, 10d, 1200d, 36, 19),
+            new LevelDataRow(20, 3600d, 105d, 105d, 300d, 360d, 10.5d, 11d, 1200d, 36, 20),
+        };
+
+        public static readonly BubbleDataRow[] BubbleData = new BubbleDataRow[]
+        {
+            new BubbleDataRow("bubble_coin"),
         };
 
         public static readonly LevelUpAdvantageRow[] LevelUpAdvantage = new LevelUpAdvantageRow[]
@@ -474,7 +495,7 @@ namespace SnailPet.Data
 
         public static readonly ItemDataRow[] ItemData = new ItemDataRow[]
         {
-            new ItemDataRow(36, "팽이코인. 많은 것을 할 수 있다.", "pangcoin"),
+            new ItemDataRow(36, "팽이코인. 많은 것을 할 수 있다.", "item_coin"),
         };
 
         public static readonly EggDataRow[] EggData = new EggDataRow[]

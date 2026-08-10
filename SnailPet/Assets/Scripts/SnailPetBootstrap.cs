@@ -68,6 +68,12 @@ namespace SnailPet
         private float _eatFlashUntil;
         private string _lastBuffs = "없음";
 
+        private SnailPresent _present;
+        private Inventory _inventory;
+        private bool _wasMouseDown;
+        private bool _cursorOnSnail;
+        private float _claimFlashUntil;
+
         private int _vLeft, _vTop, _vWidth, _vHeight;
         private string _status = "";
 
@@ -105,7 +111,7 @@ namespace SnailPet
             _box = ResolveBox();
             Say("[5] 박스 ............ " + BoxName + "  " + _box);
 #endif
-            _status = "화면 안쪽 테두리를 따라 한 바퀴 돕니다.";
+            _status = "말풍선이 뜨면 달팽이를 눌러 선물을 받으세요.";
             Say("");
             Say("→ " + AutoQuitSeconds + "초 뒤 자동 종료.");
             WriteReport();
@@ -146,6 +152,8 @@ namespace SnailPet
             _growth = new SnailGrowth();
             ApplyGrowth();
             _food = new FoodField(transform);
+            _inventory = new Inventory();
+            _present = new SnailPresent(transform);
 
             Say("[2] 성장 ............. " + _growth);
             Say(string.Format("      환산: Speed 1 = {0}px/s, Size 1 = {1}px  (레벨 1~{2})",
@@ -219,6 +227,8 @@ namespace SnailPet
                 _snail.position = VirtualToWorld(pose.RootScreen.x, pose.RootScreen.y);
                 _snail.localRotation = Quaternion.Euler(0f, 0f, pose.RotationDeg);
                 _snail.localScale = new Vector3(pose.FlipX ? -_scale : _scale, _scale, 1f);
+
+                StepPresent(pose, footDepth, px);
             }
 #endif
             if (!_diagDone && _t > 1f) { LogDiagnostics(); _diagDone = true; }
@@ -310,6 +320,69 @@ namespace SnailPet
             }
         }
 
+        /// <summary>
+        /// 선물 타이머와 말풍선.
+        ///
+        /// 말풍선은 달팽이 머리 위 — 즉 벽에서 박스 안쪽으로 — 띄운다.
+        /// 천장에 매달려 있어도 화면 안에 들어오고, 회전은 주지 않아 항상 똑바로 선다.
+        /// </summary>
+        private void StepPresent(SnailPose pose, float footDepth, float px)
+        {
+            _present.Tick(Time.deltaTime * DemoTimeScale, _growth.Current);
+
+            var n = BoxWalk.OutwardNormal(_anchor.Edge);
+            Vector2 foot = pose.RootScreen + n * footDepth;
+
+            float bodyDepth = (_bounds.Top - _bounds.Foot) * _scale * px;   // 발에서 등까지
+            float bubbleHalf = _present.HalfHeightWorld * px;
+            Vector2 bubbleScreen = foot - n * (bodyDepth + BubbleGapPx + bubbleHalf);
+
+            bool visible = _present.Ready;
+            _present.Place(VirtualToWorld(bubbleScreen.x, bubbleScreen.y), visible);
+
+            // 받는 것은 말풍선이 아니라 달팽이를 눌러서다. 말풍선은 알림일 뿐이다.
+            bool onSnail = visible && CursorOnSnail();
+            if (onSnail != _cursorOnSnail)
+                Say($"      커서 {(onSnail ? "진입" : "이탈")} (달팽이 {(visible ? "누를 수 있음" : "-")})");
+            _cursorOnSnail = onSnail;
+
+            // 달팽이 위에 있을 때만 클릭 통과를 꺼서, 클릭이 뒤 창으로 새지 않게 한다.
+            // 선물이 없을 때는 계속 통과시켜 바탕화면 작업을 방해하지 않는다.
+            TransparentWindow.SetClickThrough(!_cursorOnSnail);
+
+            // 포커스가 없는 창이라 Unity 의 Input 대신 전역 키 상태를 본다
+            bool down = TransparentWindow.IsLeftMouseDown();
+            if (down && !_wasMouseDown && _cursorOnSnail)
+            {
+                if (_present.TryClaim(_growth.Current, _inventory, out int itemId, out int count))
+                {
+                    _claimFlashUntil = _t + 1.5f;
+                    string name = GameData.TokenById.TryGetValue(itemId, out string t) ? t : itemId.ToString();
+                    Say($"      선물 수령: {name} x{count}  → 가방: {_inventory}");
+                }
+            }
+            _wasMouseDown = down;
+        }
+
+        private const float BubbleGapPx = SnailPresent.BubbleGap;
+
+        /// <summary>
+        /// 커서가 달팽이 몸통 위에 있는가.
+        ///
+        /// 달팽이는 벽에 따라 회전하고 진행 방향에 따라 좌우로 뒤집히며 레벨에 따라 크기가 변한다.
+        /// 화면 좌표에서 그 셋을 다시 계산하는 대신, 커서를 달팽이 로컬 좌표로 역변환해
+        /// 실측 몸통 경계와 그대로 비교한다. 회전·반전·스케일이 자동으로 반영된다.
+        /// </summary>
+        private bool CursorOnSnail()
+        {
+            if (_snail == null || !_bounds.Measured) return false;
+            if (!TransparentWindow.TryGetCursor(out int cx, out int cy)) return false;
+
+            Vector3 local = _snail.InverseTransformPoint(VirtualToWorld(cx, cy));
+            return local.x >= _bounds.Left && local.x <= _bounds.Right
+                && local.y >= _bounds.Foot && local.y <= _bounds.Top;
+        }
+
         private ScreenRect ResolveBox() =>
             UseActiveWindowAsBox ? ActiveWindowBox.Resolve(TransparentWindow.Hwnd)
                                  : TransparentWindow.VirtualScreen;
@@ -395,10 +468,12 @@ namespace SnailPet
                 _             => (_growth.FullPoint < _growth.Current.NeedFullPoint ? "배고픔 (먹이 없음)" : "배회 중"),
             };
             if (_t < _eatFlashUntil) act = "냠냠!";
+            if (_t < _claimFlashUntil) act = "선물 획득!";
             GUI.Label(new Rect(32, y + 50, 960, 22),
                 act + "   |   벽: " + edgeName + "   먹이 " + (_food != null ? _food.Count : 0) + "개", style);
             GUI.Label(new Rect(32, y + 72, 960, 22),
-                "자동 종료까지 " + remain.ToString("0.0") + "초 (ESC 로 즉시 종료)", style);
+                (_present != null ? _present + "   가방: " + _inventory + "   |   " : "") +
+                "자동 종료까지 " + remain.ToString("0.0") + "초 (ESC)", style);
         }
 
         private void WriteReport()
