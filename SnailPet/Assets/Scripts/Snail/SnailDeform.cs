@@ -41,6 +41,47 @@ namespace SnailPet.Snail
         /// <summary>발바닥을 따라 물결이 진행하는 방향. 진행 방향과 맞춰 준다.</summary>
         public float WaveDirection = 1f;
 
+        // ── 모서리 ──
+        // 발바닥을 모서리에서 접어 두 벽에 나눠 붙인다. 접힘은 발바닥에서만 100% 이고
+        // 위로 갈수록 사라지므로, 몸통은 접히지 않고 통째로 도는 것으로 보인다.
+        //
+        // 각도는 부호를 손으로 따지지 않는다. 부르는 쪽이 벽 방향을 로컬 좌표로
+        // 역변환해 넣어 주므로 벽·진행 방향·좌우 반전이 저절로 맞는다.
+
+        public bool Cornering;
+
+        /// <summary>모서리의 로컬 x. 발바닥 위의 한 점이다.</summary>
+        public float CornerX;
+
+        /// <summary>+1 이면 x > CornerX 쪽이 모서리 '너머'.</summary>
+        public float CornerFarSign = 1f;
+
+        /// <summary>모서리 이쪽(지나온 벽) 발바닥을 돌릴 각.</summary>
+        public float CornerNearDeg;
+
+        /// <summary>모서리 너머(갈 벽) 발바닥을 돌릴 각.</summary>
+        public float CornerFarDeg;
+
+        /// <summary>
+        /// 꺾임이 x 방향으로 퍼지는 폭.
+        ///
+        /// 모서리에서 칼로 자르듯 각을 바꾸면 발바닥 한 조각만 뾰족하게 튀어나온다.
+        /// 이 폭에 걸쳐 각을 부드럽게 옮겨야 몸이 「휘어 돌아가는」 것으로 보인다.
+        /// </summary>
+        public float CornerSpanX = 1f;
+
+        // ── 들렸을 때 ──
+        // 벽에서 떨어진 발은 붙잡을 곳이 없어 축 늘어지고 좌우로 흔들린다.
+
+        /// <summary>아래로 처지는 양(로컬).</summary>
+        public float DangleDepth;
+
+        /// <summary>좌우로 쏠리는 양(로컬). 손을 움직이면 뒤늦게 따라온다.</summary>
+        public float DangleSway;
+
+        /// <summary>몸통 반폭(로컬). 발 가장자리가 가운데보다 더 처지게 하는 데 쓴다.</summary>
+        public float HalfWidth = 1f;
+
         /// <summary>
         /// 발바닥 높이 가중치. 발바닥에서 1, FootBand 위로는 0.
         /// 부드럽게 떨어져야 발과 몸통 사이에 접힌 자국이 안 생긴다.
@@ -53,37 +94,70 @@ namespace SnailPet.Snail
             return 1f - h * h * (3f - 2f * h);      // smoothstep
         }
 
-        /// <summary>로컬 좌표 하나를 변형한다.</summary>
+        /// <summary>
+        /// 로컬 좌표 하나를 변형한다.
+        ///
+        /// 순서: 모서리 접기 → 물결 → 늘어짐 → 몸 전체 신장·기울기.
+        /// 앞의 셋은 발바닥만 건드리고, 마지막 하나가 몸 전체를 다룬다.
+        /// 가중치는 항상 <b>원래</b> 높이로 구해서, 앞 단계가 점을 옮겨도 흔들리지 않는다.
+        /// </summary>
         public Vector2 Apply(Vector2 p)
         {
-            float sy = 1f + Stretch;
+            float w = FootWeight(p.y);
+            float x = p.x, y = p.y;
 
-            // 부피 보존. 세로로 늘면 가로가 그만큼 홀쭉해진다.
-            float sx = 1f / Mathf.Sqrt(Mathf.Max(0.2f, sy));
-
-            float x = p.x * sx;
-            float y = (p.y - Foot) * sy;
-
-            // 발바닥 물결. 벽에 붙은 채로 살짝 부풀었다 가라앉는 근육 파동이라
-            // 음수(벽 안쪽)로는 안 가게 0..1 로 만든다.
-            if (WaveAmplitude > 0f)
+            // 1) 모서리에서 접기. 모서리 점을 축으로 양쪽을 각자의 벽에 눕힌다.
+            //    각이 양쪽에서 다르므로 모서리에 정확히 꺾인 자국이 생긴다. 그게 맞다.
+            if (Cornering && w > 0f)
             {
-                float w = FootWeight(p.y);
-                if (w > 0f)
+                // 모서리를 넘어가며 각이 near → far 로 부드럽게 옮겨간다.
+                // 같은 축을 도므로 축에서의 거리는 보존되고, 결과는 발바닥이 모서리를
+                // 감싸며 휘는 모양이 된다.
+                float u = (x - CornerX) * CornerFarSign / Mathf.Max(1f, CornerSpanX) * 0.5f + 0.5f;
+                u = Mathf.Clamp01(u);
+                u = u * u * (3f - 2f * u);
+
+                float deg = Mathf.Lerp(CornerNearDeg, CornerFarDeg, u) * w;
+                if (deg != 0f)
                 {
-                    float t = p.x / Mathf.Max(1f, WaveLength) - WavePhase * WaveDirection;
-                    float bump = Mathf.Sin(t * Mathf.PI * 2f) * 0.5f + 0.5f;
-                    y += bump * WaveAmplitude * w;
+                    float r = deg * Mathf.Deg2Rad, c = Mathf.Cos(r), s = Mathf.Sin(r);
+                    float dx = x - CornerX, dy = y - Foot;
+                    x = CornerX + dx * c - dy * s;
+                    y = Foot    + dx * s + dy * c;
                 }
             }
 
-            float deg = Mirrored ? -LeanDeg : LeanDeg;
-            if (deg != 0f)
+            // 2) 기어갈 때의 근육 파동. 벽 안쪽으로 파고들지 않게 0..1 로만 부푼다.
+            //    가중치를 세제곱해 접힘보다 훨씬 얇은 띠에만 남긴다. 물결은 발바닥 표면의
+            //    일이라 몸통 절반이 같이 출렁이면 안 된다.
+            if (WaveAmplitude > 0f && w > 0f)
             {
-                float r = deg * Mathf.Deg2Rad, c = Mathf.Cos(r), s = Mathf.Sin(r);
-                return new Vector2(x * c - y * s, x * s + y * c + Foot);
+                float t = p.x / Mathf.Max(1f, WaveLength) - WavePhase * WaveDirection;
+                y += (Mathf.Sin(t * Mathf.PI * 2f) * 0.5f + 0.5f) * WaveAmplitude * (w * w * w);
             }
-            return new Vector2(x, y + Foot);
+
+            // 3) 들렸을 때. 가장자리가 가운데보다 더 처져야 늘어진 것으로 보인다.
+            if (w > 0f && (DangleDepth != 0f || DangleSway != 0f))
+            {
+                float edge = Mathf.Clamp01(Mathf.Abs(p.x) / Mathf.Max(1f, HalfWidth));
+                y -= DangleDepth * w * (0.35f + 0.65f * edge * edge);
+                x += DangleSway * w;
+            }
+
+            // 4) 몸 전체. 부피 보존이라 세로로 늘면 가로가 그만큼 홀쭉해진다.
+            float sy = 1f + Stretch;
+            float sx = 1f / Mathf.Sqrt(Mathf.Max(0.2f, sy));
+
+            float ax = x * sx;
+            float ay = (y - Foot) * sy;
+
+            float lean = Mirrored ? -LeanDeg : LeanDeg;
+            if (lean != 0f)
+            {
+                float r = lean * Mathf.Deg2Rad, c = Mathf.Cos(r), s = Mathf.Sin(r);
+                return new Vector2(ax * c - ay * s, ax * s + ay * c + Foot);
+            }
+            return new Vector2(ax, ay + Foot);
         }
 
         /// <summary>

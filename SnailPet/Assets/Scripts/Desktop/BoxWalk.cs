@@ -144,9 +144,11 @@ namespace SnailPet.Desktop
         public const float TurnLengthFactor = 1.0f;
 
         /// <summary>
-        /// 도는 동안 발바닥을 오므리는 정도. 곧은 발바닥은 오목한 모서리에 닿을 수 없어
-        /// 양 끝이 벽 밖으로 뜨는데, 오므리면 그만큼 모서리에 붙어 있게 된다.
-        /// (진짜로 발이 휘게 하려면 메시 변형이 필요하다.)
+        /// 도는 동안 발바닥을 오므리는 정도. 1 이면 오므리지 않는다.
+        ///
+        /// 곧은 발바닥은 오목한 모서리에 닿을 수 없어 양 끝이 벽 밖으로 뜬다.
+        /// 오므리면 그만큼 모서리에 붙어 있게 된다. SnailDeform 의 모서리 접기가
+        /// 제대로 되면 1 로 되돌리고 이 대책을 지운다.
         /// </summary>
         public const float TurnFootShrink = 0.3f;
 

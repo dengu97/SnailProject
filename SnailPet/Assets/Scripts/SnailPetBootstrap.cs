@@ -55,6 +55,12 @@ namespace SnailPet
         private const BoxEdge DemoStartEdge = BoxEdge.Bottom;
 
         /// <summary>
+        /// 데모용. 박스를 화면 안쪽으로 이만큼(px) 줄인다.
+        /// 모서리는 화면 맨 끝이라 도는 모습이 잘렸는데, 줄이면 화면 안에서 볼 수 있다.
+        /// </summary>
+        private const int DemoBoxInset = 0;
+
+        /// <summary>
         /// 달팽이가 기어다닐 박스를 무엇으로 삼을지.
         ///
         /// false = 화면 전체. 달팽이가 바탕화면 테두리를 한 바퀴 돈다.
@@ -170,13 +176,45 @@ namespace SnailPet
         /// <summary>몸 높이 중 발바닥으로 볼 비율. 이 위로는 발 변형이 안 간다.</summary>
         private const float FootBandFraction = 0.18f;
 
+        /// <summary>모서리 꺾임이 퍼지는 폭. 몸통 가로폭 대비.</summary>
+        private const float CornerSpanFraction = 0.5f;
+
+        /// <summary>
+        /// 모서리에서 발바닥을 접을지. <b>아직 모양이 안 나와 꺼 둔다.</b>
+        ///
+        /// 기하는 맞다. 모서리를 축으로 한쪽은 지나온 벽 각으로, 반대쪽은 갈 벽 각으로
+        /// 돌리면 발바닥이 정확히 두 벽에 눕는다(모서리에서 거리도 보존된다).
+        /// 문제는 그 위다.
+        ///
+        ///  · 띠를 얇게 잡으면 → 발바닥 한 조각만 90도 꺾여 몸에서 떨어져 나온 것처럼 보인다
+        ///  · 띠를 넓게 잡으면 → 몸 절반에 90도 주름이 생기고, 껍질은 LeanDeg 로만 도는
+        ///    강체라 휜 몸을 못 따라가 사이가 벌어진다
+        ///  · 각을 x 로 부드럽게 섞으면 → 주름은 없어지지만 같은 축을 도는 회전이라
+        ///    축에서 먼 점이 크게 휩쓸려 몸이 길게 늘어난다
+        ///
+        /// 다음에 볼 방향: 껍질을 발바닥이 아니라 <b>껍질이 붙은 지점의 변형</b>을 따라가게
+        /// 만들고(RigidPose 에 각도까지 넘기기), 몸통 중간을 접는 대신 몸 전체의 회전이
+        /// 발바닥 아래 표면의 평균 각을 따라가게 해서 남는 꺾임 자체를 줄이는 쪽.
+        /// </summary>
+        private const bool CornerFoldEnabled = false;
+
         /// <summary>물결 하나의 길이. 몸통 가로폭 대비.</summary>
         private const float WaveLengthFraction = 0.30f;
 
         /// <summary>물결이 부푸는 높이. 몸통 가로폭 대비.</summary>
         private const float WaveAmplitudeFraction = 0.045f;
 
+        /// <summary>들렸을 때 발이 처지는 깊이. 몸 높이 대비.</summary>
+        private const float DangleDepthFraction = 0.10f;
+
+        /// <summary>들고 흔들 때 발이 쏠리는 양. 몸통 가로폭 대비.</summary>
+        private const float DangleSwayFraction = 0.10f;
+
+        /// <summary>이 손 속도(px/s)에서 쏠림이 최대가 된다.</summary>
+        private const float DangleSwayFullSpeed = 900f;
+
         private SnailDeform _deform;
+        private float _sway, _swayVel;
 
         /// <summary>스프라이트가 뒤집히거나 0 이 되지 않게 막는 한계.</summary>
         private const float MinStretch = -0.45f, MaxStretch = 0.60f;
@@ -322,9 +360,12 @@ namespace SnailPet
             _deform.Foot = _bounds.Foot;
             _deform.Stretch = _stretch;
             _deform.LeanDeg = _lean;
+            _deform.HalfWidth = _visibleWidth * 0.5f;
 
             // 좌우 반전된 달팽이는 자식의 회전도 거울로 보이므로 각도를 미리 되돌린다
             _deform.Mirrored = _snail != null && _snail.localScale.x < 0f;
+
+            StepCornerDeform();
 
             foreach (var s in _composed.Soft) s.Apply(_deform);
 
@@ -337,6 +378,75 @@ namespace SnailPet
                 rigid.localRotation = rot;
                 rigid.localPosition = pos;
             }
+        }
+
+        /// <summary>
+        /// 모서리에서 발바닥을 접는다. 지나온 벽과 갈 벽에 각각 눕혀 붙인다.
+        ///
+        /// 각도를 손으로 유도하지 않는 것이 요점이다. 네 벽 x 양방향 x 좌우반전이면
+        /// 부호 조합이 열여섯 가지라 반드시 어딘가 틀린다. 대신 두 벽의 진행 방향을
+        /// <b>달팽이 로컬 좌표로 역변환</b>해서 실제 각을 재면, 회전·반전·스케일이
+        /// 트랜스폼에 이미 들어 있으므로 전부 저절로 맞는다.
+        /// </summary>
+        private void StepCornerDeform()
+        {
+            _deform.Cornering = false;
+            if (!CornerFoldEnabled || _snail == null || SnailFree || _anchor.Turn <= 0f) return;
+
+            BoxWalk.EdgeSegment(_box, _anchor.Edge, out var start, out var dir, out float len);
+            Vector2 corner = _anchor.TurnToNext ? start + dir * len : start;
+
+            BoxEdge to = _anchor.TurnToNext ? BoxWalk.Next(_anchor.Edge) : BoxWalk.Prev(_anchor.Edge);
+            BoxWalk.EdgeSegment(_box, to, out _, out var dirTo, out _);
+
+            // 뒤로 걸으면 두 벽 모두 진행 방향이 반대다
+            Vector2 nearScreen = _anchor.TurnToNext ?  dir   : -dir;
+            Vector2 farScreen  = _anchor.TurnToNext ?  dirTo : -dirTo;
+
+            Vector2 bodyLocal = ScreenDirToLocal(corner, BoxWalk.Tangent(_box, _anchor));
+            if (bodyLocal == Vector2.zero) return;
+
+            Vector3 originLocal = _snail.InverseTransformPoint(VirtualToWorld(corner.x, corner.y));
+
+            _deform.Cornering     = true;
+            _deform.CornerX       = originLocal.x;
+            _deform.CornerSpanX   = _visibleWidth * CornerSpanFraction;
+            _deform.CornerFarSign = bodyLocal.x >= 0f ? 1f : -1f;
+            _deform.CornerNearDeg = Vector2.SignedAngle(bodyLocal, ScreenDirToLocal(corner, nearScreen));
+            _deform.CornerFarDeg  = Vector2.SignedAngle(bodyLocal, ScreenDirToLocal(corner, farScreen));
+        }
+
+        /// <summary>화면 방향 벡터를 달팽이 로컬 방향으로. 두 점을 옮겨 그 차이를 본다.</summary>
+        private Vector2 ScreenDirToLocal(Vector2 at, Vector2 screenDir)
+        {
+            Vector3 a = _snail.InverseTransformPoint(VirtualToWorld(at.x, at.y));
+            Vector3 b = _snail.InverseTransformPoint(
+                VirtualToWorld(at.x + screenDir.x * 64f, at.y + screenDir.y * 64f));
+
+            var d = new Vector2(b.x - a.x, b.y - a.y);
+            return d.sqrMagnitude > 1e-9f ? d.normalized : Vector2.zero;
+        }
+
+        /// <summary>
+        /// 벽에서 떨어진 발. 붙잡을 곳이 없어 축 늘어지고, 손을 움직이면 뒤늦게 따라온다.
+        /// </summary>
+        private void StepDangle(float deltaTime)
+        {
+            bool free = SnailFree;
+
+            float depthWant = free ? (_bounds.Top - _bounds.Foot) * DangleDepthFraction : 0f;
+            _deform.DangleDepth = Mathf.MoveTowards(_deform.DangleDepth, depthWant,
+                                                    (_bounds.Top - _bounds.Foot) * 0.6f * deltaTime);
+
+            // 손이 오른쪽으로 가면 발은 왼쪽에 남는다. 로컬 x 방향은 반전 여부에 달렸다.
+            float toLocal = (_snail != null && _snail.localScale.x < 0f) ? -1f : 1f;
+            float swayWant = free
+                ? Mathf.Clamp(-_handVel.x / DangleSwayFullSpeed, -1f, 1f)
+                  * _visibleWidth * DangleSwayFraction * toLocal
+                : 0f;
+
+            Spring(ref _sway, ref _swayVel, swayWant, deltaTime);
+            _deform.DangleSway = free ? _sway : 0f;
         }
 
         /// <summary>
@@ -446,6 +556,7 @@ namespace SnailPet
 
             // 벽에 붙어 실제로 나아가고 있을 때만 발바닥에 물결이 지나간다
             StepFootWave(!SnailFree && !_peeling, Time.deltaTime);
+            StepDangle(Time.deltaTime);
 
             if (pose.Valid)
             {
@@ -840,9 +951,14 @@ namespace SnailPet
                 && local.y >= _bounds.Foot && local.y <= _bounds.Top;
         }
 
-        private ScreenRect ResolveBox() =>
-            UseActiveWindowAsBox ? ActiveWindowBox.Resolve(TransparentWindow.Hwnd)
-                                 : TransparentWindow.VirtualScreen;
+        private ScreenRect ResolveBox()
+        {
+            var box = UseActiveWindowAsBox ? ActiveWindowBox.Resolve(TransparentWindow.Hwnd)
+                                           : TransparentWindow.VirtualScreen;
+            box.Left += DemoBoxInset; box.Right  -= DemoBoxInset;
+            box.Top  += DemoBoxInset; box.Bottom -= DemoBoxInset;
+            return box;
+        }
 
         private static string BoxName =>
             UseActiveWindowAsBox ? ActiveWindowBox.CurrentTitle : "(화면 전체)";
