@@ -18,6 +18,13 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# 끝난 batchmode 유니티도 잠깐 프로세스로 남아 다음 실행을 막는다. 잠시 기다려 준다.
+for ($i = 0; $i -lt 20; $i++) {
+    $live = Get-Process | Where-Object { $_.ProcessName -eq 'Unity' }
+    if (-not $live) { break }
+    if ($i -eq 0) { Write-Output "유니티 프로세스가 있어 기다리는 중... (PID $($live.Id -join ', '))" }
+    Start-Sleep -Seconds 3
+}
 $live = Get-Process | Where-Object { $_.ProcessName -eq 'Unity' }
 if ($live) {
     Write-Output "FAIL: 유니티 에디터가 열려 있습니다 (PID $($live.Id -join ', ')). 닫고 다시 실행하세요."
@@ -26,28 +33,46 @@ if ($live) {
 
 $dll = Join-Path $ProjectPath "Build\SnailPet_Data\Managed\Assembly-CSharp.dll"
 
-$log = & $Unity -batchmode -quit -projectPath $ProjectPath -executeMethod $Method -logFile - 2>&1
+# 에셋을 추가하거나 바꾼 뒤 첫 실행은 임포트만 하고 끝난다. 두 번까지 돌려 본다.
+$log = $null
+for ($try = 1; $try -le 2; $try++) {
+    $log = & $Unity -batchmode -quit -projectPath $ProjectPath -executeMethod $Method -logFile - 2>&1
 
-$errors = $log | Select-String -Pattern "error CS|Aborting batchmode|cannot open the same project"
-if ($errors) {
-    Write-Output "FAIL: 빌드 실패"
-    $errors | Select-Object -First 10 | ForEach-Object { "  $_" }
-    exit 1
+    $errors = $log | Select-String -Pattern "error CS|Aborting batchmode|cannot open the same project"
+    if ($errors) {
+        Write-Output "FAIL: 빌드 실패"
+        $errors | Select-Object -First 10 | ForEach-Object { "  $_" }
+        exit 1
+    }
+
+    if (Test-Path $dll) {
+        $out = Get-ChildItem (Join-Path $ProjectPath "Build\SnailPet_Data") -Recurse -File |
+               Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        $src = Get-ChildItem (Join-Path $ProjectPath "Assets") -Recurse -Include *.cs |
+               Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if (-not $src -or -not $out -or $src.LastWriteTime -le $out.LastWriteTime) { break }
+    }
+
+    if ($try -eq 1) { Write-Output "첫 실행이 임포트만 하고 끝났습니다. 다시 빌드합니다." }
+    while (Get-Process | Where-Object { $_.ProcessName -eq 'Unity' }) { Start-Sleep -Seconds 2 }
 }
 
 if (-not (Test-Path $dll)) { Write-Output "FAIL: 산출물이 없습니다: $dll"; exit 1 }
 
-# 「빌드 전보다 새로운가」로 보면 안 된다. 바뀐 게 없으면 유니티가 DLL 을 다시 쓰지 않아
-# 멀쩡한 빌드를 실패로 읽는다. 소스보다 새로운지를 봐야 실제로 최신인지 알 수 있다.
-$dllTime = (Get-Item $dll).LastWriteTime
-$newestSource = Get-ChildItem (Join-Path $ProjectPath "Assets") -Recurse -Include *.cs |
-                Sort-Object LastWriteTime -Descending | Select-Object -First 1
+# 판정 기준으로 Assembly-CSharp.dll 만 보면 안 된다.
+#  · 바뀐 게 없으면 유니티가 DLL 을 다시 쓰지 않아 멀쩡한 빌드를 실패로 읽는다
+#  · 에디터 스크립트(임포트 설정 등)만 바뀌면 DLL 은 그대로인데 산출물은 달라진다
+# 그래서 「빌드 폴더에서 가장 새 파일」과 「소스에서 가장 새 파일」을 견준다.
+$newestOut = Get-ChildItem (Join-Path $ProjectPath "Build\SnailPet_Data") -Recurse -File |
+             Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$newestSrc = Get-ChildItem (Join-Path $ProjectPath "Assets") -Recurse -Include *.cs |
+             Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
-if ($newestSource -and $newestSource.LastWriteTime -gt $dllTime) {
+if ($newestSrc -and $newestOut -and $newestSrc.LastWriteTime -gt $newestOut.LastWriteTime) {
     Write-Output "FAIL: 빌드가 소스보다 오래됐습니다."
-    Write-Output "  DLL   : $dllTime"
-    Write-Output "  최신 소스: $($newestSource.LastWriteTime)  $($newestSource.Name)"
+    Write-Output "  산출물  : $($newestOut.LastWriteTime)  $($newestOut.Name)"
+    Write-Output "  최신 소스: $($newestSrc.LastWriteTime)  $($newestSrc.Name)"
     exit 1
 }
 
-Write-Output "OK: 빌드 최신 ($dllTime)"
+Write-Output "OK: 빌드 최신 (산출물 $($newestOut.LastWriteTime))"

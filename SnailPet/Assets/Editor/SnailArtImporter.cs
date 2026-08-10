@@ -29,9 +29,33 @@ namespace SnailPet.EditorTools
         /// </summary>
         public const int MaxTextureSize = 512;
 
+        /// <summary>
+        /// UI 아이콘. 달팽이 파츠와 규칙이 다르다.
+        ///  · PPU 1 을 쓰면 안 된다. UI 는 RectTransform 이 크기를 정하는데 PPU 1 이면
+        ///    9-슬라이스 테두리 두께 계산이 어긋난다.
+        ///  · 알파 스캔 대상이 아니라 isReadable 이 필요 없다.
+        /// </summary>
+        public const string UiRoot = "Assets/Resources/Ui";
+
         private void OnPreprocessTexture()
         {
-            if (!assetPath.Replace('\\', '/').StartsWith(ArtRoot)) return;
+            string path = assetPath.Replace('\\', '/');
+
+            if (path.StartsWith(UiRoot))
+            {
+                var ui = (TextureImporter)assetImporter;
+                ui.textureType         = TextureImporterType.Sprite;
+                ui.spriteImportMode    = SpriteImportMode.Single;
+                ui.alphaIsTransparency = true;
+                ui.mipmapEnabled       = false;
+                ui.filterMode          = FilterMode.Bilinear;
+                ui.wrapMode            = TextureWrapMode.Clamp;
+                ui.maxTextureSize      = 256;      // 화면에는 16~28px 로 나온다
+                ui.textureCompression  = TextureImporterCompression.CompressedHQ;
+                return;
+            }
+
+            if (!path.StartsWith(ArtRoot)) return;
 
             var importer = (TextureImporter)assetImporter;
             importer.textureType         = TextureImporterType.Sprite;

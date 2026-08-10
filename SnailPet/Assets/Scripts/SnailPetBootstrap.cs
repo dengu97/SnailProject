@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using SnailPet.Data;
 using SnailPet.Snail;
+using SnailPet.Ui;
 using UnityEngine;
 using SnailPet.Desktop;   // ScreenRect / BoxWalk 는 플랫폼 의존이 없다
 
@@ -255,6 +256,7 @@ namespace SnailPet
 
             SetupCamera();
             SetupSnail();
+            SetupUi();
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             bool ok = TransparentWindow.Apply(clickThrough: true);
@@ -327,6 +329,29 @@ namespace SnailPet
         /// 격자 정점(가로 25줄)뿐 아니라 껍질 자세 계산에서도 임의의 x 로 조회한다.
         /// </summary>
         private const int SoleSamples = 48;
+
+        private SnailUi _ui;
+        private bool _cursorOnUi;
+
+        /// <summary>
+        /// 위젯 UI. 지금은 목업의 「디폴트」 상태만, 더미 값으로 띄운다.
+        /// 실제 데이터 연결은 모양이 확정된 뒤에 한다.
+        /// </summary>
+        private void SetupUi()
+        {
+            _ui = SnailUi.Create(transform);
+
+            _ui.Rename   += () => Say("      [UI] 이름 수정");
+            _ui.Detail   += () => Say("      [UI] 상세정보");
+            _ui.Wardrobe += () => Say("      [UI] 옷장");
+            _ui.Gene     += () => Say("      [UI] 유전 정보");
+            _ui.Sell     += () => Say("      [UI] 판매");
+            _ui.Settings += () => Say("      [UI] 설정");
+            _ui.Close    += () => Say("      [UI] 최소화");
+            _ui.Maximize += () => Say("      [UI] 최대화");
+
+            Say("[7] UI ............. 디폴트 패널 (더미 데이터)");
+        }
 
         /// <summary>
         /// 몸통의 발바닥 선을 실측해 변형에 물린다.
@@ -729,7 +754,12 @@ namespace SnailPet
             _lastCursor = cursor;
             _hasLastCursor = hasCursor;
 
-            if (down && !_wasMouseDown && hasCursor)
+            // UI 를 누른 것을 달팽이·먹이를 집은 것으로 오해하면 안 된다.
+            // 위젯이 화면 오른쪽 아래에 있어 달팽이와 겹치는 자리다.
+            _cursorOnUi = hasCursor && _ui != null
+                       && _ui.ContainsCursor(cx, cy, _vLeft, _vTop, _vHeight);
+
+            if (down && !_wasMouseDown && hasCursor && !_cursorOnUi)
             {
                 if (CursorOnSnail())
                 {
@@ -957,10 +987,12 @@ namespace SnailPet
             // 잡을 수 있는 것 위에 있거나 끌고 있는 동안에만 클릭 통과를 끈다.
             // 그 외에는 계속 통과시켜 바탕화면 작업을 방해하지 않는다.
             _cursorOnSnail = CursorOnSnail();
-            bool onFood = TransparentWindow.TryGetCursor(out int cx, out int cy)
-                       && _food.FindAt(cx, cy) != null;
+            bool hasCursor = TransparentWindow.TryGetCursor(out int cx, out int cy);
+            bool onFood = hasCursor && _food.FindAt(cx, cy) != null;
 
-            TransparentWindow.SetClickThrough(!(_cursorOnSnail || onFood || _drag != DragTarget.None));
+            // _cursorOnUi 는 StepDrag 에서 이미 이번 프레임 값으로 갱신됐다
+            TransparentWindow.SetClickThrough(
+                !(_cursorOnSnail || onFood || _cursorOnUi || _drag != DragTarget.None));
         }
 
         private const float BubbleGapPx = SnailPresent.BubbleGap;
