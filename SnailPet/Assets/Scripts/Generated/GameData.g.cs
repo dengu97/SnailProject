@@ -723,6 +723,7 @@ namespace SnailPet.Data
             new LanguageDataRow(118, "부화기"),
             new LanguageDataRow(119, "부화시킬 알이 없습니다."),
             new LanguageDataRow(120, "부화 완료"),
+            new LanguageDataRow(121, "준비중입니다."),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -949,6 +950,7 @@ namespace SnailPet.Data
             { "[부화기]", 118 },
             { "[부화시킬알없음]", 119 },
             { "[부화완료]", 120 },
+            { "[준비중]", 121 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

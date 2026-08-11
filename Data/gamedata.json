@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-11 22:26:34",
+  "generatedAt": "2026-08-11 22:54:19",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -130,7 +130,8 @@
     "[구매하기]": 117,
     "[부화기]": 118,
     "[부화시킬알없음]": 119,
-    "[부화완료]": 120
+    "[부화완료]": 120,
+    "[준비중]": 121
   },
   "tables": {
     "EnumData": [
@@ -415,7 +416,8 @@
       {"Id": 117, "Kr": "구매하기"},
       {"Id": 118, "Kr": "부화기"},
       {"Id": 119, "Kr": "부화시킬 알이 없습니다."},
-      {"Id": 120, "Kr": "부화 완료"}
+      {"Id": 120, "Kr": "부화 완료"},
+      {"Id": 121, "Kr": "준비중입니다."}
     ],
     "UnlockData": [
       {"Id": 101, "ConditionType": "SnailLevel", "NeedConditionValue": 2, "CostItem": null, "CostCount": null}
