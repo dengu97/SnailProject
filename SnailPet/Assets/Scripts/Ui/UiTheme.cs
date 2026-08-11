@@ -83,9 +83,18 @@ namespace SnailPet.Ui
                 new RectInt(116, -25, 28, 25),
             };
 
-            public const int RowCount = 4;
+            /// <summary>
+            /// 목록이 보이는 영역. 이 안에서만 그려지고 넘치면 잘린다.
+            /// 제목(y 8~24) 바로 아래에서 시작해 패널 끝까지 쓴다.
+            /// 목업의 4행이 다 보이고 다섯째 줄이 살짝 걸쳐 「더 있다」가 드러난다.
+            /// </summary>
+            public static readonly RectInt RowView = new RectInt(0, 25, PanelW, PanelH - 25);
+
             public static readonly RectInt Row = new RectInt(10, 27, 155, 40);
             public const int RowStep = 47;
+
+            /// <summary>미리 만들어 두는 행 수. 이보다 많은 달팽이는 안 보인다.</summary>
+            public const int RowPool = 24;
 
             // ── 음식 목록 (탭 2) ──
             // 목업의 5번째 줄이 패널 아래로 잘려 있다. 「더 있다」는 표시라 세로로 스크롤한다.

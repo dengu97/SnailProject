@@ -56,6 +56,7 @@ namespace SnailPet.Ui
 
         [SerializeField] private Image[] _tabs;
         [SerializeField] private ListRow[] _rows;
+        [SerializeField] private RectTransform _rowGridRoot, _rowContent;
         [SerializeField] private Text _listTitle;
         private int _tab;
 
@@ -294,8 +295,8 @@ namespace SnailPet.Ui
         private static RectInt Above(RectInt r) => new RectInt(r.x, r.y - At.Coin.y, r.width, r.height);
 
         /// <summary>
-        /// 최대화에서 왼쪽에 붙는 목록. 탭 4개 + 목록 패널 + 행 4개.
-        /// 행 내용은 아직 더미다. 실제 보유 목록이 생기면 <see cref="SetRows"/> 로 채운다.
+        /// 최대화에서 왼쪽에 붙는 목록. 탭 4개 + 목록 패널 + 스크롤되는 행 목록.
+        /// 내용은 <see cref="SetRows"/> 로 들어온다.
         /// </summary>
         private void BuildList()
         {
@@ -316,11 +317,15 @@ namespace SnailPet.Ui
 
             BuildFoodGrid(panel);
 
-            _rows = new ListRow[Max.RowCount];
+            BuildScrollView(panel, "SnailList", Max.RowView, out _rowGridRoot, out _rowContent);
+
+            _rows = new ListRow[Max.RowPool];
             for (int i = 0; i < _rows.Length; i++)
             {
+                // 행 좌표는 패널 기준이라 스크롤 영역 안에서는 그만큼 당겨 놓는다
                 var r = Max.Row;
-                _rows[i] = BuildRow(panel, new RectInt(r.x, r.y + i * Max.RowStep, r.width, r.height), i);
+                _rows[i] = BuildRow(_rowContent,
+                    new RectInt(r.x, r.y - Max.RowView.y + i * Max.RowStep, r.width, r.height), i);
             }
 
             SetTab(0);
@@ -369,8 +374,24 @@ namespace SnailPet.Ui
         private void BuildGrid(RectTransform panel, string name, Action<int> onClick,
                                out RectTransform root, out RectTransform content, out GridSlot[] slots)
         {
+            BuildScrollView(panel, name, Max.FoodView, out root, out content);
+
+            slots = new GridSlot[Max.FoodSlotPool];
+            for (int i = 0; i < slots.Length; i++)
+                slots[i] = BuildGridSlot(content, i, onClick);
+        }
+
+        /// <summary>
+        /// 세로로만 스크롤되는 영역. 음식·알 그리드와 달팽이 목록이 같은 것을 쓴다.
+        ///
+        /// 내용 높이는 채울 때 정해지므로 여기서는 보이는 만큼만 잡아 둔다.
+        /// 그 높이가 곧 스크롤 범위라, 안 늘리면 아무리 넣어도 안 밀린다.
+        /// </summary>
+        private void BuildScrollView(RectTransform panel, string name, RectInt at,
+                                     out RectTransform root, out RectTransform content)
+        {
             root = NewRect(name, panel);
-            Place(root, Max.FoodView);
+            Place(root, at);
             root.gameObject.SetActive(false);
 
             // 넘치는 부분을 잘라 낸다. 이게 없으면 패널 밖으로 흘러나온다.
@@ -379,7 +400,7 @@ namespace SnailPet.Ui
             content = NewRect("Content", root);
             content.anchorMin = content.anchorMax = content.pivot = new Vector2(0f, 1f);
             content.anchoredPosition = Vector2.zero;
-            content.sizeDelta = new Vector2(UiTheme.PanelW, Max.FoodView.height);
+            content.sizeDelta = new Vector2(UiTheme.PanelW, at.height);
 
             var scroll = root.gameObject.AddComponent<ScrollRect>();
             scroll.content = content;
@@ -387,10 +408,6 @@ namespace SnailPet.Ui
             scroll.horizontal = false;
             scroll.movementType = ScrollRect.MovementType.Clamped;
             scroll.scrollSensitivity = 20f;
-
-            slots = new GridSlot[Max.FoodSlotPool];
-            for (int i = 0; i < slots.Length; i++)
-                slots[i] = BuildGridSlot(content, i, onClick);
         }
 
         /// <summary>내용 높이를 줄 수에 맞춘다. 이게 스크롤 범위를 정한다.</summary>
@@ -693,7 +710,6 @@ namespace SnailPet.Ui
         public sealed class ListRow
         {
             public RectTransform Root;
-            public bool Filled;
             public Image Thumb;
             public Image RarityBadge, RarityIcon;
             public Text Name, Rarity, Age;
@@ -737,11 +753,20 @@ namespace SnailPet.Ui
         /// <summary>지금 나와 있는 달팽이는 교체 버튼이 없다 (목업 주석).</summary>
         public void SetRows((string name, SnailPet.Data.RarityType rarity, int age, bool isActive)[] rows)
         {
+            int count = rows?.Length ?? 0;
+            if (count > _rows.Length)
+                Debug.LogWarning($"[SnailPet] 달팽이 {count}마리 중 {_rows.Length}마리만 목록에 나옵니다 " +
+                                 $"(UiTheme.Max.RowPool)");
+
+            // 내용 높이가 스크롤 범위를 정한다. 안 늘리면 5마리째부터 밀리지 않는다.
+            _rowContent.sizeDelta = new Vector2(UiTheme.PanelW,
+                Mathf.Max(Max.RowView.height,
+                          Max.Row.y - Max.RowView.y + Mathf.Min(count, _rows.Length) * Max.RowStep));
+
             for (int i = 0; i < _rows.Length; i++)
             {
-                bool has = rows != null && i < rows.Length;
-                _rows[i].Filled = has;
-                _rows[i].Root.gameObject.SetActive(has && _tab == 0);
+                bool has = i < count;
+                _rows[i].Root.gameObject.SetActive(has);
                 if (!has) continue;
 
                 var r = rows[i];
@@ -765,7 +790,7 @@ namespace SnailPet.Ui
             if (_eggGridRoot != null)  _eggGridRoot.gameObject.SetActive(egg);
             if (_eggPanel != null)     _eggPanel.gameObject.SetActive(egg);
             if (_panel != null)        _panel.gameObject.SetActive(!food && !egg);
-            foreach (var r in _rows) if (r?.Root != null) r.Root.gameObject.SetActive(!food && !egg && r.Filled);
+            if (_rowGridRoot != null)  _rowGridRoot.gameObject.SetActive(!food && !egg);
             for (int i = 0; i < _tabs.Length; i++)
                 _tabs[i].color = i == _tab ? UiTheme.TabOn : UiTheme.TabOff;
 
