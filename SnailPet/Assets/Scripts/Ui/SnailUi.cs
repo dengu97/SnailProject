@@ -185,8 +185,8 @@ namespace SnailPet.Ui
             _nameText = Label(_panel, new RectInt(name.x + 22, name.y, name.width - 26, name.height),
                               "달팽이 이름", 13, UiTheme.Ink);
 
-            // 등급은 아이콘으로 보여 준다. 아직 EnumData.IconResourceKey 가 비어 있어
-            // 아트가 없으면 알약에 enum 이름을 그대로 띄운다 — 비어 보이지 않게 하려는 것이다.
+            // 등급은 EnumData.IconResourceKey 의 아이콘으로 보여 준다.
+            // 키가 비어 있거나 파일이 없으면 알약에 enum 이름을 띄운다 — 빠진 것이 눈에 띄게.
             _rarityBadge = Box(_panel, At.Rarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
             _rarityText  = Label(_panel, At.Rarity, "", 9, UiTheme.OnBadge);
             Shrink(_rarityText);
@@ -320,6 +320,7 @@ namespace SnailPet.Ui
         public sealed class ListRow
         {
             public Image Thumb;
+            public Image RarityBadge, RarityIcon;
             public Text Name, Rarity, Age;
             public Button Swap;
         }
@@ -342,9 +343,12 @@ namespace SnailPet.Ui
                 Age    = null,
             };
 
-            Box(rowRt, Max.RowRarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
+            row.RarityBadge = Box(rowRt, Max.RowRarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
             row.Rarity = Label(rowRt, Max.RowRarity, "", 8, UiTheme.OnBadge);
             Shrink(row.Rarity);
+            row.RarityIcon = Icon(rowRt, Max.RowRarity, null, Color.white, "RarityIcon");
+            row.RarityIcon.raycastTarget = false;
+            row.RarityIcon.enabled = false;
 
             Box(rowRt, Max.RowAge, UiTheme.Slot, UiSprites.Shape.Badge, "AgeBadge");
             row.Age = Label(rowRt, Max.RowAge, "", 8, UiTheme.Ink);
@@ -366,7 +370,7 @@ namespace SnailPet.Ui
                 var r = rows[i];
                 _rows[i].Name.text   = string.IsNullOrWhiteSpace(r.name)
                                      ? SnailPet.Data.Loc.Text(Keys.NoName) : r.name;
-                _rows[i].Rarity.text = r.rarity.ToString();
+                ApplyRarity(_rows[i].RarityIcon, _rows[i].RarityBadge, _rows[i].Rarity, r.rarity);
                 _rows[i].Age.text    = SnailPet.Data.Loc.Format(Keys.Age, r.age);
                 _rows[i].Swap.gameObject.SetActive(!r.isActive);
             }
@@ -409,16 +413,31 @@ namespace SnailPet.Ui
         /// 등급 표시. 아이콘이 있으면 아이콘만, 없으면 알약에 enum 이름을 띄운다.
         /// 아트가 들어오는 대로 자동으로 아이콘 쪽으로 넘어간다.
         /// </summary>
-        private void SetRarity(SnailPet.Data.RarityType rarity)
+        private void SetRarity(SnailPet.Data.RarityType rarity) =>
+            ApplyRarity(_rarityIcon, _rarityBadge, _rarityText, rarity);
+
+        /// <summary>
+        /// 등급 표시 한 벌. 상세 패널과 목록 행이 같은 뱃지를 쓰므로 여기로 모은다.
+        ///
+        /// 아이콘이 있으면 아이콘만 남기고 알약과 글자를 끈다. 등급 아트에 글자가
+        /// 이미 그려져 있어 알약을 같이 두면 겹친다.
+        /// </summary>
+        private static void ApplyRarity(Image icon, Image badge, Text text, SnailPet.Data.RarityType rarity)
         {
             string key = SnailPet.Data.Enums.IconOf(rarity);
             var sprite = string.IsNullOrEmpty(key) ? null : Resources.Load<Sprite>("Ui/Icon/" + key);
 
-            _rarityIcon.sprite = sprite;
-            _rarityIcon.enabled = sprite != null;
+            if (sprite == null && !string.IsNullOrEmpty(key))
+                Debug.LogWarning($"[SnailPet] 등급 아이콘을 찾지 못했습니다: Ui/Icon/{key} " +
+                                 $"(EnumData 의 RarityType.{rarity} 행)");
 
-            _rarityBadge.enabled = sprite == null;
-            _rarityText.text = sprite == null ? rarity.ToString() : "";
+            if (icon != null)
+            {
+                icon.sprite = sprite;
+                icon.enabled = sprite != null;
+            }
+            if (badge != null) badge.enabled = sprite == null;
+            if (text != null)  text.text = sprite == null ? rarity.ToString() : "";
         }
 
         public void SetGauges(float fullRatio, float happyRatio)
