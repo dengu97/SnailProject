@@ -55,12 +55,26 @@ namespace SnailPet.Ui
             if (_art.TryGetValue(shape, out var art)) return art;
 
             art = Resources.Load<Sprite>("Ui/Shape/" + shape.ToString().ToLowerInvariant());
-            if (art == null)
-                art = shape == Shape.PanelBorder ? Border(RadiusOf(shape), 1) : Fill(RadiusOf(shape));
+            if (art != null) _fromArt.Add(shape);
+            else art = shape == Shape.PanelBorder ? Border(RadiusOf(shape), 1) : Fill(RadiusOf(shape));
 
             _art[shape] = art;
             return art;
         }
+
+        /// <summary>
+        /// 이 도형이 아트에서 왔는가.
+        ///
+        /// 아트에는 색이 이미 칠해져 있으므로 <c>UiTheme</c> 색으로 물들이면 두 색이 곱해져
+        /// 탁해진다. 부르는 쪽은 이 값이 true 면 흰색으로 넘겨 원본 색을 그대로 내보낸다.
+        /// </summary>
+        public static bool IsArt(Shape shape)
+        {
+            Of(shape);   // 캐시를 채운다
+            return _fromArt.Contains(shape);
+        }
+
+        private static readonly HashSet<Shape> _fromArt = new HashSet<Shape>();
 
         /// <summary>어떤 도형이 아트이고 어떤 것이 코드 생성인지. 리포트에 남겨 확인용으로 쓴다.</summary>
         public static string Describe()

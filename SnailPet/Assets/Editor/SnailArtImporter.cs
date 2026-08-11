@@ -50,6 +50,23 @@ namespace SnailPet.EditorTools
         /// </summary>
         public const float ShapeScale = 4f;
 
+        /// <summary>
+        /// 9-슬라이스 경계(텍스처 픽셀). Sprite Editor 를 손으로 열지 않아도 되게 여기서 잡는다.
+        /// 화면에 나오는 모서리 크기는 이 값을 <see cref="ShapeScale"/> 로 나눈 것이다.
+        /// 새 도형을 넣으면 여기에 한 줄 추가하면 되고, 없으면 캔버스의 1/3 을 쓴다.
+        /// </summary>
+        private static Vector4 BorderOf(string name)
+        {
+            int m = name switch
+            {
+                "panel" or "panelborder" => 32,   // 96px 캔버스 → 화면 8px
+                "slot" or "badge" or "button" => 24,   // 64px 캔버스 → 화면 6px
+                "fill" => 6,                      // 20px 캔버스 → 화면 1.5px
+                _ => 0,
+            };
+            return new Vector4(m, m, m, m);
+        }
+
         private void OnPreprocessTexture()
         {
             string path = assetPath.Replace('\\', '/');
@@ -69,8 +86,7 @@ namespace SnailPet.EditorTools
                 if (path.StartsWith(UiShapeRoot))
                 {
                     ui.spritePixelsPerUnit = ShapeScale;
-                    // 9-슬라이스 경계는 .meta 의 spriteBorder 로 들어간다.
-                    // 아트가 들어오면 여기서 잡지 말고 인스펙터의 Sprite Editor 로 정한다.
+                    ui.spriteBorder = BorderOf(Path.GetFileNameWithoutExtension(path));
                 }
                 return;
             }

@@ -130,9 +130,8 @@ namespace SnailPet.Ui
             _rarityText  = Label(_panel, At.Rarity, "", 9, UiTheme.OnBadge);
             Shrink(_rarityText);
 
-            var iconRect = new RectInt(At.Rarity.x + (At.Rarity.width - At.Rarity.height) / 2,
-                                       At.Rarity.y, At.Rarity.height, At.Rarity.height);
-            _rarityIcon = Icon(_panel, iconRect, null, Color.white, "RarityIcon");
+            // 등급 아트는 글자까지 그려진 가로형 알약이라 뱃지 자리를 통째로 쓴다.
+            _rarityIcon = Icon(_panel, At.Rarity, null, Color.white, "RarityIcon");
             _rarityIcon.raycastTarget = false;
             _rarityIcon.enabled = false;
 
@@ -465,7 +464,9 @@ namespace SnailPet.Ui
             var img = rt.gameObject.AddComponent<Image>();
             img.sprite = UiSprites.Of(shape);
             img.type = Image.Type.Sliced;
-            img.color = color;
+            // 아트에는 색이 이미 칠해져 있다. 거기에 테마색을 곱하면 탁해진다.
+            // 게이지 채우기만 예외 — 포만/행복 두 색이 필요해 어쩔 수 없이 물들인다.
+            img.color = UiSprites.IsArt(shape) && shape != UiSprites.Shape.Fill ? Color.white : color;
             img.raycastTarget = false;
             return img;
         }
@@ -474,6 +475,9 @@ namespace SnailPet.Ui
         {
             var fill = Box(parent, r, UiTheme.PanelFill, UiSprites.Shape.Panel, "Panel");
             fill.raycastTarget = true;      // 패널 위에서는 클릭이 바탕화면으로 새면 안 된다
+
+            // 아트 판에는 테두리가 이미 그려져 있다. 위에 또 얹으면 두 겹이 된다.
+            if (UiSprites.IsArt(UiSprites.Shape.Panel)) return (RectTransform)fill.transform;
 
             var line = NewRect("Border", (RectTransform)fill.transform);
             line.anchorMin = Vector2.zero; line.anchorMax = Vector2.one;
