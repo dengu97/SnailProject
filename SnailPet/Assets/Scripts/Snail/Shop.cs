@@ -35,18 +35,26 @@ namespace SnailPet.Snail
             return list.ToArray();
         }
 
+        /// <summary>할인가가 적힌 상품만 오늘의 할인 후보다. 빈 칸은 할인 안 함이라는 뜻.</summary>
+        public static bool IsDiscounted(ShopDataRow row) =>
+            row != null && row.DiscountCostCount.HasValue && row.DiscountCostCount.Value > 0
+                        && row.CostCount.HasValue && row.DiscountCostCount.Value < row.CostCount.Value;
+
         /// <summary>
-        /// 오늘의 추천 한 개.
+        /// 오늘의 할인 한 개.
         ///
         /// 날짜를 씨앗으로 고르므로 하루 동안 고정되고 다음 날 바뀐다. 무작위로 두면
         /// 패널을 열 때마다 달라져 「오늘의」가 되지 않는다.
-        /// 아직 할인 데이터가 없어 정가 그대로 보여 준다.
+        ///
+        /// 상점에 내보내는 카테고리만 본다 — 안 파는 것이 할인으로 튀어나오면 안 된다.
         /// </summary>
         public static ShopDataRow Today(DateTime now)
         {
             var pool = new List<ShopDataRow>();
             foreach (var c in Categories)
-                if (c != CategoryType.Market) pool.AddRange(ProductsOf(c));
+                if (c != CategoryType.Market)
+                    foreach (var row in ProductsOf(c))
+                        if (IsDiscounted(row)) pool.Add(row);
 
             if (pool.Count == 0) return null;
             int days = (int)(now.Date - new DateTime(2026, 1, 1)).TotalDays;
@@ -80,7 +88,11 @@ namespace SnailPet.Snail
         /// 나머지는 아이템 개수로 들어간다. 악세서리도 지금은 개수로만 들고 있는다 —
         /// 옷장이 생기면 거기서 이 개수를 읽으면 된다.
         /// </summary>
-        public static Result TryBuy(PlayerState player, int shopId)
+        /// <param name="discounted">
+        /// 오늘의 할인 칸에서 산 것인지. 할인가는 그 칸에서만 적용된다 —
+        /// 카테고리 목록에서는 같은 상품이라도 정가다.
+        /// </param>
+        public static Result TryBuy(PlayerState player, int shopId, bool discounted = false)
         {
             if (player == null) return Result.NoSuchProduct;
 
@@ -92,7 +104,10 @@ namespace SnailPet.Snail
             if (!row.CostItem.HasValue || !row.CostCount.HasValue || row.CostCount.Value <= 0)
                 return Result.NoPrice;
 
-            if (!player.Items.TrySpend(row.CostItem.Value, row.CostCount.Value))
+            // 할인 칸에서 왔더라도 실제로 할인 중인 상품일 때만 깎아 준다
+            int price = discounted && IsDiscounted(row) ? row.DiscountCostCount.Value : row.CostCount.Value;
+
+            if (!player.Items.TrySpend(row.CostItem.Value, price))
                 return Result.NotEnough;
 
             int count = row.ItemCount > 0 ? row.ItemCount : 1;

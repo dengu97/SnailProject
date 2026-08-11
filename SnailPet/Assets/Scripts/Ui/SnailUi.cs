@@ -200,10 +200,11 @@ namespace SnailPet.Ui
             Hook(_foodSellBtn, () => Sell?.Invoke());
             Hook(_eggShopBtn,  () => GoShop?.Invoke());
 
-            Hook(_pickBuyBtn, () => { if (_pickId > 0) BuyProduct?.Invoke(_pickId); });
+            Hook(_pickBuyBtn, () => { if (_pickId > 0) BuyProduct?.Invoke(_pickId, true); });
             Hook(_shopBuyBtn, () =>
             {
-                if (_selectedShop >= 0 && _selectedShop < _shopIds.Length) BuyProduct?.Invoke(_shopIds[_selectedShop]);
+                if (_selectedShop >= 0 && _selectedShop < _shopIds.Length)
+                    BuyProduct?.Invoke(_shopIds[_selectedShop], false);
             });
             Hook(_backBtn, LeaveShopCategory);
         }
@@ -905,8 +906,8 @@ namespace SnailPet.Ui
 
         [SerializeField] private RectTransform _shopPanel, _shopItemPanel;
         [SerializeField] private RectTransform _shopBack;
-        [SerializeField] private Image _pickIcon, _pickRarityBadge, _pickRarityIcon;
-        [SerializeField] private Text _pickName, _pickRarityText, _pickCost;
+        [SerializeField] private Image _pickIcon, _pickRarityBadge, _pickRarityIcon, _pickStrike;
+        [SerializeField] private Text _pickName, _pickRarityText, _pickCost, _pickWas;
         [SerializeField] private Image _shopIcon, _shopRarityBadge, _shopRarityIcon;
         [SerializeField] private Text _shopName, _shopRarityText, _shopInfo, _shopCost;
         [SerializeField] private Text _shopFull, _shopHappy;
@@ -918,8 +919,11 @@ namespace SnailPet.Ui
         private int _selectedShop = -1;
         private int _pickId;
 
-        /// <summary>상품을 사겠다고 눌렀다. ShopData 의 Id 가 나간다.</summary>
-        public event Action<int> BuyProduct;
+        /// <summary>
+        /// 상품을 사겠다고 눌렀다. ShopData 의 Id 와, 오늘의 할인 칸에서 눌렀는지가 나간다.
+        /// 할인가는 그 칸에서만 적용되므로 어디서 눌렀는지를 같이 알려야 한다.
+        /// </summary>
+        public event Action<int, bool> BuyProduct;
 
         private void BuildShopCategories(RectTransform panel)
         {
@@ -979,8 +983,16 @@ namespace SnailPet.Ui
 
             _pickName = Label(_shopPanel, Sh.Name, "", 12, UiTheme.Ink);
             Icon(_shopPanel, Sh.PickCoin, "icon_coin", Color.white, "PickCoinIcon").raycastTarget = false;
-            _pickCost = Label(_shopPanel, Sh.PickCost, "", 11, UiTheme.Ink);
-            _pickCost.alignment = TextAnchor.MiddleLeft;
+
+            // 원가에는 취소선이 그이고 할인가는 빨갛다 (목업).
+            // 취소선은 아트가 아니라 얇은 사각형이다 — 스프라이트 없는 Image 가 색으로 꽉 차는
+            // 성질을 여기서는 일부러 쓴다.
+            _pickWas = Label(_shopPanel, Sh.PickWas, "", 11, UiTheme.Slot);
+            _pickStrike = NewRect("PickStrike", _shopPanel).gameObject.AddComponent<Image>();
+            Place((RectTransform)_pickStrike.transform, Sh.PickStrike);
+            _pickStrike.color = UiTheme.Slot;
+            _pickStrike.raycastTarget = false;
+            _pickCost = Label(_shopPanel, Sh.PickNow, "", 11, UiTheme.Discount);
 
             var pickBuy = Box(_shopPanel, Sh.PickBuy, UiTheme.Slot, UiSprites.Shape.Button, "PickBuy");
             pickBuy.raycastTarget = true;
@@ -1193,7 +1205,10 @@ namespace SnailPet.Ui
             return string.IsNullOrEmpty(key) ? null : Resources.Load<Sprite>("Snail/" + folder + "/" + key);
         }
 
-        /// <summary>오늘의 추천을 그린다. 아직 할인 데이터가 없어 정가 그대로다.</summary>
+        /// <summary>
+        /// 오늘의 할인을 그린다. 할인 중이면 원가에 취소선을 긋고 할인가를 빨갛게 옆에 놓는다.
+        /// 할인 상품이 하나도 없으면 row 가 null 로 들어온다.
+        /// </summary>
         public void SetTodayPick(ShopRow row)
         {
             _pickId = row?.Id ?? 0;
@@ -1201,13 +1216,46 @@ namespace SnailPet.Ui
             bool has = row != null;
             _pickIcon.enabled = has;
             _pickCost.enabled = has;
-            if (!has) { _pickName.text = SnailPet.Data.Loc.Text(Keys.Preparing); return; }
+            _pickWas.enabled = has;
+            _pickStrike.enabled = has;
+            if (_pickBuyBtn != null) _pickBuyBtn.gameObject.SetActive(has);
+
+            if (!has)
+            {
+                _pickName.text = SnailPet.Data.Loc.Text(Keys.Preparing);
+                _pickRarityBadge.enabled = false;
+                _pickRarityIcon.enabled = false;
+                _pickRarityText.text = "";
+                return;
+            }
 
             _pickName.text = SnailPet.Snail.Shop.NameOf(row);
-            _pickCost.text = row.CostCount.HasValue ? row.CostCount.Value.ToString("N0") : "-";
             _pickIcon.sprite = ProductSprite(row);
             _pickIcon.enabled = _pickIcon.sprite != null;
             ApplyRarity(_pickRarityIcon, _pickRarityBadge, _pickRarityText, row.RarityType);
+
+            bool sale = SnailPet.Snail.Shop.IsDiscounted(row);
+            _pickWas.enabled = sale;
+            _pickStrike.enabled = sale;
+
+            if (sale)
+            {
+                _pickWas.text  = row.CostCount.Value.ToString("N0");
+                _pickCost.text = row.DiscountCostCount.Value.ToString("N0");
+                Place((RectTransform)_pickCost.transform, Sh.PickNow);
+
+                // 취소선을 글자 폭에 맞춘다. 칸 폭 그대로면 짧은 숫자에서 허공까지 그어진다.
+                var line = (RectTransform)_pickStrike.transform;
+                float w = Mathf.Min(_pickWas.preferredWidth + 2f, Sh.PickStrike.width);
+                line.sizeDelta = new Vector2(w, Sh.PickStrike.height);
+            }
+            else
+            {
+                // 할인이 아니면 가격 하나만 가운데에. 색도 되돌린다.
+                _pickCost.text = row.CostCount.HasValue ? row.CostCount.Value.ToString("N0") : "-";
+                Place((RectTransform)_pickCost.transform, Sh.PickOnly);
+            }
+            _pickCost.color = sale ? UiTheme.Discount : UiTheme.Ink;
         }
 
         /// <summary>산 뒤에 그리드의 수량 표시를 새로 그린다. 상품이 늘거나 줄 수 있다.</summary>

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-11 22:54:19",
+  "generatedAt": "2026-08-12 00:08:43",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -284,16 +284,16 @@
       {"Id": 41, "NameId": 41, "AccessoriesType": "Bag", "ResourceKey": "bag01", "InfoId": 93}
     ],
     "ShopData": [
-      {"CategoryType": "Food", "Id": 31, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 5, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 2.5},
-      {"CategoryType": "Food", "Id": 32, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 7, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 3.5},
-      {"CategoryType": "Food", "Id": 33, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 7, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 3.5},
-      {"CategoryType": "Food", "Id": 34, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 12, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 6},
-      {"CategoryType": "Egg", "Id": 37, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 50, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 25},
-      {"CategoryType": "Egg", "Id": 38, "RarityType": "Rare", "ItemCount": 1, "CostItem": 36, "CostCount": 300, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 150},
-      {"CategoryType": "Item", "Id": 36, "RarityType": "Common", "ItemCount": 50, "CostItem": 36, "CostCount": 1, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": true, "SellItem": null, "SellCount": 0},
-      {"CategoryType": "Accessories", "Id": 39, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 500, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 250},
-      {"CategoryType": "Accessories", "Id": 40, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 500, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 250},
-      {"CategoryType": "Accessories", "Id": 41, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 500, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 250}
+      {"CategoryType": "Food", "Id": 31, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 5, "DiscountCostCount": 3, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 2.5},
+      {"CategoryType": "Food", "Id": 32, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 7, "DiscountCostCount": 4, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 3.5},
+      {"CategoryType": "Food", "Id": 33, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 7, "DiscountCostCount": 4, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 3.5},
+      {"CategoryType": "Food", "Id": 34, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 12, "DiscountCostCount": 8, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 6},
+      {"CategoryType": "Egg", "Id": 37, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 50, "DiscountCostCount": 35, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 25},
+      {"CategoryType": "Egg", "Id": 38, "RarityType": "Rare", "ItemCount": 1, "CostItem": 36, "CostCount": 300, "DiscountCostCount": 210, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 150},
+      {"CategoryType": "Item", "Id": 36, "RarityType": "Common", "ItemCount": 50, "CostItem": 36, "CostCount": 1, "DiscountCostCount": null, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": true, "SellItem": null, "SellCount": 0},
+      {"CategoryType": "Accessories", "Id": 39, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 500, "DiscountCostCount": 350, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 250},
+      {"CategoryType": "Accessories", "Id": 40, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 500, "DiscountCostCount": 350, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 250},
+      {"CategoryType": "Accessories", "Id": 41, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 500, "DiscountCostCount": 350, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 250}
     ],
     "EventData": [
       {"Id": 42, "Weekly": 1, "ShopItemIds": [31, 32, 33, 34], "ItemCount": 1, "Discount": 0.5, "BuyCount": 10},

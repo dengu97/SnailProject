@@ -287,13 +287,14 @@ namespace SnailPet.Data
         public readonly int ItemCount;
         public readonly int? CostItem;
         public readonly int? CostCount;
+        public readonly int? DiscountCostCount;
         public readonly System.DateTime StartDate;
         public readonly System.DateTime EndDate;
         public readonly bool IsShowEndDate;
         public readonly int? SellItem;
         public readonly double SellCount;
 
-        public ShopDataRow(CategoryType categoryType, int id, RarityType rarityType, int itemCount, int? costItem, int? costCount, System.DateTime startDate, System.DateTime endDate, bool isShowEndDate, int? sellItem, double sellCount)
+        public ShopDataRow(CategoryType categoryType, int id, RarityType rarityType, int itemCount, int? costItem, int? costCount, int? discountCostCount, System.DateTime startDate, System.DateTime endDate, bool isShowEndDate, int? sellItem, double sellCount)
         {
             CategoryType = categoryType;
             Id = id;
@@ -301,6 +302,7 @@ namespace SnailPet.Data
             ItemCount = itemCount;
             CostItem = costItem;
             CostCount = costCount;
+            DiscountCostCount = discountCostCount;
             StartDate = startDate;
             EndDate = endDate;
             IsShowEndDate = isShowEndDate;
@@ -582,16 +584,16 @@ namespace SnailPet.Data
 
         public static readonly ShopDataRow[] ShopData = new ShopDataRow[]
         {
-            new ShopDataRow(CategoryType.Food, 31, RarityType.Common, 1, 36, 5, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 2.5d),
-            new ShopDataRow(CategoryType.Food, 32, RarityType.Common, 1, 36, 7, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 3.5d),
-            new ShopDataRow(CategoryType.Food, 33, RarityType.Common, 1, 36, 7, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 3.5d),
-            new ShopDataRow(CategoryType.Food, 34, RarityType.Common, 1, 36, 12, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 6d),
-            new ShopDataRow(CategoryType.Egg, 37, RarityType.Common, 1, 36, 50, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 25d),
-            new ShopDataRow(CategoryType.Egg, 38, RarityType.Rare, 1, 36, 300, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 150d),
-            new ShopDataRow(CategoryType.Item, 36, RarityType.Common, 50, 36, 1, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), true, null, 0d),
-            new ShopDataRow(CategoryType.Accessories, 39, RarityType.Common, 1, 36, 500, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 250d),
-            new ShopDataRow(CategoryType.Accessories, 40, RarityType.Common, 1, 36, 500, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 250d),
-            new ShopDataRow(CategoryType.Accessories, 41, RarityType.Common, 1, 36, 500, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 250d),
+            new ShopDataRow(CategoryType.Food, 31, RarityType.Common, 1, 36, 5, 3, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 2.5d),
+            new ShopDataRow(CategoryType.Food, 32, RarityType.Common, 1, 36, 7, 4, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 3.5d),
+            new ShopDataRow(CategoryType.Food, 33, RarityType.Common, 1, 36, 7, 4, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 3.5d),
+            new ShopDataRow(CategoryType.Food, 34, RarityType.Common, 1, 36, 12, 8, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 6d),
+            new ShopDataRow(CategoryType.Egg, 37, RarityType.Common, 1, 36, 50, 35, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 25d),
+            new ShopDataRow(CategoryType.Egg, 38, RarityType.Rare, 1, 36, 300, 210, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 150d),
+            new ShopDataRow(CategoryType.Item, 36, RarityType.Common, 50, 36, 1, null, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), true, null, 0d),
+            new ShopDataRow(CategoryType.Accessories, 39, RarityType.Common, 1, 36, 500, 350, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 250d),
+            new ShopDataRow(CategoryType.Accessories, 40, RarityType.Common, 1, 36, 500, 350, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 250d),
+            new ShopDataRow(CategoryType.Accessories, 41, RarityType.Common, 1, 36, 500, 350, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 250d),
         };
 
         public static readonly EventDataRow[] EventData = new EventDataRow[]

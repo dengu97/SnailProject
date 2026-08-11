@@ -481,10 +481,10 @@ namespace SnailPet
             _ui.SetPortrait(_portrait.Texture);
         }
 
-        /// <summary>상점에서 「구매하기」를 눌렀다.</summary>
-        private void BuyFromShop(int shopId)
+        /// <summary>상점에서 「구매하기」를 눌렀다. 오늘의 할인 칸에서 누른 것만 깎아 준다.</summary>
+        private void BuyFromShop(int shopId, bool discounted)
         {
-            var result = Shop.TryBuy(_player, shopId);
+            var result = Shop.TryBuy(_player, shopId, discounted);
             if (result != Shop.Result.Ok)
             {
                 string why = result switch
@@ -493,7 +493,7 @@ namespace SnailPet
                     Shop.Result.NoPrice       => "가격이 없습니다",
                     _                         => "그런 상품이 없습니다",
                 };
-                Say($"      [UI] 구매 실패 ({shopId}): {why}  보유 {_player.Coins}코인");
+                Say($"      [UI] 구매 실패 ({shopId}, 할인 {discounted}): {why}  보유 {_player.Coins}코인");
                 return;
             }
 
@@ -503,7 +503,7 @@ namespace SnailPet
             _ui.SetCoin(_player.Coins);
             _ui.RefreshShop();
 
-            Say($"      [UI] 구매: {shopId} → {_player}");
+            Say($"      [UI] 구매: {shopId}{(discounted ? " (할인가)" : "")} → {_player}");
         }
 
         /// <summary>목록에서 다른 달팽이를 골랐다.</summary>
