@@ -1,0 +1,172 @@
+using System.Collections.Generic;
+using SnailPet.Data;
+
+namespace SnailPet.Snail
+{
+    /// <summary>유저가 가진 달팽이 한 마리. 화면에 나와 있는 개체도 이 중 하나다.</summary>
+    public sealed class OwnedSnail
+    {
+        /// <summary>개체 신원. 목록에서 고르고 교체할 때 이것으로 가리킨다.</summary>
+        public int Id;
+
+        /// <summary>아직 이름을 못 지었으면 null. UI 가 「이름 없음」으로 채운다.</summary>
+        public string Name;
+
+        /// <summary>나온 알의 등급을 그대로 물려받는다.</summary>
+        public RarityType Rarity;
+
+        public SnailAppearance Appearance;
+        public SnailGrowth Growth;
+    }
+
+    /// <summary>
+    /// 유저가 가진 것 전부.
+    ///
+    /// 지금까지 달팽이 목록·음식·알이 화면마다 따로 만든 더미였고, 그래서 부화시킨
+    /// 달팽이가 어디에도 들어가지 못했다. 그걸 담을 곳이다.
+    ///
+    /// 코인과 음식은 개수만 있으면 되므로 <see cref="Inventory"/> 하나에 같이 넣는다.
+    /// 선물 지급이 이미 아이템 Id 로 들어오고 있어 그 경로를 그대로 쓴다.
+    /// 반면 알과 달팽이는 같은 종류라도 낱개로 구분해야 해서 목록으로 둔다 —
+    /// 알은 어떤 파츠가 나올지 알 수 없으니 개수로 뭉치면 안 된다.
+    /// </summary>
+    public sealed class PlayerState
+    {
+        /// <summary>부화 칸 수. UnlockData 로 늘어나면 이 값이 바뀐다.</summary>
+        public const int IncubatorSlots = 3;
+
+        /// <summary>화폐 아이템의 토큰. 말풍선 아트인 `[코인]` 과는 다른 행이다.</summary>
+        public const string CoinToken = "[팽이코인]";
+
+        public readonly List<OwnedSnail> Snails = new List<OwnedSnail>();
+
+        /// <summary>보유 알. 같은 등급이어도 낱개로 들고 있는다.</summary>
+        public readonly List<int> Eggs = new List<int>();
+
+        /// <summary>코인과 음식. 아이템 Id 로 개수를 센다.</summary>
+        public readonly Inventory Items = new Inventory();
+
+        /// <summary>부화 중인 칸. eggId 가 0 이면 빈 칸이다.</summary>
+        public readonly (int eggId, double remain)[] Incubator = new (int, double)[IncubatorSlots];
+
+        /// <summary>화면에 나와 있는 개체의 <see cref="OwnedSnail.Id"/>.</summary>
+        public int ActiveId;
+
+        private int _nextId = 1;
+
+        private static int _coinItemId = -1;
+        public static int CoinItemId
+        {
+            get
+            {
+                if (_coinItemId < 0)
+                    _coinItemId = GameData.IdByToken.TryGetValue(CoinToken, out int id) ? id : 0;
+                return _coinItemId;
+            }
+        }
+
+        public long Coins => Items.CountOf(CoinItemId);
+
+        /// <summary>지금 화면에 나와 있는 개체. 한 마리도 없으면 null.</summary>
+        public OwnedSnail Active
+        {
+            get
+            {
+                foreach (var s in Snails) if (s.Id == ActiveId) return s;
+                return Snails.Count > 0 ? Snails[0] : null;
+            }
+        }
+
+        public OwnedSnail AddSnail(SnailAppearance appearance, RarityType rarity)
+        {
+            var snail = new OwnedSnail
+            {
+                Id = _nextId++,
+                Rarity = rarity,
+                Appearance = appearance,
+                Growth = new SnailGrowth(),
+            };
+            Snails.Add(snail);
+            if (ActiveId == 0) ActiveId = snail.Id;
+            return snail;
+        }
+
+        /// <summary>
+        /// 세이브에서 되돌릴 때만 쓴다. 신원을 새로 매기지 않고 그대로 살린다 —
+        /// 활성 개체가 <see cref="ActiveId"/> 로 적혀 있어서 번호가 바뀌면 못 찾는다.
+        /// </summary>
+        public void RestoreSnail(OwnedSnail snail)
+        {
+            Snails.Add(snail);
+            if (snail.Id >= _nextId) _nextId = snail.Id + 1;
+        }
+
+        /// <summary>목록의 몇 번째를 화면에 낼지. 이미 그 개체면 false 를 돌려준다.</summary>
+        public bool SetActiveByIndex(int index)
+        {
+            if (index < 0 || index >= Snails.Count) return false;
+            if (Snails[index].Id == ActiveId) return false;
+            ActiveId = Snails[index].Id;
+            return true;
+        }
+
+        /// <summary>보유 음식을 UI 가 쓰는 (아이템, 개수) 목록으로. 0개는 빼고 낸다.</summary>
+        public (int foodId, int count)[] OwnedFoods()
+        {
+            var list = new List<(int, int)>();
+            foreach (var f in GameData.FoodData)
+            {
+                long n = Items.CountOf(f.Id);
+                if (n > 0) list.Add((f.Id, (int)n));
+            }
+            return list.ToArray();
+        }
+
+        /// <summary>부화기의 남은 시간을 흘린다. 다 된 칸이 하나라도 생기면 true.</summary>
+        public bool TickIncubator(double deltaSeconds)
+        {
+            bool changed = false;
+            for (int i = 0; i < Incubator.Length; i++)
+            {
+                if (Incubator[i].eggId == 0 || Incubator[i].remain <= 0) continue;
+
+                double before = Incubator[i].remain;
+                Incubator[i].remain = System.Math.Max(0, before - deltaSeconds);
+
+                // 초가 바뀔 때만 다시 그린다. 매 프레임 갱신할 이유가 없다.
+                if ((int)before != (int)Incubator[i].remain || Incubator[i].remain <= 0) changed = true;
+            }
+            return changed;
+        }
+
+        /// <summary>목록의 알 하나를 빈 칸에 넣는다. 넣은 칸 번호, 못 넣었으면 -1.</summary>
+        public int PutEggInIncubator(int listIndex)
+        {
+            if (listIndex < 0 || listIndex >= Eggs.Count) return -1;
+
+            int slot = System.Array.FindIndex(Incubator, h => h.eggId == 0);
+            if (slot < 0) return -1;
+
+            int eggId = Eggs[listIndex];
+            if (!GameData.EggDataById.TryGetValue(eggId, out var row)) return -1;
+
+            Eggs.RemoveAt(listIndex);
+            Incubator[slot] = (eggId, row.HatchTime);
+            return slot;
+        }
+
+        /// <summary>다 된 칸을 비우고 그 알의 Id 를 돌려준다. 아직이면 0.</summary>
+        public int TakeHatched(int slot)
+        {
+            if (slot < 0 || slot >= Incubator.Length) return 0;
+            if (Incubator[slot].eggId == 0 || Incubator[slot].remain > 0) return 0;
+
+            int eggId = Incubator[slot].eggId;
+            Incubator[slot] = (0, 0);
+            return eggId;
+        }
+
+        public override string ToString() =>
+            $"달팽이 {Snails.Count}마리, 알 {Eggs.Count}개, 코인 {Coins}, 가방: {Items}";
+    }
+}

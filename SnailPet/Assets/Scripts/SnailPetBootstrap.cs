@@ -93,7 +93,9 @@ namespace SnailPet
         private string _lastBuffs = "없음";
 
         private SnailPresent _present;
-        private Inventory _inventory;
+
+        /// <summary>보유 상태. 달팽이 목록·알·코인·음식이 전부 여기에 있다.</summary>
+        private PlayerState _player;
         private bool _wasMouseDown;
         private bool _cursorOnSnail;
         private float _claimFlashUntil;
@@ -290,13 +292,89 @@ namespace SnailPet
         private void SetupSnail()
         {
             var rng = new System.Random();
-            var eggs = GameData.EggData;
-            var egg = eggs[rng.Next(eggs.Length)];
-            _rarity = egg.RarityType;
-            _appearance = SnailHatchery.Hatch(egg.Id, rng);
+            _player = SaveFile.Load();
 
-            Say("[1] 부화 ............. " + GameData.TokenById[egg.Id] + " (" + egg.RarityType + ")");
-            Say("      " + _appearance);
+            if (_player != null)
+            {
+                Say("[1] 이어하기 ......... 세이브에서 불러옴");
+                Say("      " + _player.Active.Appearance);
+            }
+            else
+            {
+                _player = new PlayerState();
+
+                var eggs = GameData.EggData;
+                var egg = eggs[rng.Next(eggs.Length)];
+                var first = _player.AddSnail(SnailHatchery.Hatch(egg.Id, rng), egg.RarityType);
+                GiveStartingBelongings();
+
+                Say("[1] 부화 ............. " + GameData.TokenById[egg.Id] + " (" + egg.RarityType + ")");
+                Say("      " + first.Appearance);
+            }
+
+            ActivateSnail(_player.Active);
+
+            _food = new FoodField(transform);
+            _present = new SnailPresent(transform);
+
+            Say("[2] 성장 ............. " + _growth);
+            Say(string.Format("      환산: Speed 1 = {0}px/s, Size 1 = {1}px  (레벨 1~{2})",
+                SnailGrowth.PixelsPerSpeedUnit, SnailGrowth.PixelsPerSizeUnit, SnailGrowth.MaxLevel));
+            var top = GameData.LevelData[GameData.LevelData.Length - 1];
+            Say(string.Format("      최고 레벨: 속도 {0}px/s, 크기 {1}px",
+                top.Speed * SnailGrowth.PixelsPerSpeedUnit, top.Size * SnailGrowth.PixelsPerSizeUnit));
+            Say("      보유 ........... " + _player);
+            Say("      세이브 ......... " + SaveFile.Path);
+            Say($"      (데모 배속 {DemoTimeScale}배라 {AutoQuitSeconds:0}초 실행이 " +
+                $"약 {AutoQuitSeconds * DemoTimeScale / 60f:0}분치로 굳습니다. " +
+                "처음부터 보려면 위 파일을 지우세요)");
+        }
+
+        /// <summary>
+        /// 나가기 전에 보유 상태를 적는다.
+        ///
+        /// 여기 한 곳에서만 저장한다. 상태를 바꾸는 곳마다 부르면 저장 누락이 생기고,
+        /// 성장은 매 프레임 바뀌므로 어차피 나갈 때 한 번은 적어야 한다.
+        /// </summary>
+        private void OnApplicationQuit()
+        {
+            SaveFile.Save(_player);
+        }
+
+        /// <summary>
+        /// 첫 실행 지급. 상점이 없어 스스로 구할 방법이 아직 없으므로 손에 쥐어 준다.
+        /// 상점이 생기면 여기서 주는 양을 줄이거나 없앤다.
+        /// </summary>
+        private void GiveStartingBelongings()
+        {
+            foreach (var e in GameData.EggData) { _player.Eggs.Add(e.Id); _player.Eggs.Add(e.Id); }
+
+            // 아트가 없는 음식은 화면에 떨어뜨릴 수 없어 줘도 쓸 수가 없다
+            int n = 1;
+            foreach (var f in GameData.FoodData)
+                if (!string.IsNullOrEmpty(f.ResourceKey)) _player.Items.Add(f.Id, n++);
+
+            _player.Items.Add(PlayerState.CoinItemId, 100);
+        }
+
+        /// <summary>
+        /// 목록의 개체 하나를 화면에 낸다.
+        ///
+        /// 외형이 통째로 바뀌므로 합성부터 다시 한다. 발선·껍질 중심·발바닥 프로파일은
+        /// 전부 그 개체의 몸통에서 실측한 값이라 같이 다시 재야 한다 —
+        /// 이전 달팽이의 값을 물려받으면 발이 벽에서 뜨거나 파고든다.
+        /// 벽 위의 자리(<see cref="_anchor"/>)는 그대로 두어 있던 곳에서 바뀐다.
+        /// </summary>
+        private void ActivateSnail(OwnedSnail snail)
+        {
+            if (snail == null) return;
+
+            if (_composed != null) Destroy(_composed.Root);
+
+            _player.ActiveId = snail.Id;
+            _appearance = snail.Appearance;
+            _growth     = snail.Growth;
+            _rarity     = snail.Rarity;
 
             _composed = SnailComposer.Build(_appearance);
             _composed.Root.transform.SetParent(transform, false);
@@ -311,18 +389,10 @@ namespace SnailPet
             _deform = new SnailDeform { Foot = _bounds.Foot };
             MeasureSole();
 
-            _growth = new SnailGrowth();
             ApplyGrowth();
-            _food = new FoodField(transform);
-            _inventory = new Inventory();
-            _present = new SnailPresent(transform);
 
-            Say("[2] 성장 ............. " + _growth);
-            Say(string.Format("      환산: Speed 1 = {0}px/s, Size 1 = {1}px  (레벨 1~{2})",
-                SnailGrowth.PixelsPerSpeedUnit, SnailGrowth.PixelsPerSizeUnit, SnailGrowth.MaxLevel));
-            var top = GameData.LevelData[GameData.LevelData.Length - 1];
-            Say(string.Format("      최고 레벨: 속도 {0}px/s, 크기 {1}px",
-                top.Speed * SnailGrowth.PixelsPerSpeedUnit, top.Size * SnailGrowth.PixelsPerSizeUnit));
+            // 먹으러 가던 목표는 이 개체의 것이 아니다
+            _target = null;
         }
 
         /// <summary>
@@ -337,8 +407,8 @@ namespace SnailPet
         private bool _cursorOnUi;
 
         /// <summary>
-        /// 위젯 UI. 지금은 목업의 「디폴트」 상태만, 더미 값으로 띄운다.
-        /// 실제 데이터 연결은 모양이 확정된 뒤에 한다.
+        /// 위젯 UI. 목록·음식·알은 전부 <see cref="_player"/> 를 그대로 비춘다.
+        /// 상태를 바꾼 쪽에서 Refresh* 를 불러 다시 그린다 — UI 는 스스로 아무것도 안 들고 있다.
         /// </summary>
         private void SetupUi()
         {
@@ -353,7 +423,7 @@ namespace SnailPet
             _ui.Close    += () => Say("      [UI] 최소화");
             _ui.Maximize += () => Say("      [UI] 최대화");
             _ui.TabChanged += i => Say($"      [UI] 탭 {i}");
-            _ui.SwapTo     += i => Say($"      [UI] {i}번 달팽이로 교체");
+            _ui.SwapTo     += SwapSnail;
 
             // 「먹이기」는 즉시 먹이지 않는다. 화면에 떨어뜨리고 달팽이가 기어가서 먹는다.
             _ui.FeedFood += DropFoodFromUi;
@@ -362,39 +432,58 @@ namespace SnailPet
             _ui.ClaimHatched += ClaimHatched;
             _ui.GoShop       += () => _ui.SetTab(3);
 
-            // 보유 알도 더미. 같은 등급이어도 낱개로 들고 있어야 해서 Id 를 그대로 늘어놓는다.
-            foreach (var e in GameData.EggData) { _eggs.Add(e.Id); _eggs.Add(e.Id); }
+            SnailPortrait.ExcludeFrom(_cam);
+
             RefreshEggs();
+            RefreshFoods();
+            RefreshSnail();
 
-            // 보유 음식도 아직 더미다. 아트가 있는 것만 몇 개씩 가진 것으로 친다.
-            var owned = new System.Collections.Generic.List<(int, int)>();
-            int n = 1;
-            foreach (var f in GameData.FoodData)
-                if (!string.IsNullOrEmpty(f.ResourceKey)) owned.Add((f.Id, n++));
-            _ui.SetFoods(owned.ToArray());
+            Say("[7] UI ............. 디폴트 패널");
+            Say("      도형: " + UiSprites.Describe());
+            var size = SnailUi.PortraitSize;
+            Say($"      초상: {size.x}x{size.y} (레이어 {SnailPortrait.Layer})");
+        }
 
-            // 목록은 아직 더미다. 보유 달팽이를 들고 있는 곳이 생기면 그걸 넘긴다.
-            _ui.SetRows(new (string, RarityType, int, bool)[]
+        /// <summary>보유 음식을 음식 탭에 반영한다.</summary>
+        private void RefreshFoods() => _ui.SetFoods(_player.OwnedFoods());
+
+        /// <summary>
+        /// 활성 개체를 상세 패널과 목록에 반영한다.
+        /// 초상은 외형이 바뀔 때만 다시 찍으면 되므로 <paramref name="reshoot"/> 로 가른다.
+        /// </summary>
+        private void RefreshSnail(bool reshoot = true)
+        {
+            var rows = new (string, RarityType, int, bool)[_player.Snails.Count];
+            for (int i = 0; i < rows.Length; i++)
             {
-                (null, _rarity,             _growth.Level, true),
-                (null, RarityType.Common,   3,             false),
-                (null, RarityType.Rare,     7,             false),
-                (null, RarityType.Legendary, 12,           false),
-            });
+                var s = _player.Snails[i];
+                rows[i] = (s.Name, s.Rarity, s.Growth.Level, s.Id == _player.ActiveId);
+            }
+            _ui.SetRows(rows);
+
+            // 이름은 아직 지을 방법이 없어 비워 둔다 — UI 가 「이름 없음」으로 채운다.
+            var active = _player.Active;
+            _ui.SetSnail(active?.Name, _rarity, _growth.Level);
+            _ui.SetCoin(_player.Coins);
+
+            if (!reshoot) return;
 
             // 패널 가운데의 달팽이 모습. 살아있는 쪽은 벽을 따라 돌아가 있고 변형 중이라
             // 비출 수 없다. 같은 외형으로 정지 복제본을 만들어 전용 카메라로 찍는다.
+            _portrait?.Dispose();
             var size = SnailUi.PortraitSize;
             _portrait = new SnailPortrait(transform, _appearance, _bounds, size.x, size.y);
-            SnailPortrait.ExcludeFrom(_cam);
             _ui.SetPortrait(_portrait.Texture);
+        }
 
-            // 이름은 아직 지을 방법이 없어 비워 둔다 — UI 가 「이름 없음」으로 채운다.
-            _ui.SetSnail(null, _rarity, _growth.Level);
+        /// <summary>목록에서 다른 달팽이를 골랐다.</summary>
+        private void SwapSnail(int listIndex)
+        {
+            if (!_player.SetActiveByIndex(listIndex)) return;
 
-            Say("[7] UI ............. 디폴트 패널 (더미 데이터)");
-            Say("      도형: " + UiSprites.Describe());
-            Say($"      초상: {size.x}x{size.y} (레이어 {SnailPortrait.Layer})");
+            ActivateSnail(_player.Snails[listIndex]);
+            RefreshSnail();
+            Say($"      [UI] {listIndex}번 달팽이로 교체 → {_appearance}");
         }
 
         /// <summary>
@@ -589,10 +678,29 @@ namespace SnailPet
         /// <summary>실제로 걷는 속도. 데모 배수가 걸려 있으므로 이동과 출렁임이 같은 값을 봐야 한다.</summary>
         private float WalkSpeed => _growth.PixelsPerSecond * DemoSpeedScale;
 
-        /// <summary>레벨이 바뀌면 크기를 다시 맞춘다. 속도는 매 프레임 읽으므로 여기선 안 건드린다.</summary>
+        /// <summary>레벨이 바뀌면 크기를 다시 맞춘다. 속도는 매 프레임 읽으므로 여긴 안 건드린다.</summary>
         private void ApplyGrowth()
         {
             _scale = _growth.SizePixels / _visibleWidth;
+        }
+
+        private float _shownFull = -1f, _shownHappy = -1f;
+
+        /// <summary>
+        /// 포만도·행복도 막대를 따라가게 한다.
+        /// 값이 눈에 띄게 바뀔 때만 다시 그린다 — 막대 너비를 매 프레임 건드리면
+        /// UGUI 가 레이아웃을 통째로 다시 계산한다.
+        /// </summary>
+        private void RefreshGauges()
+        {
+            float full  = (float)_growth.FullPercent;
+            float happy = (float)_growth.HappyPercent;
+
+            if (Mathf.Abs(full - _shownFull) < 0.005f && Mathf.Abs(happy - _shownHappy) < 0.005f) return;
+
+            _shownFull = full;
+            _shownHappy = happy;
+            _ui.SetGauges(full, happy);
         }
 
         private void Update()
@@ -603,8 +711,11 @@ namespace SnailPet
             if (_growth.Tick(Time.deltaTime, DemoTimeScale))
             {
                 ApplyGrowth();
+                RefreshSnail(reshoot: false);   // 나이(레벨)가 패널과 목록에 같이 나온다
                 Say("      레벨업! → " + _growth);
             }
+
+            RefreshGauges();
 
             // 버프가 걸리고 풀리는 순간을 놓치지 않게 변화만 기록한다
             string buffs = _growth.Buffs.Signature;
@@ -677,6 +788,9 @@ namespace SnailPet
 
             if (_t >= AutoQuitSeconds || Input.GetKeyDown(KeyCode.Escape))
             {
+                // 리포트가 이미 나간 뒤에 저장하면 결과를 남길 수 없다. 먼저 적고 확인한다.
+                SaveFile.Save(_player);
+                Say("[8] 저장 ............. " + _player);
                 WriteReport();
                 Application.Quit();
             }
@@ -743,69 +857,54 @@ namespace SnailPet
         }
 
         // ── 부화기 ──
-        // 칸은 지금 3개다. UnlockData 로 늘어나면 배열 크기만 바뀐다.
-
-        private readonly System.Collections.Generic.List<int> _eggs = new System.Collections.Generic.List<int>();
-        private (int eggId, double remain)[] _hatch = new (int, double)[3];
 
         private void RefreshEggs()
         {
-            _ui.SetEggs(_eggs.ToArray());
-            _ui.SetIncubator(_hatch);
+            _ui.SetEggs(_player.Eggs.ToArray());
+            _ui.SetIncubator(_player.Incubator);
         }
 
         /// <summary>목록의 알을 눌렀다. 빈 칸이 있으면 넣는다.</summary>
         private void PutEggInIncubator(int listIndex)
         {
-            if (listIndex < 0 || listIndex >= _eggs.Count) return;
+            if (listIndex < 0 || listIndex >= _player.Eggs.Count) return;
+            int eggId = _player.Eggs[listIndex];
 
-            int slot = System.Array.FindIndex(_hatch, h => h.eggId == 0);
+            int slot = _player.PutEggInIncubator(listIndex);
             if (slot < 0) { Say("      [UI] 부화기가 가득 찼습니다"); return; }
 
-            int eggId = _eggs[listIndex];
-            if (!GameData.EggDataById.TryGetValue(eggId, out var row)) return;
-
-            _eggs.RemoveAt(listIndex);
-            _hatch[slot] = (eggId, row.HatchTime);
             RefreshEggs();
 
+            var row = GameData.EggDataById[eggId];
             Say($"      [UI] {Loc.ById(row.NameId)} 를 {slot}번 칸에 넣음 ({row.HatchTime}초)");
         }
 
         /// <summary>다 된 칸을 눌렀다. 아직이면 아무 일도 없다.</summary>
         private void ClaimHatched(int slot)
         {
-            if (slot < 0 || slot >= _hatch.Length || _hatch[slot].eggId == 0) return;
-            if (_hatch[slot].remain > 0)
+            int eggId = _player.TakeHatched(slot);
+            if (eggId == 0)
             {
-                Say($"      [UI] {slot}번 칸은 아직 {_hatch[slot].remain:0}초 남았습니다");
+                if (slot >= 0 && slot < _player.Incubator.Length && _player.Incubator[slot].eggId != 0)
+                    Say($"      [UI] {slot}번 칸은 아직 {_player.Incubator[slot].remain:0}초 남았습니다");
                 return;
             }
 
-            int eggId = _hatch[slot].eggId;
-            _hatch[slot] = (0, 0);
-            RefreshEggs();
+            if (!GameData.EggDataById.TryGetValue(eggId, out var egg)) return;
 
-            // 실제로 부화시켜 어떤 달팽이가 나왔는지 남긴다. 보유 목록에 넣는 것은 그곳이 생기면.
-            var born = SnailHatchery.Hatch(eggId, new System.Random());
-            Say($"      [UI] 부화! {GameData.TokenById[eggId]} → {born}");
+            var born = _player.AddSnail(SnailHatchery.Hatch(egg.Id, new System.Random()), egg.RarityType);
+            RefreshEggs();
+            RefreshSnail(reshoot: false);   // 화면에 나와 있는 개체는 그대로다
+
+            Say($"      [UI] 부화! {GameData.TokenById[eggId]} → {born.Appearance}");
+            Say($"      보유 달팽이 {_player.Snails.Count}마리");
         }
 
         /// <summary>부화 시간을 흘린다. 데모 배속을 그대로 쓴다 — 안 그러면 40초 안에 안 깬다.</summary>
         private void TickIncubator(float deltaTime)
         {
-            bool changed = false;
-            for (int i = 0; i < _hatch.Length; i++)
-            {
-                if (_hatch[i].eggId == 0 || _hatch[i].remain <= 0) continue;
-
-                double before = _hatch[i].remain;
-                _hatch[i].remain = System.Math.Max(0, before - deltaTime * DemoTimeScale);
-
-                // 초가 바뀔 때만 다시 그린다. 매 프레임 갱신할 이유가 없다.
-                if ((int)before != (int)_hatch[i].remain || _hatch[i].remain <= 0) changed = true;
-            }
-            if (changed) _ui.SetIncubator(_hatch);
+            if (_player.TickIncubator(deltaTime * DemoTimeScale))
+                _ui.SetIncubator(_player.Incubator);
         }
 
         /// <summary>
@@ -823,13 +922,27 @@ namespace SnailPet
                 return;
             }
 
+            if (_player.Items.CountOf(foodId) <= 0)
+            {
+                Say($"      [UI] 먹이기: {Loc.ById(data.NameId)} 를 가지고 있지 않습니다");
+                return;
+            }
+
             float x = Mathf.Lerp(_box.Left, _box.Right, UnityEngine.Random.Range(0.3f, 0.6f));
             float y = _box.Top + UnityEngine.Random.Range(60f, 200f);
 
+            // 떨어뜨리지 못하면 가방에서 빼지 않는다. 리소스가 없는 음식은 화면에 못 나온다.
             var dropped = _food.Drop(data, x, y);
-            Say(dropped != null
-                ? $"      [UI] 먹이기: {Loc.ById(data.NameId)} 를 x={x:0} 에 떨어뜨림"
-                : $"      [UI] 먹이기: {Loc.ById(data.NameId)} 는 리소스가 없어 못 떨어뜨림");
+            if (dropped == null)
+            {
+                Say($"      [UI] 먹이기: {Loc.ById(data.NameId)} 는 리소스가 없어 못 떨어뜨림");
+                return;
+            }
+
+            _player.Items.Add(foodId, -1);
+            RefreshFoods();
+            Say($"      [UI] 먹이기: {Loc.ById(data.NameId)} 를 x={x:0} 에 떨어뜨림 " +
+                $"(남은 {_player.Items.CountOf(foodId)}개)");
         }
 
         /// <summary>데모용. 실제로는 유저가 상점에서 사서 원하는 위치에 떨어뜨린다.</summary>
@@ -901,11 +1014,12 @@ namespace SnailPet
                 {
                     // 선물이 준비돼 있으면 누른 순간 받는다. 그러고도 계속 집어 들 수 있다.
                     if (_present.Ready
-                        && _present.TryClaim(_growth.Current, _inventory, out int itemId, out int count))
+                        && _present.TryClaim(_growth.Current, _player.Items, out int itemId, out int count))
                     {
                         _claimFlashUntil = _t + 1.5f;
+                        _ui.SetCoin(_player.Coins);
                         string name = GameData.TokenById.TryGetValue(itemId, out string t) ? t : itemId.ToString();
-                        Say($"      선물 수령: {name} x{count}  → 가방: {_inventory}");
+                        Say($"      선물 수령: {name} x{count}  → 가방: {_player.Items}");
                     }
 
                     // 바로 들리지 않는다. 먼저 벽에서 떼어내야 한다.
@@ -1252,7 +1366,7 @@ namespace SnailPet
             GUI.Label(new Rect(32, y + 50, 960, 22),
                 act + "   |   벽: " + edgeName + "   먹이 " + (_food != null ? _food.Count : 0) + "개", style);
             GUI.Label(new Rect(32, y + 72, 960, 22),
-                (_present != null ? _present + "   가방: " + _inventory + "   |   " : "") +
+                (_present != null ? _present + "   가방: " + _player.Items + "   |   " : "") +
                 "자동 종료까지 " + remain.ToString("0.0") + "초 (ESC)", style);
         }
 

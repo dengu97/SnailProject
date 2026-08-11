@@ -49,6 +49,7 @@ namespace SnailPet.Snail
 
                 appearance.Parts.Add(new SnailPartRef
                 {
+                    PartsId = picked.Id,
                     Type = picked.PartsType,
                     ResourceKey = picked.ResourceKey,
                     ColorKey = color

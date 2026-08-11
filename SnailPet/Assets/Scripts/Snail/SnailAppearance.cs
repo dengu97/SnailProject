@@ -6,6 +6,12 @@ namespace SnailPet.Snail
     /// <summary>달팽이 한 부위. 색상을 쓰지 않는 파츠(눈 등)는 ColorKey 가 null.</summary>
     public struct SnailPartRef
     {
+        /// <summary>
+        /// PartsData 의 행 Id. 세이브에 적히는 신원이라 ResourceKey 대신 이것을 쓴다 —
+        /// 아트 파일 이름은 바뀔 수 있지만 IdMap 의 번호는 안 바뀐다.
+        /// </summary>
+        public int PartsId;
+
         public PartsType Type;
         public string ResourceKey;
         public string ColorKey;

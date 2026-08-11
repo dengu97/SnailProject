@@ -123,6 +123,21 @@ namespace SnailPet.Snail
             }
         }
 
+        /// <summary>
+        /// 세이브에서 되돌린다.
+        ///
+        /// 포만·행복은 지금 레벨의 요구치로 자른다. 데이터가 바뀌어 요구치가 줄었으면
+        /// 저장된 값이 100% 를 넘어 가속 판정이 영원히 최고 등급에 걸려 버린다.
+        /// </summary>
+        public void Restore(int level, double fullPoint, double happyPoint, double levelUpProgress)
+        {
+            EnsureIndex();
+            Level = UnityEngine.Mathf.Clamp(level, 1, _maxLevel);
+            FullPoint  = Math.Max(0, Math.Min(Current.NeedFullPoint,  fullPoint));
+            HappyPoint = Math.Max(0, Math.Min(Current.NeedHappyPoint, happyPoint));
+            LevelUpProgress = Math.Max(0, levelUpProgress);
+        }
+
         /// <summary>테스트·데모용. 조건을 무시하고 레벨만 바꾼다.</summary>
         public void ForceLevel(int level)
         {

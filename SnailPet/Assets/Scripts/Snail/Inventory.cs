@@ -13,6 +13,9 @@ namespace SnailPet.Snail
 
         public long CountOf(int itemId) => _counts.TryGetValue(itemId, out long v) ? v : 0;
 
+        /// <summary>가진 것 전부. 세이브에 적을 때 쓴다.</summary>
+        public IEnumerable<KeyValuePair<int, long>> Entries => _counts;
+
         public void Add(int itemId, long amount)
         {
             if (itemId <= 0 || amount == 0) return;
