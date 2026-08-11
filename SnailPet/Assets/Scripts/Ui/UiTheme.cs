@@ -169,10 +169,12 @@ namespace SnailPet.Ui
             public static readonly RectInt PickBuy  = new RectInt(53, 187,     63, 22);
 
             // ── 상품 상세의 하단 (구매하기 + 가격이 한 버튼 안에 들어간다) ──
-            public static readonly RectInt Buy      = new RectInt( 31, 190, 110, 22);
-            public static readonly RectInt BuyLabel = new RectInt( 30, 190,  55, 22);
-            public static readonly RectInt BuyCoin  = new RectInt( 86, 192,  18, 18);
-            public static readonly RectInt BuyCost  = new RectInt(106, 190,  35, 22);
+            // Buy 만 패널 기준이고 나머지 셋은 <b>버튼 안</b> 좌표다.
+            // 살 것이 없을 때 버튼을 통째로 끄면 글자와 코인도 같이 사라져야 한다.
+            public static readonly RectInt Buy      = new RectInt(31, 190, 110, 22);
+            public static readonly RectInt BuyLabel = new RectInt( 0,   0,  55, 22);
+            public static readonly RectInt BuyCoin  = new RectInt(55,   2,  18, 18);
+            public static readonly RectInt BuyCost  = new RectInt(75,   0,  35, 22);
 
             /// <summary>뒤로 가기. 목업에서 닫기 X 자리에 화살표가 들어온다.</summary>
             public static readonly RectInt Back = At.Close;

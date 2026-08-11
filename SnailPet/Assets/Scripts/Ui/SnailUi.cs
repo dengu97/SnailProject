@@ -144,6 +144,14 @@ namespace SnailPet.Ui
                 if (img != null && img.sprite == null) img.sprite = UiSprites.Of(s.Shape);
             }
 
+            // 구울 때의 글자가 프리팹에 굳어 있다. 시트가 원본이므로 항상 다시 읽는다.
+            foreach (var t in GetComponentsInChildren<UiTextRef>(true))
+            {
+                var text = t.GetComponent<Text>();
+                if (text != null && !string.IsNullOrEmpty(t.Token))
+                    text.text = SnailPet.Data.Loc.Text(t.Token);
+            }
+
             Rewire();
             EnsureEventSystem();
             SetTab(_tab);
@@ -578,7 +586,7 @@ namespace SnailPet.Ui
 
             var feed = Box(_foodPanel, Fd.Feed, UiTheme.Slot, UiSprites.Shape.Button, "FeedButton");
             feed.raycastTarget = true;
-            Label(_foodPanel, Fd.Feed, SnailPet.Data.Loc.Text(Keys.Feed), 10, UiTheme.Ink);
+            LocLabel(_foodPanel, Fd.Feed, Keys.Feed, 10, UiTheme.Ink);
             _feedBtn = feed.gameObject.AddComponent<Button>();
             _feedBtn.targetGraphic = feed;
 
@@ -678,14 +686,14 @@ namespace SnailPet.Ui
             _eggPanel = Panel(_detailRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
             _eggPanel.gameObject.SetActive(false);
 
-            Label(_eggPanel, UiTheme.Egg.Title, SnailPet.Data.Loc.Text(Keys.Incubator), 12, UiTheme.Ink);
+            LocLabel(_eggPanel, UiTheme.Egg.Title, Keys.Incubator, 12, UiTheme.Ink);
 
             _hatchSlots = new HatchSlot[UiTheme.Egg.Slots.Length];
             for (int i = 0; i < _hatchSlots.Length; i++)
                 _hatchSlots[i] = BuildHatchSlot(i);
 
             // 알이 하나도 없을 때만 보이는 안내
-            _eggEmpty = Label(_eggPanel, UiTheme.Egg.Empty, SnailPet.Data.Loc.Text(Keys.NoEgg), 10, UiTheme.Slot);
+            _eggEmpty = LocLabel(_eggPanel, UiTheme.Egg.Empty, Keys.NoEgg, 10, UiTheme.Slot);
 
             _eggShopBtn = IconButton(_eggPanel, UiTheme.Egg.Buy, "icon_egg", "BuyEgg");
         }
@@ -937,8 +945,7 @@ namespace SnailPet.Ui
                 bg.color = UiTheme.Slot;
                 root.gameObject.AddComponent<UiShapeRef>().Shape = UiSprites.Shape.Slot;
 
-                var name = Label(root, UiTheme.Shop.CategoryName,
-                                 SnailPet.Data.Loc.Text(Keys.CategoryOf(cats[i])), 11, UiTheme.Ink);
+                var name = LocLabel(root, UiTheme.Shop.CategoryName, Keys.CategoryOf(cats[i]), 11, UiTheme.Ink);
                 name.alignment = TextAnchor.MiddleLeft;
 
                 var btn = root.gameObject.AddComponent<Button>();
@@ -957,7 +964,7 @@ namespace SnailPet.Ui
             _shopPanel = Panel(_detailRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
             _shopPanel.gameObject.SetActive(false);
 
-            Label(_shopPanel, Sh.Title, SnailPet.Data.Loc.Text(Keys.Today), 12, UiTheme.Ink);
+            LocLabel(_shopPanel, Sh.Title, Keys.Today, 12, UiTheme.Ink);
 
             _pickRarityBadge = Box(_shopPanel, Sh.Rarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "PickRarity");
             _pickRarityText  = Label(_shopPanel, Sh.Rarity, "", 9, UiTheme.OnBadge);
@@ -977,7 +984,7 @@ namespace SnailPet.Ui
 
             var pickBuy = Box(_shopPanel, Sh.PickBuy, UiTheme.Slot, UiSprites.Shape.Button, "PickBuy");
             pickBuy.raycastTarget = true;
-            Label(_shopPanel, Sh.PickBuy, SnailPet.Data.Loc.Text(Keys.BuyIt), 10, UiTheme.Ink);
+            LocLabel(_shopPanel, Sh.PickBuy, Keys.BuyIt, 10, UiTheme.Ink);
             _pickBuyBtn = pickBuy.gameObject.AddComponent<Button>();
             _pickBuyBtn.targetGraphic = pickBuy;
 
@@ -1020,9 +1027,12 @@ namespace SnailPet.Ui
 
             var buy = Box(_shopItemPanel, Sh.Buy, UiTheme.Slot, UiSprites.Shape.Button, "BuyButton");
             buy.raycastTarget = true;
-            Label(_shopItemPanel, Sh.BuyLabel, SnailPet.Data.Loc.Text(Keys.BuyIt), 10, UiTheme.Ink);
-            Icon(_shopItemPanel, Sh.BuyCoin, "icon_coin", Color.white, "BuyCoinIcon").raycastTarget = false;
-            _shopCost = Label(_shopItemPanel, Sh.BuyCost, "", 10, UiTheme.Ink);
+
+            // 글자와 가격은 버튼의 자식이다. 살 것이 없을 때 버튼을 끄면 같이 사라져야 한다.
+            var buyRt = (RectTransform)buy.transform;
+            LocLabel(buyRt, Sh.BuyLabel, Keys.BuyIt, 10, UiTheme.Ink);
+            Icon(buyRt, Sh.BuyCoin, "icon_coin", Color.white, "BuyCoinIcon").raycastTarget = false;
+            _shopCost = Label(buyRt, Sh.BuyCost, "", 10, UiTheme.Ink);
             _shopCost.alignment = TextAnchor.MiddleLeft;
 
             _shopBuyBtn = buy.gameObject.AddComponent<Button>();
@@ -1100,7 +1110,22 @@ namespace SnailPet.Ui
             for (int i = 0; i < _shopSlots.Length; i++)
                 _shopSlots[i].Frame.enabled = i == index;
 
-            if (index < 0 || index >= _shopIds.Length) return;
+            // 상품이 없는 카테고리(자유시장)를 열면 고를 것이 없다.
+            // 그냥 두면 직전에 보던 상품이 그대로 남아 그걸 살 수 있는 것처럼 보인다.
+            if (index < 0 || index >= _shopIds.Length)
+            {
+                _shopName.text = SnailPet.Data.Loc.Text(Keys.Preparing);
+                _shopInfo.text = "";
+                _shopCost.text = "";
+                _shopIcon.enabled = false;
+                _shopRarityBadge.enabled = false;
+                _shopRarityIcon.enabled = false;
+                _shopRarityText.text = "";
+                _shopStats.gameObject.SetActive(false);
+                if (_shopBuyBtn != null) _shopBuyBtn.gameObject.SetActive(false);
+                return;
+            }
+            if (_shopBuyBtn != null) _shopBuyBtn.gameObject.SetActive(true);
 
             ShopRow row = null;
             foreach (var r in SnailPet.Data.GameData.ShopData)
@@ -1375,6 +1400,18 @@ namespace SnailPet.Ui
             img.raycastTarget = false;
 
             return (RectTransform)fill.transform;
+        }
+
+        /// <summary>
+        /// 언어 키에서 오는 붙박이 글자. 어디서 왔는지 <see cref="UiTextRef"/> 로 남겨
+        /// 프리팹에서 살아날 때 시트를 다시 읽게 한다 — 안 그러면 구울 때의 글자가 굳는다.
+        /// 값이 바뀌는 글자(이름·수량 등)는 그냥 <see cref="Label"/> 로 만들고 코드가 채운다.
+        /// </summary>
+        private Text LocLabel(RectTransform parent, RectInt r, string token, int size, Color color)
+        {
+            var t = Label(parent, r, SnailPet.Data.Loc.Text(token), size, color);
+            t.gameObject.AddComponent<UiTextRef>().Token = token;
+            return t;
         }
 
         private Text Label(RectTransform parent, RectInt r, string text, int size, Color color)
