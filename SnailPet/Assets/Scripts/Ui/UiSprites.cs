@@ -29,21 +29,28 @@ namespace SnailPet.Ui
         {
             Panel,          // 큰 판
             PanelBorder,    // 판의 테두리 (판과 따로 물들여야 해서 분리돼 있다)
-            Slot,           // 안쪽 홈 — 이름칸·게이지 트랙·목록 행·음식 슬롯
-            Badge,          // 알약 — 등급·나이·코인
+            Slot,           // 목록 행처럼 가로로 긴 홈
+            Badge,          // 알약 — 등급·코인
             Fill,           // 게이지 채우기 (포만도)
             FillHappy,      // 게이지 채우기 (행복 지수)
             Button,         // 버튼 배경
             Selection,      // 고른 칸을 두르는 테두리
+
+            // 아래는 아트가 들어오면서 Slot 하나로 쓰던 것을 갈라낸 것들이다.
+            // 손그림이라 가로로 긴 홈과 정사각 칸의 모양이 서로 다르다.
+            Name,           // 이름칸
+            Guage,          // 게이지 트랙 (파일 이름이 guage 다)
+            LevelBadge,     // 나이 뱃지
+            Slot2,          // 음식·알·상품 그리드의 정사각 칸
         }
 
         /// <summary>역할별 기본 모서리 반지름. 아트가 없을 때만 쓴다.</summary>
         private static int RadiusOf(Shape s) => s switch
         {
             Shape.Panel or Shape.PanelBorder => 6,
-            Shape.Slot  => 6,
-            Shape.Badge => 6,
-            Shape.Fill or Shape.FillHappy => 5,
+            Shape.Slot or Shape.Name or Shape.Slot2 => 6,
+            Shape.Badge or Shape.LevelBadge => 6,
+            Shape.Fill or Shape.FillHappy or Shape.Guage => 5,
             Shape.Selection => 6,
             _           => 4,
         };

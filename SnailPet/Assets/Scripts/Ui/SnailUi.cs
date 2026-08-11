@@ -280,7 +280,7 @@ namespace SnailPet.Ui
         /// <summary>이름칸 · 이름 수정 · 등급 뱃지.</summary>
         private void BuildHeader()
         {
-            Box(_panel, At.NameField, UiTheme.Slot, UiSprites.Shape.Slot, "NameField");
+            Box(_panel, At.NameField, UiTheme.Slot, UiSprites.Shape.Name, "NameField");
             _renameBtn = IconButton(_panel, At.RenameBtn, "icon_rename", "Rename");
 
             var name = At.NameField;
@@ -322,7 +322,7 @@ namespace SnailPet.Ui
         /// <summary>나이 뱃지 · 포만도 · 행복 지수.</summary>
         private void BuildGauges()
         {
-            Box(_panel, At.Age, UiTheme.Slot, UiSprites.Shape.Badge, "AgeBadge");
+            Box(_panel, At.Age, UiTheme.Slot, UiSprites.Shape.LevelBadge, "AgeBadge");
             _ageText = Label(_panel, At.Age, "00살", 9, UiTheme.Ink);
 
             _fullFill  = Gauge(At.FullBar,  At.FullIcon,  "icon_food",  UiTheme.GaugeFull,
@@ -339,7 +339,7 @@ namespace SnailPet.Ui
         private RectTransform Gauge(RectInt bar, RectInt icon, string iconKey, Color fillColor,
                                     UiSprites.Shape fillShape, string name)
         {
-            Box(_panel, bar, UiTheme.Slot, UiSprites.Shape.Slot, name + "Track");
+            Box(_panel, bar, UiTheme.Slot, UiSprites.Shape.Guage, name + "Track");
 
             const int inset = 2;
             var fill = Box(_panel, new RectInt(bar.x + inset, bar.y + inset,
@@ -350,7 +350,7 @@ namespace SnailPet.Ui
             var rt = (RectTransform)fill.transform;
             rt.pivot = new Vector2(0f, 1f);
 
-            Icon(_panel, icon, iconKey, UiTheme.Ink, name + "Icon").raycastTarget = false;
+            Icon(_panel, icon, iconKey, Color.white, name + "Icon").raycastTarget = false;
             return rt;
         }
 
@@ -368,7 +368,7 @@ namespace SnailPet.Ui
         /// <summary>패널 밖으로 걸치는 것들. 설정 · 코인 · 닫기 · 최대화.</summary>
         private void BuildOutside()
         {
-            _settingsBtn = IconButton(_detailRoot, Above(At.Settings), "icon_settings", "Settings", UiTheme.Accent);
+            _settingsBtn = IconButton(_detailRoot, Above(At.Settings), "icon_settings", "Settings");
 
             var coin = Above(At.Coin);
             Box(_detailRoot, coin, UiTheme.Slot, UiSprites.Shape.Badge, "CoinPill");
@@ -385,21 +385,37 @@ namespace SnailPet.Ui
         /// <summary>위젯 상자 기준 좌표로 옮긴다. 목업은 패널 왼쪽 위가 원점이라 코인 줄만큼 내려 준다.</summary>
         private static RectInt Above(RectInt r) => new RectInt(r.x, r.y - At.Coin.y, r.width, r.height);
 
+        private static readonly string[] TabKeys = { "tab_snail", "tab_food", "tab_egg", "tab_shop" };
+
+        /// <summary>
+        /// 탭 아트. 고른 탭과 안 고른 탭은 <b>그림 자체가 다르다</b> — 아트에 종이 모양
+        /// 배경이 들어 있어 색으로 물들이면 탭 전체가 그 색이 되기 때문이다.
+        /// 아직 <c>_on</c> 아트가 없으면 그냥 같은 그림을 쓴다. 그동안은 선택이 안 보인다.
+        /// </summary>
+        private static string TabArt(int index, bool on)
+        {
+            if (index < 0 || index >= TabKeys.Length) return null;
+            if (!on) return TabKeys[index];
+
+            string key = TabKeys[index] + "_on";
+            return Resources.Load<Sprite>("Ui/Icon/" + key) != null ? key : TabKeys[index];
+        }
+
         /// <summary>
         /// 최대화에서 왼쪽에 붙는 목록. 탭 4개 + 목록 패널 + 스크롤되는 행 목록.
         /// 내용은 <see cref="SetRows"/> 로 들어온다.
         /// </summary>
         private void BuildList()
         {
-            var tabKeys  = new[] { "icon_snail", "icon_food", "icon_egg", "icon_shop" };
             var tabNames = new[] { "TabSnail", "TabFood", "TabEgg", "TabShop" };
 
             _tabs = new Image[Max.Tabs.Length];
             _tabBtns = new Button[Max.Tabs.Length];
             for (int i = 0; i < _tabs.Length; i++)
             {
-                _tabBtns[i] = IconButton(_listRoot, Above(Max.Tabs[i]), tabKeys[i], tabNames[i], UiTheme.TabOff);
-                _tabs[i] = _tabBtns[i].GetComponent<Image>();
+                // 탭 아트에는 종이 모양 배경이 들어 있어 Button 도형을 따로 깔지 않는다.
+                _tabBtns[i] = IconButton(_listRoot, Above(Max.Tabs[i]), TabArt(i, false), tabNames[i]);
+                _tabs[i] = _tabBtns[i].transform.Find("Glyph").GetComponent<Image>();
             }
 
             var panel = Panel(_listRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
@@ -519,10 +535,10 @@ namespace SnailPet.Ui
             Place(root, at);
 
             var bg = root.gameObject.AddComponent<Image>();
-            bg.sprite = UiSprites.Of(UiSprites.Shape.Slot);
+            bg.sprite = UiSprites.Of(UiSprites.Shape.Slot2);
             bg.type = Image.Type.Sliced;
-            bg.color = UiTheme.RowSlot;
-            root.gameObject.AddComponent<UiShapeRef>().Shape = UiSprites.Shape.Slot;
+            bg.color = UiSprites.IsArt(UiSprites.Shape.Slot2) ? Color.white : UiTheme.RowSlot;
+            root.gameObject.AddComponent<UiShapeRef>().Shape = UiSprites.Shape.Slot2;
 
             var slot = new GridSlot { Root = root };
             slot.Icon = Icon(root, new RectInt(2, 2, s.width - 4, s.height - 4), null, Color.white, "Icon");
@@ -556,7 +572,7 @@ namespace SnailPet.Ui
             _foodPanel = Panel(_detailRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
             _foodPanel.gameObject.SetActive(false);
 
-            Icon(_foodPanel, Fd.Favorite, "icon_favorite", UiTheme.Ink, "Favorite").raycastTarget = false;
+            Icon(_foodPanel, Fd.Favorite, "icon_favorite", Color.white, "Favorite").raycastTarget = false;
             _foodName = Label(_foodPanel, Fd.Name, "", 12, UiTheme.Ink);
 
             _foodRarityBadge = Box(_foodPanel, Fd.Rarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
@@ -570,14 +586,12 @@ namespace SnailPet.Ui
             _foodIcon = Icon(_foodPanel, Fd.Preview, null, Color.white, "PreviewIcon");
             _foodIcon.raycastTarget = false;
 
-            Box(_foodPanel, Fd.FullIcon, UiTheme.Slot, UiSprites.Shape.Badge, "FullIconBox");
-            Icon(_foodPanel, Fd.FullIcon, "icon_food", UiTheme.Ink, "FullIcon").raycastTarget = false;
-            Box(_foodPanel, Fd.FullValue, UiTheme.Slot, UiSprites.Shape.Badge, "FullValue");
+            Icon(_foodPanel, Fd.FullIcon, "icon_food", Color.white, "FullIcon").raycastTarget = false;
+            Box(_foodPanel, Fd.FullValue, UiTheme.Slot, UiSprites.Shape.LevelBadge, "FullValue");
             _foodFull = Label(_foodPanel, Fd.FullValue, "", 9, UiTheme.Ink);
 
-            Box(_foodPanel, Fd.HappyIcon, UiTheme.Slot, UiSprites.Shape.Badge, "HappyIconBox");
-            Icon(_foodPanel, Fd.HappyIcon, "icon_happy", UiTheme.Ink, "HappyIcon").raycastTarget = false;
-            Box(_foodPanel, Fd.HappyValue, UiTheme.Slot, UiSprites.Shape.Badge, "HappyValue");
+            Icon(_foodPanel, Fd.HappyIcon, "icon_happy", Color.white, "HappyIcon").raycastTarget = false;
+            Box(_foodPanel, Fd.HappyValue, UiTheme.Slot, UiSprites.Shape.LevelBadge, "HappyValue");
             _foodHappy = Label(_foodPanel, Fd.HappyValue, "", 9, UiTheme.Ink);
 
             Box(_foodPanel, Fd.Info, UiTheme.Slot, UiSprites.Shape.Slot, "InfoBox");
@@ -591,7 +605,7 @@ namespace SnailPet.Ui
             _feedBtn = feed.gameObject.AddComponent<Button>();
             _feedBtn.targetGraphic = feed;
 
-            _foodBuyBtn  = IconButton(_foodPanel, Fd.Buy,  "icon_shop", "Buy");
+            _foodBuyBtn  = IconButton(_foodPanel, Fd.Buy,  "tab_shop", "Buy");
             _foodSellBtn = IconButton(_foodPanel, Fd.Sell, "icon_sell", "Sell");
         }
 
@@ -696,7 +710,7 @@ namespace SnailPet.Ui
             // 알이 하나도 없을 때만 보이는 안내
             _eggEmpty = LocLabel(_eggPanel, UiTheme.Egg.Empty, Keys.NoEgg, 10, UiTheme.Slot);
 
-            _eggShopBtn = IconButton(_eggPanel, UiTheme.Egg.Buy, "icon_egg", "BuyEgg");
+            _eggShopBtn = IconButton(_eggPanel, UiTheme.Egg.Buy, "tab_shop", "BuyEgg");
         }
 
         private HatchSlot BuildHatchSlot(int index)
@@ -811,7 +825,7 @@ namespace SnailPet.Ui
             var row = new ListRow
             {
                 Root   = rowRt,
-                Thumb  = Box(rowRt, Max.RowThumb, UiTheme.RowSlot, UiSprites.Shape.Slot, "Thumb"),
+                Thumb  = Box(rowRt, Max.RowThumb, UiTheme.RowSlot, UiSprites.Shape.Slot2, "Thumb"),
                 Name   = Label(rowRt, Max.RowName, "", 11, UiTheme.Ink),
                 Rarity = null,
                 Age    = null,
@@ -824,7 +838,7 @@ namespace SnailPet.Ui
             row.RarityIcon.raycastTarget = false;
             row.RarityIcon.enabled = false;
 
-            Box(rowRt, Max.RowAge, UiTheme.Slot, UiSprites.Shape.Badge, "AgeBadge");
+            Box(rowRt, Max.RowAge, UiTheme.Slot, UiSprites.Shape.LevelBadge, "AgeBadge");
             row.Age = Label(rowRt, Max.RowAge, "", 8, UiTheme.Ink);
 
             int captured = index;
@@ -877,8 +891,14 @@ namespace SnailPet.Ui
             // 상점은 들어올 때마다 카테고리 목록에서 시작한다
             _shopCat = -1;
             ApplyShopStage();
+            // 아트가 배경까지 들고 있어 색으로는 구분할 수 없다. 그림을 갈아 끼운다.
             for (int i = 0; i < _tabs.Length; i++)
-                _tabs[i].color = i == _tab ? UiTheme.TabOn : UiTheme.TabOff;
+            {
+                if (_tabs[i] == null) continue;
+                var sprite = Resources.Load<Sprite>("Ui/Icon/" + TabArt(i, i == _tab));
+                if (sprite != null) { _tabs[i].sprite = sprite; _tabs[i].color = Color.white; }
+                else _tabs[i].color = i == _tab ? UiTheme.TabOn : UiTheme.TabOff;
+            }
 
             string[] titles = { Keys.SnailList, Keys.FoodList, Keys.EggList, Keys.Shop };
             _listTitle.text = SnailPet.Data.Loc.Text(titles[_tab]);
@@ -1022,14 +1042,12 @@ namespace SnailPet.Ui
             _shopStats.anchorMin = Vector2.zero; _shopStats.anchorMax = Vector2.one;
             _shopStats.offsetMin = Vector2.zero; _shopStats.offsetMax = Vector2.zero;
 
-            Box(_shopStats, Fd.FullIcon, UiTheme.Slot, UiSprites.Shape.Badge, "FullIconBox");
-            Icon(_shopStats, Fd.FullIcon, "icon_food", UiTheme.Ink, "FullIcon").raycastTarget = false;
-            Box(_shopStats, Fd.FullValue, UiTheme.Slot, UiSprites.Shape.Badge, "FullValue");
+            Icon(_shopStats, Fd.FullIcon, "icon_food", Color.white, "FullIcon").raycastTarget = false;
+            Box(_shopStats, Fd.FullValue, UiTheme.Slot, UiSprites.Shape.LevelBadge, "FullValue");
             _shopFull = Label(_shopStats, Fd.FullValue, "", 9, UiTheme.Ink);
 
-            Box(_shopStats, Fd.HappyIcon, UiTheme.Slot, UiSprites.Shape.Badge, "HappyIconBox");
-            Icon(_shopStats, Fd.HappyIcon, "icon_happy", UiTheme.Ink, "HappyIcon").raycastTarget = false;
-            Box(_shopStats, Fd.HappyValue, UiTheme.Slot, UiSprites.Shape.Badge, "HappyValue");
+            Icon(_shopStats, Fd.HappyIcon, "icon_happy", Color.white, "HappyIcon").raycastTarget = false;
+            Box(_shopStats, Fd.HappyValue, UiTheme.Slot, UiSprites.Shape.LevelBadge, "HappyValue");
             _shopHappy = Label(_shopStats, Fd.HappyValue, "", 9, UiTheme.Ink);
 
             Box(_shopItemPanel, Fd.Info, UiTheme.Slot, UiSprites.Shape.Slot, "InfoBox");
@@ -1493,7 +1511,12 @@ namespace SnailPet.Ui
             {
                 img.sprite = Resources.Load<Sprite>("Ui/Icon/" + key);
                 if (img.sprite == null)
+                {
+                    // 스프라이트 없는 Image 는 색으로 꽉 찬 사각형이 된다. 아트가 빠졌을 때
+                    // 화면에 덩어리가 나오느니 아무것도 안 나오는 편이 낫다.
+                    img.enabled = false;
                     Debug.LogWarning("[SnailPet] UI 아이콘을 찾지 못했습니다: Ui/Icon/" + key);
+                }
             }
             return img;
         }
@@ -1521,9 +1544,11 @@ namespace SnailPet.Ui
                 img.color = new Color(0f, 0f, 0f, 0f);   // 배경이 없어도 클릭은 받아야 한다
             }
 
+            // 아이콘 아트에는 배경과 색이 이미 들어 있다. 물들이면 통째로 그 색이 되므로
+            // 흰색으로 넘겨 원본을 그대로 낸다. 예전 단색 실루엣 시절에는 Ink 로 칠했었다.
             int pad = background.HasValue ? 4 : 1;
             Icon(rt, new RectInt(pad, pad, r.width - pad * 2, r.height - pad * 2),
-                 key, tint ?? UiTheme.Ink, "Glyph").raycastTarget = false;
+                 key, tint ?? Color.white, "Glyph").raycastTarget = false;
 
             var btn = rt.gameObject.AddComponent<Button>();
             btn.targetGraphic = img;

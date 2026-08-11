@@ -55,13 +55,23 @@ namespace SnailPet.EditorTools
         /// 화면에 나오는 모서리 크기는 이 값을 <see cref="ShapeScale"/> 로 나눈 것이다.
         /// 새 도형을 넣으면 여기에 한 줄 추가하면 되고, 없으면 캔버스의 1/3 을 쓴다.
         /// </summary>
+        /// <remarks>
+        /// 손그림 아트는 테두리가 울퉁불퉁해서 경계를 잘못 잡으면 모서리가 잘리거나
+        /// 늘어난 자국이 남는다. 원본 세로 높이의 <b>절반보다 작게</b> 잡아야 위아래
+        /// 경계가 겹치지 않는다. 가로로 아주 납작한 것(게이지·채우기)은 특히 작게.
+        /// </remarks>
         private static Vector4 BorderOf(string name)
         {
             int m = name switch
             {
-                "panel" or "panelborder" => 32,   // 96px 캔버스 → 화면 8px
-                "slot" or "badge" or "button" => 24,   // 64px 캔버스 → 화면 6px
-                "fill" or "fill_happy" => 6,       // 20px 캔버스 → 화면 1.5px
+                "panel" or "panelborder" => 32,   // 714x911 → 화면 8px
+                "slot" or "badge" or "button" => 24,   // 634x171 → 화면 6px
+                "fill" or "fill_happy" => 6,       // 481x36 → 화면 1.5px
+
+                "name" => 40,        // 535x104 → 화면 10px
+                "guage" => 20,       // 527x56  → 화면 5px  (높이의 절반 미만)
+                "levelbadge" => 28,  // 155x63  → 화면 7px
+                "slot2" => 40,       // 134x131 → 화면 10px (정사각이라 넉넉히)
                 _ => 0,
             };
             return new Vector4(m, m, m, m);
