@@ -39,29 +39,91 @@ namespace SnailPet.Ui
         private const int CanvasSortOrder = 100;
 
         private Font _font;
-        private RectTransform _widget;      // 패널 + 밖으로 걸치는 버튼까지 감싸는 상자
-        private RectTransform _listRoot, _detailRoot;
-        private RectTransform _panel;
+        [SerializeField] private RectTransform _widget;      // 패널 + 밖으로 걸치는 버튼까지 감싸는 상자
+        [SerializeField] private RectTransform _listRoot, _detailRoot;
+        [SerializeField] private RectTransform _panel;
 
-        private Text _nameText, _rarityText, _ageText, _coinText;
-        private Image _rarityBadge, _rarityIcon;
-        private RectTransform _fullFill, _happyFill;
+        [SerializeField] private Text _nameText, _rarityText, _ageText, _coinText;
+        [SerializeField] private Image _rarityBadge, _rarityIcon;
+        [SerializeField] private RectTransform _fullFill, _happyFill;
 
         public event Action Rename, Detail, Wardrobe, Gene, Sell, Settings, Close, Maximize;
         public event Action<int> TabChanged, SwapTo;
 
-        private Image[] _tabs;
-        private ListRow[] _rows;
-        private Text _listTitle;
+        [SerializeField] private Image[] _tabs;
+        [SerializeField] private ListRow[] _rows;
+        [SerializeField] private Text _listTitle;
         private int _tab;
 
+        /// <summary>편집용 프리팹의 위치. 메뉴 「SnailPet → 5. UI 프리팹 생성」 이 여기에 만든다.</summary>
+        public const string PrefabResource = "Ui/SnailUi";
+
+        /// <summary>
+        /// 프리팹이 있으면 그것을 쓰고, 없으면 코드로 짓는다.
+        ///
+        /// 프리팹이 원본이다. 레이아웃을 손으로 옮기셨다면 그 편집본이 그대로 화면에 나온다.
+        /// 코드 빌더는 프리팹을 처음 만들 때와, 프리팹이 없을 때의 대비책으로만 남는다.
+        /// </summary>
         public static SnailUi Create(Transform parent)
         {
+            var prefab = Resources.Load<GameObject>(PrefabResource);
+            if (prefab != null)
+            {
+                var instance = Instantiate(prefab, parent, false);
+                instance.name = "SnailUi";
+                return instance.GetComponent<SnailUi>();
+            }
+
+            Debug.Log("[SnailPet] UI 프리팹이 없어 코드로 만듭니다. " +
+                      "메뉴 SnailPet > 5. UI 프리팹 생성 으로 편집 가능한 프리팹을 만들 수 있습니다.");
+
             var go = new GameObject("SnailUi");
             go.transform.SetParent(parent, false);
             var self = go.AddComponent<SnailUi>();
             self.Build();
+            self.Bind();
             return self;
+        }
+
+#if UNITY_EDITOR
+        /// <summary>에디터에서 프리팹을 구울 때만 쓴다.</summary>
+        public static SnailUi BuildForPrefab(GameObject host)
+        {
+            var self = host.AddComponent<SnailUi>();
+            self.Build();
+            return self;
+        }
+#endif
+
+        /// <summary>
+        /// 프리팹 인스턴스가 살아날 때의 마무리.
+        ///
+        /// 두 가지는 프리팹에 저장할 수 없어 여기서 채운다.
+        ///  · 글꼴 — OS 폰트라 에셋이 아니다. 안 채우면 한글이 네모로 나온다
+        ///  · 코드가 만든 도형 스프라이트 — 런타임 생성물이라 직렬화되지 않는다
+        /// 둘 다 <b>비어 있을 때만</b> 채우므로 프리팹에서 갈아 끼운 것은 살아남는다.
+        /// </summary>
+        private void Bind()
+        {
+            _font ??= LoadKoreanFont();
+
+            foreach (var t in GetComponentsInChildren<Text>(true))
+                t.font = _font;
+
+            foreach (var s in GetComponentsInChildren<UiShapeRef>(true))
+            {
+                var img = s.GetComponent<Image>();
+                if (img != null && img.sprite == null) img.sprite = UiSprites.Of(s.Shape);
+            }
+
+            EnsureEventSystem();
+            SetTab(_tab);
+        }
+
+        private void Awake()
+        {
+            // 코드로 지은 경우에는 Create 가 직접 부른다. 두 번 불려도 문제는 없다.
+            if (_widget != null) Bind();
         }
 
         // ── 짓기 ──
@@ -83,7 +145,6 @@ namespace SnailPet.Ui
             // 잘리지 않고 통째로 늘어난다. 둥근 사각형이 타원이 되고 전부 뭉개진다.
             scaler.referencePixelsPerUnit = 1f;
             gameObject.AddComponent<GraphicRaycaster>();
-            EnsureEventSystem();
 
             // 위젯 상자를 화면 오른쪽 아래에 붙인다. 코인 줄이 패널 위로 올라가므로 그만큼 키운다.
             // 폭은 최대화 기준으로 잡아 둔다. 오른쪽에 붙어 있으므로 목록이 열려도
@@ -143,7 +204,7 @@ namespace SnailPet.Ui
             _portrait.enabled = false;
         }
 
-        private RawImage _portrait;
+        [SerializeField] private RawImage _portrait;
 
         /// <summary>패널 가운데에 띄울 달팽이 모습.</summary>
         public void SetPortrait(Texture texture)
@@ -255,7 +316,8 @@ namespace SnailPet.Ui
         }
 
         /// <summary>목록 한 줄. 썸네일 · 이름 · 등급 · 나이 · 교체 버튼.</summary>
-        private sealed class ListRow
+        [Serializable]
+        public sealed class ListRow
         {
             public Image Thumb;
             public Text Name, Rarity, Age;
@@ -463,6 +525,7 @@ namespace SnailPet.Ui
 
             var img = rt.gameObject.AddComponent<Image>();
             img.sprite = UiSprites.Of(shape);
+            rt.gameObject.AddComponent<UiShapeRef>().Shape = shape;
             img.type = Image.Type.Sliced;
             // 아트에는 색이 이미 칠해져 있다. 거기에 테마색을 곱하면 탁해진다.
             // 게이지 채우기만 예외 — 포만/행복 두 색이 필요해 어쩔 수 없이 물들인다.
