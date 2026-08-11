@@ -146,6 +146,38 @@ namespace SnailPet.Ui
         public static readonly Color RowSlot = Hex("4472C4");   // 목록 행의 썸네일 자리
         public static readonly Color Selected = Hex("FF0000");  // 선택된 음식 칸의 테두리
 
+        /// <summary>
+        /// 상점 탭. 두 단계다 — 카테고리를 고르고, 그 안의 상품을 고른다.
+        ///
+        /// 목업을 재 보니 <b>카테고리 행은 달팽이 목록 행과, 상품 그리드는 음식 그리드와
+        /// 자리·크기가 같다</b> (행 155x40 step 46.3 · 칸 31.5 step 39.2x40).
+        /// 그래서 여기에는 오른쪽 패널 좌표만 적는다.
+        /// 상품 상세도 <see cref="Food"/> 와 같고 하단 버튼만 다르다.
+        /// </summary>
+        public static class Shop
+        {
+            /// <summary>카테고리 행 안에서의 이름. 왼쪽 정렬이다.</summary>
+            public static readonly RectInt CategoryName = new RectInt(6, 10, 98, 21);
+
+            // ── 오늘의 추천 (카테고리를 고르기 전) ──
+            public static readonly RectInt Title    = new RectInt( 0,   4, PanelW, 21);
+            public static readonly RectInt Rarity   = new RectInt(69,  45,     35, 12);
+            public static readonly RectInt Preview  = new RectInt(48,  55,     78, 71);
+            public static readonly RectInt Name     = new RectInt( 0, 127, PanelW, 21);
+            public static readonly RectInt PickCoin = new RectInt(44, 152,     20, 20);
+            public static readonly RectInt PickCost = new RectInt(66, 151,     70, 22);
+            public static readonly RectInt PickBuy  = new RectInt(53, 187,     63, 22);
+
+            // ── 상품 상세의 하단 (구매하기 + 가격이 한 버튼 안에 들어간다) ──
+            public static readonly RectInt Buy      = new RectInt( 31, 190, 110, 22);
+            public static readonly RectInt BuyLabel = new RectInt( 30, 190,  55, 22);
+            public static readonly RectInt BuyCoin  = new RectInt( 86, 192,  18, 18);
+            public static readonly RectInt BuyCost  = new RectInt(106, 190,  35, 22);
+
+            /// <summary>뒤로 가기. 목업에서 닫기 X 자리에 화살표가 들어온다.</summary>
+            public static readonly RectInt Back = At.Close;
+        }
+
         /// <summary>알 탭의 부화기 패널. 패널 왼쪽 위가 원점.</summary>
         public static class Egg
         {

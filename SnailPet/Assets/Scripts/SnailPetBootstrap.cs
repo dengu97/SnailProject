@@ -431,12 +431,17 @@ namespace SnailPet
             _ui.PutEgg       += PutEggInIncubator;
             _ui.ClaimHatched += ClaimHatched;
             _ui.GoShop       += () => _ui.SetTab(3);
+            _ui.BuyProduct   += BuyFromShop;
 
             SnailPortrait.ExcludeFrom(_cam);
 
             RefreshEggs();
             RefreshFoods();
             RefreshSnail();
+
+            var pick = Shop.Today(System.DateTime.Now);
+            _ui.SetTodayPick(pick);
+            Say("      오늘의 추천: " + (pick == null ? "없음" : Shop.NameOf(pick) + " " + pick.CostCount + "코인"));
 
             Say("[7] UI ............. 디폴트 패널");
             Say("      도형: " + UiSprites.Describe());
@@ -474,6 +479,31 @@ namespace SnailPet
             var size = SnailUi.PortraitSize;
             _portrait = new SnailPortrait(transform, _appearance, _bounds, size.x, size.y);
             _ui.SetPortrait(_portrait.Texture);
+        }
+
+        /// <summary>상점에서 「구매하기」를 눌렀다.</summary>
+        private void BuyFromShop(int shopId)
+        {
+            var result = Shop.TryBuy(_player, shopId);
+            if (result != Shop.Result.Ok)
+            {
+                string why = result switch
+                {
+                    Shop.Result.NotEnough     => "코인이 모자랍니다",
+                    Shop.Result.NoPrice       => "가격이 없습니다",
+                    _                         => "그런 상품이 없습니다",
+                };
+                Say($"      [UI] 구매 실패 ({shopId}): {why}  보유 {_player.Coins}코인");
+                return;
+            }
+
+            // 산 것이 음식일 수도 알일 수도 있어 양쪽을 다 새로 그린다
+            RefreshFoods();
+            RefreshEggs();
+            _ui.SetCoin(_player.Coins);
+            _ui.RefreshShop();
+
+            Say($"      [UI] 구매: {shopId} → {_player}");
         }
 
         /// <summary>목록에서 다른 달팽이를 골랐다.</summary>

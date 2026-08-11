@@ -18,6 +18,23 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Newest([string]$path) {
+    if (-not (Test-Path $path)) { return $null }
+    Get-ChildItem $path -Recurse -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+}
+
+# 플레이어에 들어갈 수 있는 것 전부. .cs 만 보면 안 된다 —
+# 프리팹이나 아트만 바뀐 경우 산출물이 그대로인데 「최신」으로 읽어 옛 빌드를 검사하게 된다.
+# 실제로 UI 프리팹을 다시 구운 뒤 그렇게 두 번 속았다.
+# Assets\Editor 는 뺀다. 플레이어에 안 들어가므로 그것만 바뀌면 산출물이 그대로인 게 정상이고,
+# 넣으면 영원히 「오래됐다」로 나온다.
+function NewestSource([string]$projectPath) {
+    $editor = Join-Path $projectPath "Assets\Editor"
+    Get-ChildItem (Join-Path $projectPath "Assets") -Recurse -File |
+        Where-Object { $_.FullName -notlike "$editor*" } |
+        Sort-Object LastWriteTime -Descending | Select-Object -First 1
+}
+
 # 끝난 batchmode 유니티도 잠깐 프로세스로 남아 다음 실행을 막는다. 잠시 기다려 준다.
 for ($i = 0; $i -lt 20; $i++) {
     $live = Get-Process | Where-Object { $_.ProcessName -eq 'Unity' }
@@ -46,10 +63,8 @@ for ($try = 1; $try -le 2; $try++) {
     }
 
     if (Test-Path $dll) {
-        $out = Get-ChildItem (Join-Path $ProjectPath "Build\SnailPet_Data") -Recurse -File |
-               Sort-Object LastWriteTime -Descending | Select-Object -First 1
-        $src = Get-ChildItem (Join-Path $ProjectPath "Assets\Scripts") -Recurse -Include *.cs |
-               Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        $out = Newest (Join-Path $ProjectPath "Build\SnailPet_Data")
+        $src = NewestSource $ProjectPath
         if (-not $src -or -not $out -or $src.LastWriteTime -le $out.LastWriteTime) { break }
     }
 
@@ -63,13 +78,8 @@ if (-not (Test-Path $dll)) { Write-Output "FAIL: 산출물이 없습니다: $dll
 #  · 바뀐 게 없으면 유니티가 DLL 을 다시 쓰지 않아 멀쩡한 빌드를 실패로 읽는다
 #  · 에디터 스크립트(임포트 설정 등)만 바뀌면 DLL 은 그대로인데 산출물은 달라진다
 # 그래서 「빌드 폴더에서 가장 새 파일」과 「소스에서 가장 새 파일」을 견준다.
-$newestOut = Get-ChildItem (Join-Path $ProjectPath "Build\SnailPet_Data") -Recurse -File |
-             Sort-Object LastWriteTime -Descending | Select-Object -First 1
-# Assets\Editor 는 제외한다. 에디터 스크립트는 플레이어에 안 들어가므로 그것만 바뀌면
-# 산출물이 그대로인 게 정상인데, 포함시키면 영원히 「오래됐다」로 나온다.
-# (임포트 설정을 바꾼 경우에는 해당 에셋의 .meta 를 지우고 다시 빌드해야 반영된다.)
-$newestSrc = Get-ChildItem (Join-Path $ProjectPath "Assets\Scripts") -Recurse -Include *.cs |
-             Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$newestOut = Newest (Join-Path $ProjectPath "Build\SnailPet_Data")
+$newestSrc = NewestSource $ProjectPath
 
 if ($newestSrc -and $newestOut -and $newestSrc.LastWriteTime -gt $newestOut.LastWriteTime) {
     Write-Output "FAIL: 빌드가 소스보다 오래됐습니다."

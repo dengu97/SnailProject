@@ -5,6 +5,8 @@ using UnityEngine.UI;
 using At = SnailPet.Ui.UiTheme.At;
 using Max = SnailPet.Ui.UiTheme.Max;
 using Fd = SnailPet.Ui.UiTheme.Food;
+using Sh = SnailPet.Ui.UiTheme.Shop;
+using ShopRow = SnailPet.Data.ShopDataRow;
 
 namespace SnailPet.Ui
 {
@@ -37,6 +39,20 @@ namespace SnailPet.Ui
             public const string Incubator = "[부화기]";
             public const string NoEgg     = "[부화시킬알없음]";
             public const string HatchDone = "[부화완료]";
+
+            public const string Today    = "[오늘의추천]";
+            public const string BuyIt    = "[구매하기]";
+            public const string Preparing = "[준비중]";
+
+            /// <summary>상점 카테고리 이름. <see cref="SnailPet.Data.CategoryType"/> 순서와 맞춰야 한다.</summary>
+            public static string CategoryOf(SnailPet.Data.CategoryType c) => c switch
+            {
+                SnailPet.Data.CategoryType.Food        => "[음식]",
+                SnailPet.Data.CategoryType.Egg         => "[달팽이알]",
+                SnailPet.Data.CategoryType.Accessories => "[악세서리]",
+                SnailPet.Data.CategoryType.Market      => "[자유시장]",
+                _ => "[상점]",
+            };
         }
 
         /// <summary>한 화면에 위젯이 두 개 이상 뜰 일이 없으므로 정렬 순서는 고정.</summary>
@@ -55,6 +71,13 @@ namespace SnailPet.Ui
         public event Action<int> TabChanged, SwapTo;
 
         [SerializeField] private Image[] _tabs;
+
+        // 버튼은 전부 여기에 붙잡아 둔다. 프리팹에 onClick 이 저장되지 않아
+        // 살아날 때마다 Rewire 가 다시 붙여야 하기 때문이다.
+        [SerializeField] private Button[] _tabBtns, _actionBtns;
+        [SerializeField] private Button _renameBtn, _settingsBtn, _closeBtn, _maximizeBtn;
+        [SerializeField] private Button _feedBtn, _foodBuyBtn, _foodSellBtn, _eggShopBtn;
+        [SerializeField] private Button _pickBuyBtn, _shopBuyBtn, _backBtn;
         [SerializeField] private ListRow[] _rows;
         [SerializeField] private RectTransform _rowGridRoot, _rowContent;
         [SerializeField] private Text _listTitle;
@@ -121,8 +144,70 @@ namespace SnailPet.Ui
                 if (img != null && img.sprite == null) img.sprite = UiSprites.Of(s.Shape);
             }
 
+            Rewire();
             EnsureEventSystem();
             SetTab(_tab);
+        }
+
+        /// <summary>
+        /// 버튼에 할 일을 붙인다.
+        ///
+        /// <b>프리팹에는 onClick 이 저장되지 않는다.</b> AddListener 로 단 것은 런타임 전용이라
+        /// 굽는 순간 사라진다 — 실제로 프리팹으로 바꾼 뒤 화면의 버튼 146개가 전부 아무 일도
+        /// 하지 않고 있었다. 컴파일도 되고 그림도 제대로 나와서 눈치채기 어려웠다.
+        ///
+        /// 그래서 배선을 짓기에서 떼어 여기 한 곳에 둔다. 코드로 짓든 프리팹에서 살아나든
+        /// 항상 이 함수를 지나므로 두 경로가 어긋날 수 없다.
+        /// </summary>
+        private void Rewire()
+        {
+            Hook(_renameBtn,   () => Rename?.Invoke());
+            Hook(_settingsBtn, () => Settings?.Invoke());
+            Hook(_closeBtn,    () => { SetMaximized(false); Close?.Invoke(); });
+            Hook(_maximizeBtn, () => { SetMaximized(true);  Maximize?.Invoke(); });
+
+            // 하단 액션 4개. 순서는 BuildActions 의 이름 배열과 같다.
+            var actions = new UnityEngine.Events.UnityAction[]
+            {
+                () => Detail?.Invoke(), () => Wardrobe?.Invoke(),
+                () => Gene?.Invoke(),   () => Sell?.Invoke(),
+            };
+            for (int i = 0; i < Count(_actionBtns) && i < actions.Length; i++) Hook(_actionBtns[i], actions[i]);
+
+            for (int i = 0; i < Count(_tabBtns); i++) { int k = i; Hook(_tabBtns[i], () => SetTab(k)); }
+            for (int i = 0; i < Count(_rows); i++)    { int k = i; Hook(_rows[i]?.Swap, () => SwapTo?.Invoke(k)); }
+
+            for (int i = 0; i < Count(_foodSlots); i++) { int k = i; Hook(_foodSlots[i]?.Button, () => SelectFood(k)); }
+            for (int i = 0; i < Count(_eggSlots); i++)  { int k = i; Hook(_eggSlots[i]?.Button,  () => SelectEgg(k)); }
+            for (int i = 0; i < Count(_shopSlots); i++) { int k = i; Hook(_shopSlots[i]?.Button, () => SelectShopSlot(k)); }
+
+            for (int i = 0; i < Count(_hatchSlots); i++) { int k = i; Hook(_hatchSlots[i]?.Button, () => ClaimHatched?.Invoke(k)); }
+            for (int i = 0; i < Count(_shopCats); i++)   { int k = i; Hook(_shopCats[i]?.Button,   () => EnterShopCategory(k)); }
+
+            Hook(_feedBtn, () =>
+            {
+                if (_selectedFood >= 0 && _selectedFood < _foodIds.Length) FeedFood?.Invoke(_foodIds[_selectedFood]);
+            });
+            Hook(_foodBuyBtn,  () => GoShop?.Invoke());
+            Hook(_foodSellBtn, () => Sell?.Invoke());
+            Hook(_eggShopBtn,  () => GoShop?.Invoke());
+
+            Hook(_pickBuyBtn, () => { if (_pickId > 0) BuyProduct?.Invoke(_pickId); });
+            Hook(_shopBuyBtn, () =>
+            {
+                if (_selectedShop >= 0 && _selectedShop < _shopIds.Length) BuyProduct?.Invoke(_shopIds[_selectedShop]);
+            });
+            Hook(_backBtn, LeaveShopCategory);
+        }
+
+        private static int Count(System.Array a) => a?.Length ?? 0;
+
+        /// <summary>같은 버튼에 두 번 붙지 않게 지우고 단다. 프리팹 인스턴스는 비어 있지만 코드로 지은 것은 아니다.</summary>
+        private static void Hook(Button btn, UnityEngine.Events.UnityAction fire)
+        {
+            if (btn == null) return;
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(fire);
         }
 
         private void Awake()
@@ -174,6 +259,7 @@ namespace SnailPet.Ui
             BuildList();
             BuildFoodDetail();
             BuildEggPanel();
+            BuildShopPanels();
 
             SetMaximized(false);
 
@@ -186,7 +272,7 @@ namespace SnailPet.Ui
         private void BuildHeader()
         {
             Box(_panel, At.NameField, UiTheme.Slot, UiSprites.Shape.Slot, "NameField");
-            IconButton(_panel, At.RenameBtn, "icon_rename", "Rename", () => Rename?.Invoke());
+            _renameBtn = IconButton(_panel, At.RenameBtn, "icon_rename", "Rename");
 
             var name = At.NameField;
             _nameText = Label(_panel, new RectInt(name.x + 22, name.y, name.width - 26, name.height),
@@ -264,18 +350,16 @@ namespace SnailPet.Ui
         {
             var keys  = new[] { "icon_detail", "icon_wardrobe", "icon_gene", "icon_sell" };
             var names = new[] { "Detail", "Wardrobe", "Gene", "Sell" };
-            var fires = new Action[] { () => Detail?.Invoke(), () => Wardrobe?.Invoke(),
-                                       () => Gene?.Invoke(),   () => Sell?.Invoke() };
 
+            _actionBtns = new Button[keys.Length];
             for (int i = 0; i < keys.Length; i++)
-                IconButton(_panel, At.Actions[i], keys[i], names[i], fires[i]);
+                _actionBtns[i] = IconButton(_panel, At.Actions[i], keys[i], names[i]);
         }
 
         /// <summary>패널 밖으로 걸치는 것들. 설정 · 코인 · 닫기 · 최대화.</summary>
         private void BuildOutside()
         {
-            IconButton(_detailRoot, Above(At.Settings), "icon_settings", "Settings",
-                       () => Settings?.Invoke(), UiTheme.Accent);
+            _settingsBtn = IconButton(_detailRoot, Above(At.Settings), "icon_settings", "Settings", UiTheme.Accent);
 
             var coin = Above(At.Coin);
             Box(_detailRoot, coin, UiTheme.Slot, UiSprites.Shape.Badge, "CoinPill");
@@ -285,10 +369,8 @@ namespace SnailPet.Ui
                               "5,000", 12, UiTheme.Ink);
 
             // 이 둘은 다른 아이콘과 달리 아트에 색이 들어 있다. 물들이면 안 된다.
-            IconButton(_detailRoot, Above(At.Close),    "btn_close",    "Close",
-                       () => { SetMaximized(false); Close?.Invoke(); }, tint: Color.white);
-            IconButton(_detailRoot, Above(At.Maximize), "btn_maximize", "Maximize",
-                       () => { SetMaximized(true); Maximize?.Invoke(); }, tint: Color.white);
+            _closeBtn = IconButton(_detailRoot, Above(At.Close), "btn_close", "Close", tint: Color.white);
+            _maximizeBtn = IconButton(_detailRoot, Above(At.Maximize), "btn_maximize", "Maximize", tint: Color.white);
         }
 
         /// <summary>위젯 상자 기준 좌표로 옮긴다. 목업은 패널 왼쪽 위가 원점이라 코인 줄만큼 내려 준다.</summary>
@@ -304,12 +386,11 @@ namespace SnailPet.Ui
             var tabNames = new[] { "TabSnail", "TabFood", "TabEgg", "TabShop" };
 
             _tabs = new Image[Max.Tabs.Length];
+            _tabBtns = new Button[Max.Tabs.Length];
             for (int i = 0; i < _tabs.Length; i++)
             {
-                int index = i;
-                var btn = IconButton(_listRoot, Above(Max.Tabs[i]), tabKeys[i], tabNames[i],
-                                     () => SetTab(index), UiTheme.TabOff);
-                _tabs[i] = btn.GetComponent<Image>();
+                _tabBtns[i] = IconButton(_listRoot, Above(Max.Tabs[i]), tabKeys[i], tabNames[i], UiTheme.TabOff);
+                _tabs[i] = _tabBtns[i].GetComponent<Image>();
             }
 
             var panel = Panel(_listRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
@@ -317,6 +398,7 @@ namespace SnailPet.Ui
 
             BuildFoodGrid(panel);
 
+            BuildShopCategories(panel);
             BuildScrollView(panel, "SnailList", Max.RowView, out _rowGridRoot, out _rowContent);
 
             _rows = new ListRow[Max.RowPool];
@@ -364,21 +446,21 @@ namespace SnailPet.Ui
         /// </summary>
         private void BuildFoodGrid(RectTransform panel)
         {
-            BuildGrid(panel, "FoodGrid", SelectFood, out _foodGridRoot, out _foodContent, out _foodSlots);
-            BuildGrid(panel, "EggGrid",  SelectEgg,  out _eggGridRoot,  out _eggContent,  out _eggSlots);
+            BuildGrid(panel, "FoodGrid", out _foodGridRoot, out _foodContent, out _foodSlots);
+            BuildGrid(panel, "EggGrid",  out _eggGridRoot,  out _eggContent,  out _eggSlots);
         }
 
         /// <summary>
         /// 스크롤되는 4열 그리드. 음식과 알이 목업에서 같은 자리·같은 크기라 그대로 공유한다.
         /// </summary>
-        private void BuildGrid(RectTransform panel, string name, Action<int> onClick,
+        private void BuildGrid(RectTransform panel, string name,
                                out RectTransform root, out RectTransform content, out GridSlot[] slots)
         {
             BuildScrollView(panel, name, Max.FoodView, out root, out content);
 
             slots = new GridSlot[Max.FoodSlotPool];
             for (int i = 0; i < slots.Length; i++)
-                slots[i] = BuildGridSlot(content, i, onClick);
+                slots[i] = BuildGridSlot(content, i);
         }
 
         /// <summary>
@@ -418,7 +500,7 @@ namespace SnailPet.Ui
                 Mathf.Max(Max.FoodView.height, Max.FoodSlot.y + rows * Max.FoodStepY));
         }
 
-        private GridSlot BuildGridSlot(RectTransform content, int index, Action<int> onClick)
+        private GridSlot BuildGridSlot(RectTransform content, int index)
         {
             var s = Max.FoodSlot;
             var at = new RectInt(s.x + index % Max.FoodCols * Max.FoodStepX,
@@ -452,10 +534,8 @@ namespace SnailPet.Ui
             slot.Count = Label(root, Max.FoodCount, "", 9, UiTheme.Ink);
             slot.Count.alignment = TextAnchor.LowerRight;
 
-            int captured = index;
             slot.Button = root.gameObject.AddComponent<Button>();
             slot.Button.targetGraphic = bg;
-            slot.Button.onClick.AddListener(() => onClick(captured));
 
             root.gameObject.SetActive(false);
             return slot;
@@ -499,16 +579,11 @@ namespace SnailPet.Ui
             var feed = Box(_foodPanel, Fd.Feed, UiTheme.Slot, UiSprites.Shape.Button, "FeedButton");
             feed.raycastTarget = true;
             Label(_foodPanel, Fd.Feed, SnailPet.Data.Loc.Text(Keys.Feed), 10, UiTheme.Ink);
-            var feedBtn = feed.gameObject.AddComponent<Button>();
-            feedBtn.targetGraphic = feed;
-            feedBtn.onClick.AddListener(() =>
-            {
-                if (_selectedFood >= 0 && _selectedFood < _foodIds.Length)
-                    FeedFood?.Invoke(_foodIds[_selectedFood]);
-            });
+            _feedBtn = feed.gameObject.AddComponent<Button>();
+            _feedBtn.targetGraphic = feed;
 
-            IconButton(_foodPanel, Fd.Buy,  "icon_shop", "Buy",  () => Settings?.Invoke());
-            IconButton(_foodPanel, Fd.Sell, "icon_sell", "Sell", () => Sell?.Invoke());
+            _foodBuyBtn  = IconButton(_foodPanel, Fd.Buy,  "icon_shop", "Buy");
+            _foodSellBtn = IconButton(_foodPanel, Fd.Sell, "icon_sell", "Sell");
         }
 
         /// <summary>보유 음식을 채운다. (음식 Id, 개수) 목록.</summary>
@@ -612,7 +687,7 @@ namespace SnailPet.Ui
             // 알이 하나도 없을 때만 보이는 안내
             _eggEmpty = Label(_eggPanel, UiTheme.Egg.Empty, SnailPet.Data.Loc.Text(Keys.NoEgg), 10, UiTheme.Slot);
 
-            IconButton(_eggPanel, UiTheme.Egg.Buy, "icon_egg", "BuyEgg", () => GoShop?.Invoke());
+            _eggShopBtn = IconButton(_eggPanel, UiTheme.Egg.Buy, "icon_egg", "BuyEgg");
         }
 
         private HatchSlot BuildHatchSlot(int index)
@@ -638,10 +713,8 @@ namespace SnailPet.Ui
 
             slot.Timer = Label(root, new RectInt(0, at.height - 16, at.width, 14), "", 9, UiTheme.Ink);
 
-            int captured = index;
             slot.Button = root.gameObject.AddComponent<Button>();
             slot.Button.targetGraphic = bg;
-            slot.Button.onClick.AddListener(() => ClaimHatched?.Invoke(captured));
             return slot;
         }
 
@@ -746,7 +819,7 @@ namespace SnailPet.Ui
             row.Age = Label(rowRt, Max.RowAge, "", 8, UiTheme.Ink);
 
             int captured = index;
-            row.Swap = IconButton(rowRt, Max.RowSwap, "icon_swap", "Swap", () => SwapTo?.Invoke(captured));
+            row.Swap = IconButton(rowRt, Max.RowSwap, "icon_swap", "Swap");
             return row;
         }
 
@@ -784,19 +857,338 @@ namespace SnailPet.Ui
             _tab = Mathf.Clamp(index, 0, _tabs.Length - 1);
 
             // 탭이 왼쪽 목록과 오른쪽 상세를 함께 바꾼다. 둘은 항상 같은 것을 보여 줘야 한다.
-            bool food = _tab == 1, egg = _tab == 2;
+            bool food = _tab == 1, egg = _tab == 2, shop = _tab == 3;
             if (_foodGridRoot != null) _foodGridRoot.gameObject.SetActive(food);
             if (_foodPanel != null)    _foodPanel.gameObject.SetActive(food);
             if (_eggGridRoot != null)  _eggGridRoot.gameObject.SetActive(egg);
             if (_eggPanel != null)     _eggPanel.gameObject.SetActive(egg);
-            if (_panel != null)        _panel.gameObject.SetActive(!food && !egg);
-            if (_rowGridRoot != null)  _rowGridRoot.gameObject.SetActive(!food && !egg);
+            if (_panel != null)        _panel.gameObject.SetActive(!food && !egg && !shop);
+            if (_rowGridRoot != null)  _rowGridRoot.gameObject.SetActive(!food && !egg && !shop);
+
+            // 상점은 들어올 때마다 카테고리 목록에서 시작한다
+            _shopCat = -1;
+            ApplyShopStage();
             for (int i = 0; i < _tabs.Length; i++)
                 _tabs[i].color = i == _tab ? UiTheme.TabOn : UiTheme.TabOff;
 
             string[] titles = { Keys.SnailList, Keys.FoodList, Keys.EggList, Keys.Shop };
             _listTitle.text = SnailPet.Data.Loc.Text(titles[_tab]);
             TabChanged?.Invoke(_tab);
+        }
+
+        // ── 상점 탭 ──
+        //
+        // 두 단계다. 카테고리를 고르면 그 안의 상품 그리드로 들어가고, 뒤로 가면 돌아온다.
+        // 카테고리 행은 달팽이 목록 행과, 상품 그리드는 음식 그리드와 자리가 같아
+        // (목업 실측) 같은 부품을 쓴다.
+
+        [Serializable]
+        public sealed class ShopCategory
+        {
+            public RectTransform Root;
+            public Text Name;
+            public Button Button;
+        }
+
+        [SerializeField] private RectTransform _shopCatRoot;
+        [SerializeField] private ShopCategory[] _shopCats;
+        [SerializeField] private RectTransform _shopGridRoot, _shopGridContent;
+        [SerializeField] private GridSlot[] _shopSlots;
+
+        [SerializeField] private RectTransform _shopPanel, _shopItemPanel;
+        [SerializeField] private RectTransform _shopBack;
+        [SerializeField] private Image _pickIcon, _pickRarityBadge, _pickRarityIcon;
+        [SerializeField] private Text _pickName, _pickRarityText, _pickCost;
+        [SerializeField] private Image _shopIcon, _shopRarityBadge, _shopRarityIcon;
+        [SerializeField] private Text _shopName, _shopRarityText, _shopInfo, _shopCost;
+        [SerializeField] private Text _shopFull, _shopHappy;
+        [SerializeField] private RectTransform _shopStats;   // 포만·행복 묶음. 음식이 아니면 숨긴다
+
+        /// <summary>-1 이면 카테고리 목록, 아니면 그 카테고리의 상품 그리드.</summary>
+        private int _shopCat = -1;
+        private int[] _shopIds = new int[0];
+        private int _selectedShop = -1;
+        private int _pickId;
+
+        /// <summary>상품을 사겠다고 눌렀다. ShopData 의 Id 가 나간다.</summary>
+        public event Action<int> BuyProduct;
+
+        private void BuildShopCategories(RectTransform panel)
+        {
+            // 카테고리는 넷뿐이라 패널에 그대로 들어간다. 스크롤을 붙일 이유가 없다.
+            _shopCatRoot = NewRect("ShopCategories", panel);
+            Place(_shopCatRoot, Max.RowView);
+            _shopCatRoot.gameObject.SetActive(false);
+
+            var cats = SnailPet.Snail.Shop.Categories;
+            _shopCats = new ShopCategory[cats.Length];
+
+            for (int i = 0; i < cats.Length; i++)
+            {
+                var r = Max.Row;
+                var at = new RectInt(r.x, r.y - Max.RowView.y + i * Max.RowStep, r.width, r.height);
+
+                var root = NewRect("Category" + i, _shopCatRoot);
+                Place(root, at);
+
+                var bg = root.gameObject.AddComponent<Image>();
+                bg.sprite = UiSprites.Of(UiSprites.Shape.Slot);
+                bg.type = Image.Type.Sliced;
+                bg.color = UiTheme.Slot;
+                root.gameObject.AddComponent<UiShapeRef>().Shape = UiSprites.Shape.Slot;
+
+                var name = Label(root, UiTheme.Shop.CategoryName,
+                                 SnailPet.Data.Loc.Text(Keys.CategoryOf(cats[i])), 11, UiTheme.Ink);
+                name.alignment = TextAnchor.MiddleLeft;
+
+                var btn = root.gameObject.AddComponent<Button>();
+                btn.targetGraphic = bg;
+
+                _shopCats[i] = new ShopCategory { Root = root, Name = name, Button = btn };
+            }
+
+            BuildGrid(panel, "ShopGrid", out _shopGridRoot, out _shopGridContent, out _shopSlots);
+        }
+
+        /// <summary>오늘의 추천 패널과 상품 상세 패널. 둘 중 하나만 떠 있다.</summary>
+        private void BuildShopPanels()
+        {
+            // ── 오늘의 추천 ──
+            _shopPanel = Panel(_detailRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
+            _shopPanel.gameObject.SetActive(false);
+
+            Label(_shopPanel, Sh.Title, SnailPet.Data.Loc.Text(Keys.Today), 12, UiTheme.Ink);
+
+            _pickRarityBadge = Box(_shopPanel, Sh.Rarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "PickRarity");
+            _pickRarityText  = Label(_shopPanel, Sh.Rarity, "", 9, UiTheme.OnBadge);
+            Shrink(_pickRarityText);
+            _pickRarityIcon = Icon(_shopPanel, Sh.Rarity, null, Color.white, "PickRarityIcon");
+            _pickRarityIcon.raycastTarget = false;
+            _pickRarityIcon.enabled = false;
+
+            Box(_shopPanel, Sh.Preview, UiTheme.Slot, UiSprites.Shape.Slot, "PickPreview");
+            _pickIcon = Icon(_shopPanel, Sh.Preview, null, Color.white, "PickIcon");
+            _pickIcon.raycastTarget = false;
+
+            _pickName = Label(_shopPanel, Sh.Name, "", 12, UiTheme.Ink);
+            Icon(_shopPanel, Sh.PickCoin, "icon_coin", Color.white, "PickCoinIcon").raycastTarget = false;
+            _pickCost = Label(_shopPanel, Sh.PickCost, "", 11, UiTheme.Ink);
+            _pickCost.alignment = TextAnchor.MiddleLeft;
+
+            var pickBuy = Box(_shopPanel, Sh.PickBuy, UiTheme.Slot, UiSprites.Shape.Button, "PickBuy");
+            pickBuy.raycastTarget = true;
+            Label(_shopPanel, Sh.PickBuy, SnailPet.Data.Loc.Text(Keys.BuyIt), 10, UiTheme.Ink);
+            _pickBuyBtn = pickBuy.gameObject.AddComponent<Button>();
+            _pickBuyBtn.targetGraphic = pickBuy;
+
+            // ── 상품 상세 ── 음식 상세와 같은 자리를 쓰고 하단 버튼만 다르다
+            _shopItemPanel = Panel(_detailRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
+            _shopItemPanel.gameObject.SetActive(false);
+
+            _shopName = Label(_shopItemPanel, Fd.Name, "", 12, UiTheme.Ink);
+
+            _shopRarityBadge = Box(_shopItemPanel, Fd.Rarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
+            _shopRarityText  = Label(_shopItemPanel, Fd.Rarity, "", 9, UiTheme.OnBadge);
+            Shrink(_shopRarityText);
+            _shopRarityIcon = Icon(_shopItemPanel, Fd.Rarity, null, Color.white, "RarityIcon");
+            _shopRarityIcon.raycastTarget = false;
+            _shopRarityIcon.enabled = false;
+
+            Box(_shopItemPanel, Fd.Preview, UiTheme.Slot, UiSprites.Shape.Slot, "Preview");
+            _shopIcon = Icon(_shopItemPanel, Fd.Preview, null, Color.white, "PreviewIcon");
+            _shopIcon.raycastTarget = false;
+
+            // 포만·행복은 음식에만 있다. 한 상자에 묶어 통째로 껐다 켠다.
+            _shopStats = NewRect("Stats", _shopItemPanel);
+            _shopStats.anchorMin = Vector2.zero; _shopStats.anchorMax = Vector2.one;
+            _shopStats.offsetMin = Vector2.zero; _shopStats.offsetMax = Vector2.zero;
+
+            Box(_shopStats, Fd.FullIcon, UiTheme.Slot, UiSprites.Shape.Badge, "FullIconBox");
+            Icon(_shopStats, Fd.FullIcon, "icon_food", UiTheme.Ink, "FullIcon").raycastTarget = false;
+            Box(_shopStats, Fd.FullValue, UiTheme.Slot, UiSprites.Shape.Badge, "FullValue");
+            _shopFull = Label(_shopStats, Fd.FullValue, "", 9, UiTheme.Ink);
+
+            Box(_shopStats, Fd.HappyIcon, UiTheme.Slot, UiSprites.Shape.Badge, "HappyIconBox");
+            Icon(_shopStats, Fd.HappyIcon, "icon_happy", UiTheme.Ink, "HappyIcon").raycastTarget = false;
+            Box(_shopStats, Fd.HappyValue, UiTheme.Slot, UiSprites.Shape.Badge, "HappyValue");
+            _shopHappy = Label(_shopStats, Fd.HappyValue, "", 9, UiTheme.Ink);
+
+            Box(_shopItemPanel, Fd.Info, UiTheme.Slot, UiSprites.Shape.Slot, "InfoBox");
+            _shopInfo = Label(_shopItemPanel, new RectInt(Fd.Info.x + 4, Fd.Info.y, Fd.Info.width - 8, Fd.Info.height),
+                              "", 8, UiTheme.Ink);
+            _shopInfo.horizontalOverflow = HorizontalWrapMode.Wrap;
+
+            var buy = Box(_shopItemPanel, Sh.Buy, UiTheme.Slot, UiSprites.Shape.Button, "BuyButton");
+            buy.raycastTarget = true;
+            Label(_shopItemPanel, Sh.BuyLabel, SnailPet.Data.Loc.Text(Keys.BuyIt), 10, UiTheme.Ink);
+            Icon(_shopItemPanel, Sh.BuyCoin, "icon_coin", Color.white, "BuyCoinIcon").raycastTarget = false;
+            _shopCost = Label(_shopItemPanel, Sh.BuyCost, "", 10, UiTheme.Ink);
+            _shopCost.alignment = TextAnchor.MiddleLeft;
+
+            _shopBuyBtn = buy.gameObject.AddComponent<Button>();
+            _shopBuyBtn.targetGraphic = buy;
+
+            // 뒤로 가기. 목업에서 닫기 X 자리에 화살표가 들어온다.
+            // btn_back 아트가 아직 없어 글자로 그린다 — 스프라이트 없는 Image 는 색 사각형이 된다.
+            var back = Box(_detailRoot, Above(Sh.Back), UiTheme.PanelBorder, UiSprites.Shape.Button, "Back");
+            back.raycastTarget = true;
+            Label(_detailRoot, Above(Sh.Back), "←", 16, Color.white);
+            _backBtn = back.gameObject.AddComponent<Button>();
+            _backBtn.targetGraphic = back;
+            _shopBack = (RectTransform)back.transform;
+            _shopBack.gameObject.SetActive(false);
+        }
+
+        /// <summary>카테고리를 골랐다. 그 안의 상품 그리드로 들어간다.</summary>
+        private void EnterShopCategory(int index)
+        {
+            var cats = SnailPet.Snail.Shop.Categories;
+            if (index < 0 || index >= cats.Length) return;
+
+            _shopCat = index;
+            var products = SnailPet.Snail.Shop.ProductsOf(cats[index]);
+
+            _shopIds = new int[Mathf.Min(products.Length, _shopSlots.Length)];
+            for (int i = 0; i < _shopSlots.Length; i++)
+            {
+                bool has = i < _shopIds.Length;
+                _shopSlots[i].Root.gameObject.SetActive(has);
+                if (!has) continue;
+
+                _shopIds[i] = products[i].Id;
+                _shopSlots[i].Icon.sprite = ProductSprite(products[i]);
+                _shopSlots[i].Icon.enabled = _shopSlots[i].Icon.sprite != null;
+                _shopSlots[i].Count.text = products[i].ItemCount > 1 ? products[i].ItemCount.ToString() : "";
+                _shopSlots[i].Frame.enabled = false;
+            }
+            FitContent(_shopGridContent, _shopIds.Length);
+
+            _listTitle.text = SnailPet.Data.Loc.Text(Keys.CategoryOf(cats[index]));
+            ApplyShopStage();
+            SelectShopSlot(_shopIds.Length > 0 ? 0 : -1);
+        }
+
+        private void LeaveShopCategory()
+        {
+            _shopCat = -1;
+            _listTitle.text = SnailPet.Data.Loc.Text(Keys.Shop);
+            ApplyShopStage();
+        }
+
+        /// <summary>
+        /// 카테고리 단계인지 상품 단계인지에 따라 양쪽 패널을 맞춘다.
+        /// 짓는 도중에도 <see cref="SetTab"/> 을 거쳐 불리므로 아직 없는 것은 건너뛴다.
+        /// </summary>
+        private void ApplyShopStage()
+        {
+            bool shop = _tab == 3;
+            bool inCategory = shop && _shopCat >= 0;
+
+            if (_shopCatRoot != null)   _shopCatRoot.gameObject.SetActive(shop && !inCategory);
+            if (_shopGridRoot != null)  _shopGridRoot.gameObject.SetActive(inCategory);
+            if (_shopPanel != null)     _shopPanel.gameObject.SetActive(shop && !inCategory);
+            if (_shopItemPanel != null) _shopItemPanel.gameObject.SetActive(inCategory);
+
+            // 뒤로가 나올 때는 닫기가 그 자리를 비켜 준다
+            if (_shopBack != null)  _shopBack.gameObject.SetActive(inCategory);
+            if (_closeBtn != null)  _closeBtn.gameObject.SetActive(!inCategory);
+        }
+
+        private void SelectShopSlot(int index)
+        {
+            _selectedShop = index;
+            for (int i = 0; i < _shopSlots.Length; i++)
+                _shopSlots[i].Frame.enabled = i == index;
+
+            if (index < 0 || index >= _shopIds.Length) return;
+
+            ShopRow row = null;
+            foreach (var r in SnailPet.Data.GameData.ShopData)
+                if (r.Id == _shopIds[index]) { row = r; break; }
+            if (row == null) return;
+
+            _shopName.text = SnailPet.Snail.Shop.NameOf(row);
+            _shopCost.text = row.CostCount.HasValue ? row.CostCount.Value.ToString("N0") : "-";
+            _shopIcon.sprite = ProductSprite(row);
+            _shopIcon.enabled = _shopIcon.sprite != null;
+
+            ApplyRarity(_shopRarityIcon, _shopRarityBadge, _shopRarityText, row.RarityType);
+
+            // 포만·행복은 음식에만 있다
+            bool isFood = row.CategoryType == SnailPet.Data.CategoryType.Food
+                       && SnailPet.Data.GameData.FoodDataById.TryGetValue(row.Id, out var food);
+            _shopStats.gameObject.SetActive(isFood);
+            if (isFood)
+            {
+                var f = SnailPet.Data.GameData.FoodDataById[row.Id];
+                _shopFull.text  = f.FullPoint.ToString("0");
+                _shopHappy.text = f.HappyPoint.ToString("0");
+                _shopInfo.text  = SnailPet.Data.Loc.ById(f.InfoId);
+            }
+            else _shopInfo.text = InfoOf(row);
+        }
+
+        private static string InfoOf(ShopRow row)
+        {
+            switch (row.CategoryType)
+            {
+                case SnailPet.Data.CategoryType.Egg:
+                    return SnailPet.Data.GameData.EggDataById.TryGetValue(row.Id, out var e)
+                         ? SnailPet.Data.Loc.ById(e.InfoId) : string.Empty;
+                case SnailPet.Data.CategoryType.Accessories:
+                    return SnailPet.Data.GameData.AccessoriesDataById.TryGetValue(row.Id, out var a)
+                         ? SnailPet.Data.Loc.ById(a.InfoId) : string.Empty;
+                default:
+                    return string.Empty;
+            }
+        }
+
+        /// <summary>상품 그림. 카테고리마다 아트가 있는 폴더가 다르다.</summary>
+        private static Sprite ProductSprite(ShopRow row)
+        {
+            string folder = row.CategoryType switch
+            {
+                SnailPet.Data.CategoryType.Food        => "Food",
+                SnailPet.Data.CategoryType.Egg         => "Egg",
+                SnailPet.Data.CategoryType.Accessories => "Accessories",
+                _ => "Item",
+            };
+
+            string key = row.CategoryType switch
+            {
+                SnailPet.Data.CategoryType.Food =>
+                    SnailPet.Data.GameData.FoodDataById.TryGetValue(row.Id, out var f) ? f.ResourceKey : null,
+                SnailPet.Data.CategoryType.Egg =>
+                    SnailPet.Data.GameData.EggDataById.TryGetValue(row.Id, out var e) ? e.ResourceKey : null,
+                SnailPet.Data.CategoryType.Accessories =>
+                    SnailPet.Data.GameData.AccessoriesDataById.TryGetValue(row.Id, out var a) ? a.ResourceKey : null,
+                _ => SnailPet.Data.GameData.ItemDataById.TryGetValue(row.Id, out var i) ? i.ResourceKey : null,
+            };
+
+            return string.IsNullOrEmpty(key) ? null : Resources.Load<Sprite>("Snail/" + folder + "/" + key);
+        }
+
+        /// <summary>오늘의 추천을 그린다. 아직 할인 데이터가 없어 정가 그대로다.</summary>
+        public void SetTodayPick(ShopRow row)
+        {
+            _pickId = row?.Id ?? 0;
+
+            bool has = row != null;
+            _pickIcon.enabled = has;
+            _pickCost.enabled = has;
+            if (!has) { _pickName.text = SnailPet.Data.Loc.Text(Keys.Preparing); return; }
+
+            _pickName.text = SnailPet.Snail.Shop.NameOf(row);
+            _pickCost.text = row.CostCount.HasValue ? row.CostCount.Value.ToString("N0") : "-";
+            _pickIcon.sprite = ProductSprite(row);
+            _pickIcon.enabled = _pickIcon.sprite != null;
+            ApplyRarity(_pickRarityIcon, _pickRarityBadge, _pickRarityText, row.RarityType);
+        }
+
+        /// <summary>산 뒤에 그리드의 수량 표시를 새로 그린다. 상품이 늘거나 줄 수 있다.</summary>
+        public void RefreshShop()
+        {
+            if (_shopCat >= 0) EnterShopCategory(_shopCat);
         }
 
         /// <summary>목록을 펼칠지. 상세 패널은 화면에서 제자리에 남는다.</summary>
@@ -1022,8 +1414,12 @@ namespace SnailPet.Ui
         }
 
         /// <param name="tint">아이콘 색. 실루엣 아이콘은 기본값(먹색), 색이 들어 있는 아트는 흰색.</param>
+        /// <summary>
+        /// 아이콘 버튼을 만들기만 한다. 할 일은 <see cref="Rewire"/> 가 붙인다 —
+        /// 여기서 붙이면 프리팹으로 구울 때 사라진다.
+        /// </summary>
         private Button IconButton(RectTransform parent, RectInt r, string key, string name,
-                                  Action fire, Color? background = null, Color? tint = null)
+                                  Color? background = null, Color? tint = null)
         {
             var rt = NewRect(name, parent);
             Place(rt, r);
@@ -1046,7 +1442,6 @@ namespace SnailPet.Ui
 
             var btn = rt.gameObject.AddComponent<Button>();
             btn.targetGraphic = img;
-            btn.onClick.AddListener(() => fire?.Invoke());
             return btn;
         }
     }
