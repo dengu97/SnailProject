@@ -44,6 +44,10 @@ namespace SnailPet.Data
         /// </summary>
         public static string ById(int id)
         {
+            // 0 은 「아직 안 적음」이다. 시트의 빈 칸이 그대로 0 으로 들어온다.
+            // 화면에 #0 을 띄우느니 비워 둔다. 다만 한 번은 알린다.
+            if (id <= 0) { Warn("#0", "비어 있는 Id 를 글자로 찾으려 했습니다"); return string.Empty; }
+
             if (GameData.LanguageDataById.TryGetValue(id, out var row) && !string.IsNullOrEmpty(row.Kr))
                 return row.Kr;
 

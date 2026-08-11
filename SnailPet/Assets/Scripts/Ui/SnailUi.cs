@@ -4,6 +4,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using At = SnailPet.Ui.UiTheme.At;
 using Max = SnailPet.Ui.UiTheme.Max;
+using Fd = SnailPet.Ui.UiTheme.Food;
 
 namespace SnailPet.Ui
 {
@@ -167,6 +168,7 @@ namespace SnailPet.Ui
             BuildActions();
             BuildOutside();
             BuildList();
+            BuildFoodDetail();
 
             SetMaximized(false);
 
@@ -308,6 +310,8 @@ namespace SnailPet.Ui
             var panel = Panel(_listRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
             _listTitle = Label(panel, new RectInt(0, 8, UiTheme.PanelW, 16), "", 12, UiTheme.Ink);
 
+            BuildFoodGrid(panel);
+
             _rows = new ListRow[Max.RowCount];
             for (int i = 0; i < _rows.Length; i++)
             {
@@ -318,10 +322,219 @@ namespace SnailPet.Ui
             SetTab(0);
         }
 
+        // ── 음식 탭 ──
+
+        [Serializable]
+        public sealed class FoodSlot
+        {
+            public RectTransform Root;
+            public Image Icon, Frame;
+            public Text Count;
+            public Button Button;
+        }
+
+        [SerializeField] private RectTransform _foodPanel, _foodGridRoot, _foodContent;
+        [SerializeField] private FoodSlot[] _foodSlots;
+        [SerializeField] private Image _foodIcon;
+        [SerializeField] private Text _foodName, _foodFull, _foodHappy, _foodInfo;
+        [SerializeField] private Image _foodRarityBadge, _foodRarityIcon;
+        [SerializeField] private Text _foodRarityText;
+
+        private int[] _foodIds = new int[0];
+        private int _selectedFood = -1;
+
+        public event Action<int> FoodSelected, FeedFood;
+
+        /// <summary>
+        /// 음식 그리드. 목업의 5번째 줄이 잘려 있어 세로로 스크롤한다.
+        ///
+        /// 칸은 미리 만들어 두고 보유량에 따라 켜고 끈다. 매번 만들고 지우면
+        /// 프리팹으로 구울 수 없고, 스크롤 중에 GC 가 튄다.
+        /// </summary>
+        private void BuildFoodGrid(RectTransform panel)
+        {
+            _foodGridRoot = NewRect("FoodGrid", panel);
+            Place(_foodGridRoot, Max.FoodView);
+            _foodGridRoot.gameObject.SetActive(false);
+
+            // 넘치는 부분을 잘라 낸다. 이게 없으면 패널 밖으로 흘러나온다.
+            _foodGridRoot.gameObject.AddComponent<RectMask2D>();
+
+            _foodContent = NewRect("Content", _foodGridRoot);
+            _foodContent.anchorMin = _foodContent.anchorMax = _foodContent.pivot = new Vector2(0f, 1f);
+            _foodContent.anchoredPosition = Vector2.zero;
+            _foodContent.sizeDelta = new Vector2(UiTheme.PanelW, Max.FoodView.height);
+
+            var scroll = _foodGridRoot.gameObject.AddComponent<ScrollRect>();
+            scroll.content = _foodContent;
+            scroll.viewport = _foodGridRoot;
+            scroll.horizontal = false;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 20f;
+
+            _foodSlots = new FoodSlot[Max.FoodSlotPool];
+            for (int i = 0; i < _foodSlots.Length; i++)
+                _foodSlots[i] = BuildFoodSlot(i);
+        }
+
+        private FoodSlot BuildFoodSlot(int index)
+        {
+            var s = Max.FoodSlot;
+            var at = new RectInt(s.x + index % Max.FoodCols * Max.FoodStepX,
+                                 s.y + index / Max.FoodCols * Max.FoodStepY, s.width, s.height);
+
+            var root = NewRect("Slot" + index, _foodContent);
+            Place(root, at);
+
+            var bg = root.gameObject.AddComponent<Image>();
+            bg.sprite = UiSprites.Of(UiSprites.Shape.Slot);
+            bg.type = Image.Type.Sliced;
+            bg.color = UiTheme.RowSlot;
+            root.gameObject.AddComponent<UiShapeRef>().Shape = UiSprites.Shape.Slot;
+
+            var slot = new FoodSlot { Root = root };
+            slot.Icon = Icon(root, new RectInt(2, 2, s.width - 4, s.height - 4), null, Color.white, "Icon");
+            slot.Icon.raycastTarget = false;
+
+            // 선택 표시. 목업에서 고른 칸에 빨간 테두리가 둘린다.
+            slot.Frame = NewRect("Frame", root).gameObject.AddComponent<Image>();
+            var fr = (RectTransform)slot.Frame.transform;
+            fr.anchorMin = Vector2.zero; fr.anchorMax = Vector2.one;
+            fr.offsetMin = Vector2.zero; fr.offsetMax = Vector2.zero;
+            slot.Frame.sprite = UiSprites.Of(UiSprites.Shape.Selection);
+            slot.Frame.type = Image.Type.Sliced;
+            slot.Frame.gameObject.AddComponent<UiShapeRef>().Shape = UiSprites.Shape.Selection;
+            slot.Frame.color = UiTheme.Selected;
+            slot.Frame.raycastTarget = false;
+            slot.Frame.enabled = false;
+
+            slot.Count = Label(root, Max.FoodCount, "", 9, UiTheme.Ink);
+            slot.Count.alignment = TextAnchor.LowerRight;
+
+            int captured = index;
+            slot.Button = root.gameObject.AddComponent<Button>();
+            slot.Button.targetGraphic = bg;
+            slot.Button.onClick.AddListener(() => SelectFood(captured));
+
+            root.gameObject.SetActive(false);
+            return slot;
+        }
+
+        /// <summary>음식 탭의 오른쪽 상세 패널. 달팽이 상세와 자리를 바꿔 가며 쓴다.</summary>
+        private void BuildFoodDetail()
+        {
+            _foodPanel = Panel(_detailRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
+            _foodPanel.gameObject.SetActive(false);
+
+            Icon(_foodPanel, Fd.Favorite, "icon_favorite", UiTheme.Ink, "Favorite").raycastTarget = false;
+            _foodName = Label(_foodPanel, Fd.Name, "", 12, UiTheme.Ink);
+
+            _foodRarityBadge = Box(_foodPanel, Fd.Rarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
+            _foodRarityText  = Label(_foodPanel, Fd.Rarity, "", 9, UiTheme.OnBadge);
+            Shrink(_foodRarityText);
+            _foodRarityIcon = Icon(_foodPanel, Fd.Rarity, null, Color.white, "RarityIcon");
+            _foodRarityIcon.raycastTarget = false;
+            _foodRarityIcon.enabled = false;
+
+            Box(_foodPanel, Fd.Preview, UiTheme.Slot, UiSprites.Shape.Slot, "Preview");
+            _foodIcon = Icon(_foodPanel, Fd.Preview, null, Color.white, "PreviewIcon");
+            _foodIcon.raycastTarget = false;
+
+            Box(_foodPanel, Fd.FullIcon, UiTheme.Slot, UiSprites.Shape.Badge, "FullIconBox");
+            Icon(_foodPanel, Fd.FullIcon, "icon_food", UiTheme.Ink, "FullIcon").raycastTarget = false;
+            Box(_foodPanel, Fd.FullValue, UiTheme.Slot, UiSprites.Shape.Badge, "FullValue");
+            _foodFull = Label(_foodPanel, Fd.FullValue, "", 9, UiTheme.Ink);
+
+            Box(_foodPanel, Fd.HappyIcon, UiTheme.Slot, UiSprites.Shape.Badge, "HappyIconBox");
+            Icon(_foodPanel, Fd.HappyIcon, "icon_happy", UiTheme.Ink, "HappyIcon").raycastTarget = false;
+            Box(_foodPanel, Fd.HappyValue, UiTheme.Slot, UiSprites.Shape.Badge, "HappyValue");
+            _foodHappy = Label(_foodPanel, Fd.HappyValue, "", 9, UiTheme.Ink);
+
+            Box(_foodPanel, Fd.Info, UiTheme.Slot, UiSprites.Shape.Slot, "InfoBox");
+            _foodInfo = Label(_foodPanel, new RectInt(Fd.Info.x + 4, Fd.Info.y, Fd.Info.width - 8, Fd.Info.height),
+                              "", 8, UiTheme.Ink);
+            _foodInfo.horizontalOverflow = HorizontalWrapMode.Wrap;
+
+            var feed = Box(_foodPanel, Fd.Feed, UiTheme.Slot, UiSprites.Shape.Button, "FeedButton");
+            feed.raycastTarget = true;
+            Label(_foodPanel, Fd.Feed, SnailPet.Data.Loc.Text(Keys.Feed), 10, UiTheme.Ink);
+            var feedBtn = feed.gameObject.AddComponent<Button>();
+            feedBtn.targetGraphic = feed;
+            feedBtn.onClick.AddListener(() =>
+            {
+                if (_selectedFood >= 0 && _selectedFood < _foodIds.Length)
+                    FeedFood?.Invoke(_foodIds[_selectedFood]);
+            });
+
+            IconButton(_foodPanel, Fd.Buy,  "icon_shop", "Buy",  () => Settings?.Invoke());
+            IconButton(_foodPanel, Fd.Sell, "icon_sell", "Sell", () => Sell?.Invoke());
+        }
+
+        /// <summary>보유 음식을 채운다. (음식 Id, 개수) 목록.</summary>
+        public void SetFoods((int foodId, int count)[] foods)
+        {
+            _foodIds = new int[foods?.Length ?? 0];
+
+            for (int i = 0; i < _foodSlots.Length; i++)
+            {
+                bool has = foods != null && i < foods.Length;
+                _foodSlots[i].Root.gameObject.SetActive(has);
+                if (!has) continue;
+
+                _foodIds[i] = foods[i].foodId;
+                var row = SnailPet.Data.GameData.FoodDataById.TryGetValue(foods[i].foodId, out var f) ? f : null;
+
+                _foodSlots[i].Icon.sprite = FoodSprite(row);
+                _foodSlots[i].Icon.enabled = _foodSlots[i].Icon.sprite != null;
+                _foodSlots[i].Count.text = foods[i].count > 1 ? foods[i].count.ToString() : "";
+            }
+
+            // 내용 높이를 줄 수에 맞춘다. 이게 스크롤 범위를 정한다.
+            int rows = Mathf.CeilToInt((_foodIds.Length) / (float)Max.FoodCols);
+            _foodContent.sizeDelta = new Vector2(UiTheme.PanelW,
+                Mathf.Max(Max.FoodView.height, Max.FoodSlot.y + rows * Max.FoodStepY));
+
+            SelectFood(_foodIds.Length > 0 ? 0 : -1);
+        }
+
+        private static Sprite FoodSprite(SnailPet.Data.FoodDataRow row) =>
+            row == null || string.IsNullOrEmpty(row.ResourceKey)
+                ? null : Resources.Load<Sprite>("Snail/Food/" + row.ResourceKey);
+
+        /// <summary>칸을 고른다. 상세 패널이 그 음식으로 바뀐다.</summary>
+        public void SelectFood(int index)
+        {
+            _selectedFood = index;
+            for (int i = 0; i < _foodSlots.Length; i++)
+                _foodSlots[i].Frame.enabled = i == index;
+
+            if (index < 0 || index >= _foodIds.Length) return;
+
+            var row = SnailPet.Data.GameData.FoodDataById.TryGetValue(_foodIds[index], out var f) ? f : null;
+            if (row == null) return;
+
+            _foodName.text  = SnailPet.Data.Loc.ById(row.NameId);
+            _foodInfo.text  = SnailPet.Data.Loc.ById(row.InfoId);
+            _foodFull.text  = row.FullPoint.ToString("0");
+            _foodHappy.text = row.HappyPoint.ToString("0");
+
+            _foodIcon.sprite = FoodSprite(row);
+            _foodIcon.enabled = _foodIcon.sprite != null;
+
+            // 음식에는 등급이 없다. 자리는 목업에 있으므로 비워 둔다.
+            _foodRarityBadge.enabled = false;
+            _foodRarityIcon.enabled = false;
+            _foodRarityText.text = "";
+
+            FoodSelected?.Invoke(_foodIds[index]);
+        }
+
         /// <summary>목록 한 줄. 썸네일 · 이름 · 등급 · 나이 · 교체 버튼.</summary>
         [Serializable]
         public sealed class ListRow
         {
+            public RectTransform Root;
+            public bool Filled;
             public Image Thumb;
             public Image RarityBadge, RarityIcon;
             public Text Name, Rarity, Age;
@@ -340,6 +553,7 @@ namespace SnailPet.Ui
 
             var row = new ListRow
             {
+                Root   = rowRt,
                 Thumb  = Box(rowRt, Max.RowThumb, UiTheme.RowSlot, UiSprites.Shape.Slot, "Thumb"),
                 Name   = Label(rowRt, Max.RowName, "", 11, UiTheme.Ink),
                 Rarity = null,
@@ -367,7 +581,8 @@ namespace SnailPet.Ui
             for (int i = 0; i < _rows.Length; i++)
             {
                 bool has = rows != null && i < rows.Length;
-                _rows[i].Name.transform.parent.gameObject.SetActive(has);
+                _rows[i].Filled = has;
+                _rows[i].Root.gameObject.SetActive(has && _tab == 0);
                 if (!has) continue;
 
                 var r = rows[i];
@@ -383,6 +598,13 @@ namespace SnailPet.Ui
         public void SetTab(int index)
         {
             _tab = Mathf.Clamp(index, 0, _tabs.Length - 1);
+
+            // 탭이 왼쪽 목록과 오른쪽 상세를 함께 바꾼다. 둘은 항상 같은 것을 보여 줘야 한다.
+            bool food = _tab == 1;
+            if (_foodGridRoot != null) _foodGridRoot.gameObject.SetActive(food);
+            if (_foodPanel != null)    _foodPanel.gameObject.SetActive(food);
+            if (_panel != null)        _panel.gameObject.SetActive(!food);
+            foreach (var r in _rows) if (r?.Root != null) r.Root.gameObject.SetActive(!food && r.Filled);
             for (int i = 0; i < _tabs.Length; i++)
                 _tabs[i].color = i == _tab ? UiTheme.TabOn : UiTheme.TabOff;
 

@@ -355,6 +355,16 @@ namespace SnailPet
             _ui.TabChanged += i => Say($"      [UI] 탭 {i}");
             _ui.SwapTo     += i => Say($"      [UI] {i}번 달팽이로 교체");
 
+            // 「먹이기」는 즉시 먹이지 않는다. 화면에 떨어뜨리고 달팽이가 기어가서 먹는다.
+            _ui.FeedFood += DropFoodFromUi;
+
+            // 보유 음식도 아직 더미다. 아트가 있는 것만 몇 개씩 가진 것으로 친다.
+            var owned = new System.Collections.Generic.List<(int, int)>();
+            int n = 1;
+            foreach (var f in GameData.FoodData)
+                if (!string.IsNullOrEmpty(f.ResourceKey)) owned.Add((f.Id, n++));
+            _ui.SetFoods(owned.ToArray());
+
             // 목록은 아직 더미다. 보유 달팽이를 들고 있는 곳이 생기면 그걸 넘긴다.
             _ui.SetRows(new (string, RarityType, int, bool)[]
             {
@@ -720,6 +730,30 @@ namespace SnailPet
             _eatFlashUntil = _t + 1.2f;
 
             Say($"      먹음: {Loc.ById(item.Data.NameId)} (+포만 {item.Data.FullPoint} +행복 {item.Data.HappyPoint}) → {_growth}");
+        }
+
+        /// <summary>
+        /// UI 의 「먹이기」. 즉시 먹이지 않고 화면에 떨어뜨린다.
+        ///
+        /// 달팽이가 배고프면 기어가서 먹는 흐름이 이미 있고, 떨어진 먹이는 드래그로
+        /// 옮길 수도 있다. 즉시 먹이면 그게 다 사라진다.
+        /// 떨어뜨리는 자리는 위젯을 피해 화면 가운데 위쪽으로 한다.
+        /// </summary>
+        private void DropFoodFromUi(int foodId)
+        {
+            if (!GameData.FoodDataById.TryGetValue(foodId, out var data))
+            {
+                Say($"      [UI] 먹이기: 알 수 없는 음식 {foodId}");
+                return;
+            }
+
+            float x = Mathf.Lerp(_box.Left, _box.Right, UnityEngine.Random.Range(0.3f, 0.6f));
+            float y = _box.Top + UnityEngine.Random.Range(60f, 200f);
+
+            var dropped = _food.Drop(data, x, y);
+            Say(dropped != null
+                ? $"      [UI] 먹이기: {Loc.ById(data.NameId)} 를 x={x:0} 에 떨어뜨림"
+                : $"      [UI] 먹이기: {Loc.ById(data.NameId)} 는 리소스가 없어 못 떨어뜨림");
         }
 
         /// <summary>데모용. 실제로는 유저가 상점에서 사서 원하는 위치에 떨어뜨린다.</summary>

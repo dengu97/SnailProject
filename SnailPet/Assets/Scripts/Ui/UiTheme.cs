@@ -87,6 +87,22 @@ namespace SnailPet.Ui
             public static readonly RectInt Row = new RectInt(10, 27, 155, 40);
             public const int RowStep = 47;
 
+            // ── 음식 목록 (탭 2) ──
+            // 목업의 5번째 줄이 패널 아래로 잘려 있다. 「더 있다」는 표시라 세로로 스크롤한다.
+
+            /// <summary>스크롤이 보이는 영역. 이 안에서만 그려지고 넘치면 잘린다.</summary>
+            public static readonly RectInt FoodView = new RectInt(0, 30, PanelW, 184);
+
+            public const int FoodCols = 4;
+            public const int FoodStepX = 39, FoodStepY = 40;
+            public static readonly RectInt FoodSlot = new RectInt(12, 4, 32, 32);
+
+            /// <summary>미리 만들어 두는 칸 수. 이보다 많은 음식은 안 보인다.</summary>
+            public const int FoodSlotPool = 32;
+
+            /// <summary>칸 오른쪽 아래에 붙는 수량.</summary>
+            public static readonly RectInt FoodCount = new RectInt(14, 20, 20, 12);
+
             // 아래는 행 왼쪽 위가 원점
             public static readonly RectInt RowThumb  = new RectInt(  5,  4, 32, 32);
             public static readonly RectInt RowName   = new RectInt( 42,  3, 92, 16);
@@ -95,10 +111,31 @@ namespace SnailPet.Ui
             public static readonly RectInt RowSwap   = new RectInt(137,  9, 22, 22);
         }
 
+        /// <summary>음식 탭의 오른쪽 상세 패널. 패널 왼쪽 위가 원점.</summary>
+        public static class Food
+        {
+            public static readonly RectInt Favorite = new RectInt(  9,   8,  15, 15);
+            public static readonly RectInt Name     = new RectInt(  0,   4, PanelW, 21);
+            public static readonly RectInt Rarity   = new RectInt( 69,  28,  35, 12);
+            public static readonly RectInt Preview  = new RectInt( 48,  40,  78, 71);
+
+            public static readonly RectInt FullIcon   = new RectInt( 31, 121, 19, 18);
+            public static readonly RectInt FullValue  = new RectInt( 45, 124, 38, 12);
+            public static readonly RectInt HappyIcon  = new RectInt( 87, 121, 19, 18);
+            public static readonly RectInt HappyValue = new RectInt(102, 124, 38, 12);
+
+            public static readonly RectInt Info = new RectInt( 20, 148, 137, 36);
+
+            public static readonly RectInt Feed  = new RectInt( 20, 190, 63, 22);
+            public static readonly RectInt Buy   = new RectInt(102, 190, 24, 22);
+            public static readonly RectInt Sell  = new RectInt(131, 190, 24, 22);
+        }
+
         // ── 최대화에서 쓰는 색 ──
         public static readonly Color TabOn   = Hex("FFD966");   // 선택된 탭
         public static readonly Color TabOff  = Accent;          // 나머지 탭 (설정 버튼과 같은 색)
         public static readonly Color RowSlot = Hex("4472C4");   // 목록 행의 썸네일 자리
+        public static readonly Color Selected = Hex("FF0000");  // 선택된 음식 칸의 테두리
 
         /// <summary>화면 모서리에서 띄우는 여백.</summary>
         public const int ScreenMargin = 16;

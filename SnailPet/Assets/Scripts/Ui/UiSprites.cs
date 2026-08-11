@@ -34,6 +34,7 @@ namespace SnailPet.Ui
             Fill,           // 게이지 채우기 (포만도)
             FillHappy,      // 게이지 채우기 (행복 지수)
             Button,         // 버튼 배경
+            Selection,      // 고른 칸을 두르는 테두리
         }
 
         /// <summary>역할별 기본 모서리 반지름. 아트가 없을 때만 쓴다.</summary>
@@ -43,6 +44,7 @@ namespace SnailPet.Ui
             Shape.Slot  => 6,
             Shape.Badge => 6,
             Shape.Fill or Shape.FillHappy => 5,
+            Shape.Selection => 6,
             _           => 4,
         };
 
@@ -68,7 +70,12 @@ namespace SnailPet.Ui
 
             art = Resources.Load<Sprite>("Ui/Shape/" + FileOf(shape));
             if (art != null) _fromArt.Add(shape);
-            else art = shape == Shape.PanelBorder ? Border(RadiusOf(shape), 1) : Fill(RadiusOf(shape));
+            else art = shape switch
+            {
+                Shape.PanelBorder => Border(RadiusOf(shape), 1),
+                Shape.Selection   => Border(RadiusOf(shape), 2),
+                _                 => Fill(RadiusOf(shape)),
+            };
 
             _art[shape] = art;
             return art;
