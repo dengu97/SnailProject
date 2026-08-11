@@ -34,6 +34,9 @@ namespace SnailPet.Ui
             public const string EggList   = "[보유중인알]";
             public const string Shop      = "[상점]";
             public const string Feed      = "[먹이기]";
+            public const string Incubator = "[부화기]";
+            public const string NoEgg     = "[부화시킬알없음]";
+            public const string HatchDone = "[부화완료]";
         }
 
         /// <summary>한 화면에 위젯이 두 개 이상 뜰 일이 없으므로 정렬 순서는 고정.</summary>
@@ -169,6 +172,7 @@ namespace SnailPet.Ui
             BuildOutside();
             BuildList();
             BuildFoodDetail();
+            BuildEggPanel();
 
             SetMaximized(false);
 
@@ -325,7 +329,7 @@ namespace SnailPet.Ui
         // ── 음식 탭 ──
 
         [Serializable]
-        public sealed class FoodSlot
+        public sealed class GridSlot
         {
             public RectTransform Root;
             public Image Icon, Frame;
@@ -334,7 +338,9 @@ namespace SnailPet.Ui
         }
 
         [SerializeField] private RectTransform _foodPanel, _foodGridRoot, _foodContent;
-        [SerializeField] private FoodSlot[] _foodSlots;
+        [SerializeField] private GridSlot[] _foodSlots;
+        [SerializeField] private RectTransform _eggGridRoot, _eggContent;
+        [SerializeField] private GridSlot[] _eggSlots;
         [SerializeField] private Image _foodIcon;
         [SerializeField] private Text _foodName, _foodFull, _foodHappy, _foodInfo;
         [SerializeField] private Image _foodRarityBadge, _foodRarityIcon;
@@ -353,37 +359,55 @@ namespace SnailPet.Ui
         /// </summary>
         private void BuildFoodGrid(RectTransform panel)
         {
-            _foodGridRoot = NewRect("FoodGrid", panel);
-            Place(_foodGridRoot, Max.FoodView);
-            _foodGridRoot.gameObject.SetActive(false);
+            BuildGrid(panel, "FoodGrid", SelectFood, out _foodGridRoot, out _foodContent, out _foodSlots);
+            BuildGrid(panel, "EggGrid",  SelectEgg,  out _eggGridRoot,  out _eggContent,  out _eggSlots);
+        }
+
+        /// <summary>
+        /// 스크롤되는 4열 그리드. 음식과 알이 목업에서 같은 자리·같은 크기라 그대로 공유한다.
+        /// </summary>
+        private void BuildGrid(RectTransform panel, string name, Action<int> onClick,
+                               out RectTransform root, out RectTransform content, out GridSlot[] slots)
+        {
+            root = NewRect(name, panel);
+            Place(root, Max.FoodView);
+            root.gameObject.SetActive(false);
 
             // 넘치는 부분을 잘라 낸다. 이게 없으면 패널 밖으로 흘러나온다.
-            _foodGridRoot.gameObject.AddComponent<RectMask2D>();
+            root.gameObject.AddComponent<RectMask2D>();
 
-            _foodContent = NewRect("Content", _foodGridRoot);
-            _foodContent.anchorMin = _foodContent.anchorMax = _foodContent.pivot = new Vector2(0f, 1f);
-            _foodContent.anchoredPosition = Vector2.zero;
-            _foodContent.sizeDelta = new Vector2(UiTheme.PanelW, Max.FoodView.height);
+            content = NewRect("Content", root);
+            content.anchorMin = content.anchorMax = content.pivot = new Vector2(0f, 1f);
+            content.anchoredPosition = Vector2.zero;
+            content.sizeDelta = new Vector2(UiTheme.PanelW, Max.FoodView.height);
 
-            var scroll = _foodGridRoot.gameObject.AddComponent<ScrollRect>();
-            scroll.content = _foodContent;
-            scroll.viewport = _foodGridRoot;
+            var scroll = root.gameObject.AddComponent<ScrollRect>();
+            scroll.content = content;
+            scroll.viewport = root;
             scroll.horizontal = false;
             scroll.movementType = ScrollRect.MovementType.Clamped;
             scroll.scrollSensitivity = 20f;
 
-            _foodSlots = new FoodSlot[Max.FoodSlotPool];
-            for (int i = 0; i < _foodSlots.Length; i++)
-                _foodSlots[i] = BuildFoodSlot(i);
+            slots = new GridSlot[Max.FoodSlotPool];
+            for (int i = 0; i < slots.Length; i++)
+                slots[i] = BuildGridSlot(content, i, onClick);
         }
 
-        private FoodSlot BuildFoodSlot(int index)
+        /// <summary>내용 높이를 줄 수에 맞춘다. 이게 스크롤 범위를 정한다.</summary>
+        private static void FitContent(RectTransform content, int count)
+        {
+            int rows = Mathf.CeilToInt(count / (float)Max.FoodCols);
+            content.sizeDelta = new Vector2(UiTheme.PanelW,
+                Mathf.Max(Max.FoodView.height, Max.FoodSlot.y + rows * Max.FoodStepY));
+        }
+
+        private GridSlot BuildGridSlot(RectTransform content, int index, Action<int> onClick)
         {
             var s = Max.FoodSlot;
             var at = new RectInt(s.x + index % Max.FoodCols * Max.FoodStepX,
                                  s.y + index / Max.FoodCols * Max.FoodStepY, s.width, s.height);
 
-            var root = NewRect("Slot" + index, _foodContent);
+            var root = NewRect("Slot" + index, content);
             Place(root, at);
 
             var bg = root.gameObject.AddComponent<Image>();
@@ -392,7 +416,7 @@ namespace SnailPet.Ui
             bg.color = UiTheme.RowSlot;
             root.gameObject.AddComponent<UiShapeRef>().Shape = UiSprites.Shape.Slot;
 
-            var slot = new FoodSlot { Root = root };
+            var slot = new GridSlot { Root = root };
             slot.Icon = Icon(root, new RectInt(2, 2, s.width - 4, s.height - 4), null, Color.white, "Icon");
             slot.Icon.raycastTarget = false;
 
@@ -414,7 +438,7 @@ namespace SnailPet.Ui
             int captured = index;
             slot.Button = root.gameObject.AddComponent<Button>();
             slot.Button.targetGraphic = bg;
-            slot.Button.onClick.AddListener(() => SelectFood(captured));
+            slot.Button.onClick.AddListener(() => onClick(captured));
 
             root.gameObject.SetActive(false);
             return slot;
@@ -529,6 +553,141 @@ namespace SnailPet.Ui
             FoodSelected?.Invoke(_foodIds[index]);
         }
 
+        // ── 알 탭 ──
+
+        [Serializable]
+        public sealed class HatchSlot
+        {
+            public RectTransform Root;
+            public Image Egg;
+            public Text Plus;
+            public Text Timer;
+            public Button Button;
+        }
+
+        [SerializeField] private RectTransform _eggPanel;
+        [SerializeField] private HatchSlot[] _hatchSlots;
+        [SerializeField] private Text _eggEmpty;
+
+        private int[] _eggIds = new int[0];
+
+        /// <summary>알을 부화기에 넣기 · 부화한 달팽이 수령 · 상점으로 가기.</summary>
+        public event Action<int> PutEgg, ClaimHatched;
+        public event Action GoShop;
+
+        /// <summary>
+        /// 부화기. 칸 3개와 각 칸의 남은 시간.
+        ///
+        /// 칸 수는 나중에 해금으로 늘어난다(UnlockData). 지금은 3개만 만들고,
+        /// 늘릴 때는 <see cref="UiTheme.Egg.Slots"/> 에 자리만 더 적으면 된다.
+        /// </summary>
+        private void BuildEggPanel()
+        {
+            _eggPanel = Panel(_detailRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
+            _eggPanel.gameObject.SetActive(false);
+
+            Label(_eggPanel, UiTheme.Egg.Title, SnailPet.Data.Loc.Text(Keys.Incubator), 12, UiTheme.Ink);
+
+            _hatchSlots = new HatchSlot[UiTheme.Egg.Slots.Length];
+            for (int i = 0; i < _hatchSlots.Length; i++)
+                _hatchSlots[i] = BuildHatchSlot(i);
+
+            // 알이 하나도 없을 때만 보이는 안내
+            _eggEmpty = Label(_eggPanel, UiTheme.Egg.Empty, SnailPet.Data.Loc.Text(Keys.NoEgg), 10, UiTheme.Slot);
+
+            IconButton(_eggPanel, UiTheme.Egg.Buy, "icon_egg", "BuyEgg", () => GoShop?.Invoke());
+        }
+
+        private HatchSlot BuildHatchSlot(int index)
+        {
+            var at = UiTheme.Egg.Slots[index];
+            var root = NewRect("Hatch" + index, _eggPanel);
+            Place(root, at);
+
+            var bg = root.gameObject.AddComponent<Image>();
+            bg.sprite = UiSprites.Of(UiSprites.Shape.Button);
+            bg.type = Image.Type.Sliced;
+            bg.color = UiTheme.Slot;
+            root.gameObject.AddComponent<UiShapeRef>().Shape = UiSprites.Shape.Button;
+
+            var slot = new HatchSlot { Root = root };
+
+            // 빈 칸의 +. 아이콘이 따로 없어 글자로 그린다.
+            // 스프라이트 없는 Image 를 쓰면 색으로 꽉 찬 사각형이 나온다.
+            slot.Plus = Label(root, new RectInt(0, 0, at.width, at.height), "+", 26, UiTheme.Slot);
+
+            slot.Egg = Icon(root, new RectInt((at.width - 26) / 2, 8, 26, 26), null, Color.white, "Egg");
+            slot.Egg.raycastTarget = false;
+
+            slot.Timer = Label(root, new RectInt(0, at.height - 16, at.width, 14), "", 9, UiTheme.Ink);
+
+            int captured = index;
+            slot.Button = root.gameObject.AddComponent<Button>();
+            slot.Button.targetGraphic = bg;
+            slot.Button.onClick.AddListener(() => ClaimHatched?.Invoke(captured));
+            return slot;
+        }
+
+        /// <summary>보유 알. 같은 등급이어도 낱개로 나열한다 — 뭐가 나올지 모르니 하나씩 봐야 한다.</summary>
+        public void SetEggs(int[] eggIds)
+        {
+            _eggIds = eggIds ?? new int[0];
+
+            for (int i = 0; i < _eggSlots.Length; i++)
+            {
+                bool has = i < _eggIds.Length;
+                _eggSlots[i].Root.gameObject.SetActive(has);
+                if (!has) continue;
+
+                var row = SnailPet.Data.GameData.EggDataById.TryGetValue(_eggIds[i], out var e) ? e : null;
+                _eggSlots[i].Icon.sprite = EggSprite(row);
+                _eggSlots[i].Icon.enabled = _eggSlots[i].Icon.sprite != null;
+                _eggSlots[i].Count.text = "";      // 낱개라 수량이 없다
+                _eggSlots[i].Frame.enabled = false;
+            }
+
+            FitContent(_eggContent, _eggIds.Length);
+            if (_eggEmpty != null) _eggEmpty.enabled = _eggIds.Length == 0;
+        }
+
+        private static Sprite EggSprite(SnailPet.Data.EggDataRow row) =>
+            row == null || string.IsNullOrEmpty(row.ResourceKey)
+                ? null : Resources.Load<Sprite>("Snail/Egg/" + row.ResourceKey);
+
+        /// <summary>목록의 알을 눌렀다. 빈 부화 칸에 넣어 달라고 알린다.</summary>
+        private void SelectEgg(int index)
+        {
+            if (index >= 0 && index < _eggIds.Length) PutEgg?.Invoke(index);
+        }
+
+        /// <summary>
+        /// 부화기 상태를 그린다. 칸마다 (알 Id, 남은 초). 알 Id 가 0 이면 빈 칸,
+        /// 남은 초가 0 이하면 부화 완료다.
+        /// </summary>
+        public void SetIncubator((int eggId, double remain)[] slots)
+        {
+            for (int i = 0; i < _hatchSlots.Length; i++)
+            {
+                var s = _hatchSlots[i];
+                bool filled = slots != null && i < slots.Length && slots[i].eggId > 0;
+
+                s.Plus.enabled = !filled;
+                s.Egg.enabled = filled;
+                s.Timer.text = "";
+
+                if (!filled) continue;
+
+                var row = SnailPet.Data.GameData.EggDataById.TryGetValue(slots[i].eggId, out var e) ? e : null;
+                s.Egg.sprite = EggSprite(row);
+                s.Egg.enabled = s.Egg.sprite != null;
+
+                double remain = slots[i].remain;
+                s.Timer.text = remain > 0
+                             ? System.TimeSpan.FromSeconds(remain).ToString(@"mm\:ss")
+                             : SnailPet.Data.Loc.Text(Keys.HatchDone);
+            }
+        }
+
         /// <summary>목록 한 줄. 썸네일 · 이름 · 등급 · 나이 · 교체 버튼.</summary>
         [Serializable]
         public sealed class ListRow
@@ -600,11 +759,13 @@ namespace SnailPet.Ui
             _tab = Mathf.Clamp(index, 0, _tabs.Length - 1);
 
             // 탭이 왼쪽 목록과 오른쪽 상세를 함께 바꾼다. 둘은 항상 같은 것을 보여 줘야 한다.
-            bool food = _tab == 1;
+            bool food = _tab == 1, egg = _tab == 2;
             if (_foodGridRoot != null) _foodGridRoot.gameObject.SetActive(food);
             if (_foodPanel != null)    _foodPanel.gameObject.SetActive(food);
-            if (_panel != null)        _panel.gameObject.SetActive(!food);
-            foreach (var r in _rows) if (r?.Root != null) r.Root.gameObject.SetActive(!food && r.Filled);
+            if (_eggGridRoot != null)  _eggGridRoot.gameObject.SetActive(egg);
+            if (_eggPanel != null)     _eggPanel.gameObject.SetActive(egg);
+            if (_panel != null)        _panel.gameObject.SetActive(!food && !egg);
+            foreach (var r in _rows) if (r?.Root != null) r.Root.gameObject.SetActive(!food && !egg && r.Filled);
             for (int i = 0; i < _tabs.Length; i++)
                 _tabs[i].color = i == _tab ? UiTheme.TabOn : UiTheme.TabOff;
 

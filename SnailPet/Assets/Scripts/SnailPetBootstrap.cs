@@ -358,6 +358,14 @@ namespace SnailPet
             // 「먹이기」는 즉시 먹이지 않는다. 화면에 떨어뜨리고 달팽이가 기어가서 먹는다.
             _ui.FeedFood += DropFoodFromUi;
 
+            _ui.PutEgg       += PutEggInIncubator;
+            _ui.ClaimHatched += ClaimHatched;
+            _ui.GoShop       += () => _ui.SetTab(3);
+
+            // 보유 알도 더미. 같은 등급이어도 낱개로 들고 있어야 해서 Id 를 그대로 늘어놓는다.
+            foreach (var e in GameData.EggData) { _eggs.Add(e.Id); _eggs.Add(e.Id); }
+            RefreshEggs();
+
             // 보유 음식도 아직 더미다. 아트가 있는 것만 몇 개씩 가진 것으로 친다.
             var owned = new System.Collections.Generic.List<(int, int)>();
             int n = 1;
@@ -647,6 +655,8 @@ namespace SnailPet
                 LogTurn();
             }
 
+            TickIncubator(Time.deltaTime);
+
             // 벽에 붙어 실제로 나아가고 있을 때만 발바닥에 물결이 지나간다
             StepFootWave(!SnailFree && !_peeling, Time.deltaTime);
             StepDangle(Time.deltaTime);
@@ -730,6 +740,72 @@ namespace SnailPet
             _eatFlashUntil = _t + 1.2f;
 
             Say($"      먹음: {Loc.ById(item.Data.NameId)} (+포만 {item.Data.FullPoint} +행복 {item.Data.HappyPoint}) → {_growth}");
+        }
+
+        // ── 부화기 ──
+        // 칸은 지금 3개다. UnlockData 로 늘어나면 배열 크기만 바뀐다.
+
+        private readonly System.Collections.Generic.List<int> _eggs = new System.Collections.Generic.List<int>();
+        private (int eggId, double remain)[] _hatch = new (int, double)[3];
+
+        private void RefreshEggs()
+        {
+            _ui.SetEggs(_eggs.ToArray());
+            _ui.SetIncubator(_hatch);
+        }
+
+        /// <summary>목록의 알을 눌렀다. 빈 칸이 있으면 넣는다.</summary>
+        private void PutEggInIncubator(int listIndex)
+        {
+            if (listIndex < 0 || listIndex >= _eggs.Count) return;
+
+            int slot = System.Array.FindIndex(_hatch, h => h.eggId == 0);
+            if (slot < 0) { Say("      [UI] 부화기가 가득 찼습니다"); return; }
+
+            int eggId = _eggs[listIndex];
+            if (!GameData.EggDataById.TryGetValue(eggId, out var row)) return;
+
+            _eggs.RemoveAt(listIndex);
+            _hatch[slot] = (eggId, row.HatchTime);
+            RefreshEggs();
+
+            Say($"      [UI] {Loc.ById(row.NameId)} 를 {slot}번 칸에 넣음 ({row.HatchTime}초)");
+        }
+
+        /// <summary>다 된 칸을 눌렀다. 아직이면 아무 일도 없다.</summary>
+        private void ClaimHatched(int slot)
+        {
+            if (slot < 0 || slot >= _hatch.Length || _hatch[slot].eggId == 0) return;
+            if (_hatch[slot].remain > 0)
+            {
+                Say($"      [UI] {slot}번 칸은 아직 {_hatch[slot].remain:0}초 남았습니다");
+                return;
+            }
+
+            int eggId = _hatch[slot].eggId;
+            _hatch[slot] = (0, 0);
+            RefreshEggs();
+
+            // 실제로 부화시켜 어떤 달팽이가 나왔는지 남긴다. 보유 목록에 넣는 것은 그곳이 생기면.
+            var born = SnailHatchery.Hatch(eggId, new System.Random());
+            Say($"      [UI] 부화! {GameData.TokenById[eggId]} → {born}");
+        }
+
+        /// <summary>부화 시간을 흘린다. 데모 배속을 그대로 쓴다 — 안 그러면 40초 안에 안 깬다.</summary>
+        private void TickIncubator(float deltaTime)
+        {
+            bool changed = false;
+            for (int i = 0; i < _hatch.Length; i++)
+            {
+                if (_hatch[i].eggId == 0 || _hatch[i].remain <= 0) continue;
+
+                double before = _hatch[i].remain;
+                _hatch[i].remain = System.Math.Max(0, before - deltaTime * DemoTimeScale);
+
+                // 초가 바뀔 때만 다시 그린다. 매 프레임 갱신할 이유가 없다.
+                if ((int)before != (int)_hatch[i].remain || _hatch[i].remain <= 0) changed = true;
+            }
+            if (changed) _ui.SetIncubator(_hatch);
         }
 
         /// <summary>

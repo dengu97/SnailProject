@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-11 13:49:53",
+  "generatedAt": "2026-08-11 15:30:45",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -7,7 +7,8 @@
     "PartsType": {"Shell": 1, "Body": 2, "Eyes": 3, "Feeler": 4, "Mucus": 5},
     "RarityType": {"Common": 1, "Rare": 2, "Epic": 3, "Legendary": 4},
     "CategoryType": {"Food": 1, "Egg": 2, "Item": 3, "Accessories": 4, "Market": 5, "Event": 6},
-    "AccessoriesType": {"Hat": 1, "Bag": 2}
+    "AccessoriesType": {"Hat": 1, "Bag": 2},
+    "ConditionType": {"SnailCount": 1, "SnailLevel": 2, "PayItem": 3}
   },
   "idByToken": {
     "[일반_껍질01]": 1,
@@ -109,7 +110,8 @@
     "[음식목록]": 97,
     "[보유중인알]": 98,
     "[상점]": 99,
-    "[먹이기]": 100
+    "[먹이기]": 100,
+    "[해금조건01]": 101
   },
   "tables": {
     "EnumData": [
@@ -133,7 +135,10 @@
       {"EnumType": "CategoryType", "EnumName": "Market", "EnumValue": 5, "IconResourceKey": null, "SortOrder": null, "DeformGroup": null},
       {"EnumType": "CategoryType", "EnumName": "Event", "EnumValue": 6, "IconResourceKey": null, "SortOrder": null, "DeformGroup": null},
       {"EnumType": "AccessoriesType", "EnumName": "Hat", "EnumValue": 1, "IconResourceKey": null, "SortOrder": 250, "DeformGroup": null},
-      {"EnumType": "AccessoriesType", "EnumName": "Bag", "EnumValue": 2, "IconResourceKey": null, "SortOrder": 260, "DeformGroup": null}
+      {"EnumType": "AccessoriesType", "EnumName": "Bag", "EnumValue": 2, "IconResourceKey": null, "SortOrder": 260, "DeformGroup": null},
+      {"EnumType": "ConditionType", "EnumName": "SnailCount", "EnumValue": 1, "IconResourceKey": null, "SortOrder": null, "DeformGroup": null},
+      {"EnumType": "ConditionType", "EnumName": "SnailLevel", "EnumValue": 2, "IconResourceKey": null, "SortOrder": null, "DeformGroup": null},
+      {"EnumType": "ConditionType", "EnumName": "PayItem", "EnumValue": 3, "IconResourceKey": null, "SortOrder": null, "DeformGroup": null}
     ],
     "PartsColorData": [
       {"PartsType": "Shell", "ColorResourceKey": "commonshell01_c01"},
@@ -199,10 +204,10 @@
       {"Id": 55, "NameId": 55, "PartsGroupId": 17, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler05", "IsUseColor": true, "Colors": ["commonfeeler05_c02"], "AppearWeight": 10, "InfoId": 87}
     ],
     "FoodData": [
-      {"Id": 31, "FoodType": "vegetable", "NameId": 31, "FullPoint": 5, "HappyPoint": 3, "BuffId": 0, "InfoId": 0, "ResourceKey": "food_lettuce"},
-      {"Id": 32, "FoodType": "vegetable", "NameId": 32, "FullPoint": 7, "HappyPoint": 5, "BuffId": 0, "InfoId": 0, "ResourceKey": null},
-      {"Id": 33, "FoodType": "vegetable", "NameId": 33, "FullPoint": 7, "HappyPoint": 5, "BuffId": 0, "InfoId": 0, "ResourceKey": "food_zucchini"},
-      {"Id": 34, "FoodType": "bean", "NameId": 34, "FullPoint": 15, "HappyPoint": 10, "BuffId": 35, "InfoId": 0, "ResourceKey": "food_tofu"}
+      {"Id": 31, "FoodType": "vegetable", "NameId": 31, "RarityType": "Common", "FullPoint": 5, "HappyPoint": 3, "BuffId": 0, "InfoId": 0, "ResourceKey": "food_lettuce"},
+      {"Id": 32, "FoodType": "vegetable", "NameId": 32, "RarityType": "Common", "FullPoint": 7, "HappyPoint": 5, "BuffId": 0, "InfoId": 0, "ResourceKey": null},
+      {"Id": 33, "FoodType": "vegetable", "NameId": 33, "RarityType": "Common", "FullPoint": 7, "HappyPoint": 5, "BuffId": 0, "InfoId": 0, "ResourceKey": "food_zucchini"},
+      {"Id": 34, "FoodType": "bean", "NameId": 34, "RarityType": "Common", "FullPoint": 15, "HappyPoint": 10, "BuffId": 35, "InfoId": 0, "ResourceKey": "food_tofu"}
     ],
     "LevelData": [
       {"Level": 1, "LevelUpTime": 0, "NeedFullPoint": 10, "NeedHappyPoint": 10, "UseFullPointTime": 120, "UseHappyPointTime": 240, "Speed": 1, "Size": 4, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 10},
@@ -240,8 +245,8 @@
       {"Id": 36, "NameId": 36, "InfoId": 88, "ResourceKey": "item_coin"}
     ],
     "EggData": [
-      {"Id": 37, "NameId": 37, "RarityType": "Common", "ResourceKey": "egg_common", "InfoId": 89, "PartsGroupIds": [2]},
-      {"Id": 38, "NameId": 38, "RarityType": "Rare", "ResourceKey": "egg_rare", "InfoId": 90, "PartsGroupIds": [2, 17]}
+      {"Id": 37, "NameId": 37, "HatchTime": 180, "RarityType": "Common", "ResourceKey": "egg_common", "InfoId": 89, "PartsGroupIds": [2]},
+      {"Id": 38, "NameId": 38, "HatchTime": 600, "RarityType": "Rare", "ResourceKey": "egg_rare", "InfoId": 90, "PartsGroupIds": [2, 17]}
     ],
     "AccessoriesData": [
       {"Id": 39, "NameId": 39, "AccessoriesType": "Hat", "ResourceKey": "hat01", "InfoId": 91},
@@ -373,6 +378,9 @@
       {"Id": 98, "Kr": "보유중인 알"},
       {"Id": 99, "Kr": "상점"},
       {"Id": 100, "Kr": "먹이기"}
+    ],
+    "UnlockData": [
+      {"Id": 101, "ConditionType": "SnailLevel", "NeedConditionValue": 2, "CostItem": null, "CostCount": null}
     ]
   }
 }

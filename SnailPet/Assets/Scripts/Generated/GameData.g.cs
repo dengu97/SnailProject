@@ -52,6 +52,13 @@ namespace SnailPet.Data
         Bag = 2,
     }
 
+    public enum ConditionType
+    {
+        SnailCount = 1,
+        SnailLevel = 2,
+        PayItem = 3,
+    }
+
     public sealed class EnumDataRow
     {
         public readonly string EnumType;
@@ -117,17 +124,19 @@ namespace SnailPet.Data
         public readonly int Id;
         public readonly FoodType FoodType;
         public readonly int NameId;
+        public readonly RarityType RarityType;
         public readonly double FullPoint;
         public readonly double HappyPoint;
         public readonly int BuffId;
         public readonly int InfoId;
         public readonly string ResourceKey;
 
-        public FoodDataRow(int id, FoodType foodType, int nameId, double fullPoint, double happyPoint, int buffId, int infoId, string resourceKey)
+        public FoodDataRow(int id, FoodType foodType, int nameId, RarityType rarityType, double fullPoint, double happyPoint, int buffId, int infoId, string resourceKey)
         {
             Id = id;
             FoodType = foodType;
             NameId = nameId;
+            RarityType = rarityType;
             FullPoint = fullPoint;
             HappyPoint = happyPoint;
             BuffId = buffId;
@@ -234,15 +243,17 @@ namespace SnailPet.Data
     {
         public readonly int Id;
         public readonly int NameId;
+        public readonly int HatchTime;
         public readonly RarityType RarityType;
         public readonly string ResourceKey;
         public readonly int InfoId;
         public readonly int[] PartsGroupIds;
 
-        public EggDataRow(int id, int nameId, RarityType rarityType, string resourceKey, int infoId, int[] partsGroupIds)
+        public EggDataRow(int id, int nameId, int hatchTime, RarityType rarityType, string resourceKey, int infoId, int[] partsGroupIds)
         {
             Id = id;
             NameId = nameId;
+            HatchTime = hatchTime;
             RarityType = rarityType;
             ResourceKey = resourceKey;
             InfoId = infoId;
@@ -378,6 +389,24 @@ namespace SnailPet.Data
         }
     }
 
+    public sealed class UnlockDataRow
+    {
+        public readonly int Id;
+        public readonly ConditionType ConditionType;
+        public readonly int NeedConditionValue;
+        public readonly int? CostItem;
+        public readonly int? CostCount;
+
+        public UnlockDataRow(int id, ConditionType conditionType, int needConditionValue, int? costItem, int? costCount)
+        {
+            Id = id;
+            ConditionType = conditionType;
+            NeedConditionValue = needConditionValue;
+            CostItem = costItem;
+            CostCount = costCount;
+        }
+    }
+
     public static class GameData
     {
         public static readonly EnumDataRow[] EnumData = new EnumDataRow[]
@@ -403,6 +432,9 @@ namespace SnailPet.Data
             new EnumDataRow("CategoryType", "Event", 6, null, null, null),
             new EnumDataRow("AccessoriesType", "Hat", 1, null, 250, null),
             new EnumDataRow("AccessoriesType", "Bag", 2, null, 260, null),
+            new EnumDataRow("ConditionType", "SnailCount", 1, null, null, null),
+            new EnumDataRow("ConditionType", "SnailLevel", 2, null, null, null),
+            new EnumDataRow("ConditionType", "PayItem", 3, null, null, null),
         };
 
         public static readonly PartsColorDataRow[] PartsColorData = new PartsColorDataRow[]
@@ -474,10 +506,10 @@ namespace SnailPet.Data
 
         public static readonly FoodDataRow[] FoodData = new FoodDataRow[]
         {
-            new FoodDataRow(31, FoodType.vegetable, 31, 5d, 3d, 0, 0, "food_lettuce"),
-            new FoodDataRow(32, FoodType.vegetable, 32, 7d, 5d, 0, 0, null),
-            new FoodDataRow(33, FoodType.vegetable, 33, 7d, 5d, 0, 0, "food_zucchini"),
-            new FoodDataRow(34, FoodType.bean, 34, 15d, 10d, 35, 0, "food_tofu"),
+            new FoodDataRow(31, FoodType.vegetable, 31, RarityType.Common, 5d, 3d, 0, 0, "food_lettuce"),
+            new FoodDataRow(32, FoodType.vegetable, 32, RarityType.Common, 7d, 5d, 0, 0, null),
+            new FoodDataRow(33, FoodType.vegetable, 33, RarityType.Common, 7d, 5d, 0, 0, "food_zucchini"),
+            new FoodDataRow(34, FoodType.bean, 34, RarityType.Common, 15d, 10d, 35, 0, "food_tofu"),
         };
 
         public static readonly LevelDataRow[] LevelData = new LevelDataRow[]
@@ -527,8 +559,8 @@ namespace SnailPet.Data
 
         public static readonly EggDataRow[] EggData = new EggDataRow[]
         {
-            new EggDataRow(37, 37, RarityType.Common, "egg_common", 89, new int[] { 2 }),
-            new EggDataRow(38, 38, RarityType.Rare, "egg_rare", 90, new int[] { 2, 17 }),
+            new EggDataRow(37, 37, 180, RarityType.Common, "egg_common", 89, new int[] { 2 }),
+            new EggDataRow(38, 38, 600, RarityType.Rare, "egg_rare", 90, new int[] { 2, 17 }),
         };
 
         public static readonly AccessoriesDataRow[] AccessoriesData = new AccessoriesDataRow[]
@@ -674,6 +706,11 @@ namespace SnailPet.Data
             new LanguageDataRow(100, "먹이기"),
         };
 
+        public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
+        {
+            new UnlockDataRow(101, ConditionType.SnailLevel, 2, null, null),
+        };
+
         public static readonly Dictionary<int, PartsDataRow> PartsDataById = BuildPartsDataById();
         private static Dictionary<int, PartsDataRow> BuildPartsDataById()
         {
@@ -759,6 +796,14 @@ namespace SnailPet.Data
         {
             var d = new Dictionary<int, LanguageDataRow>(LanguageData.Length);
             foreach (var row in LanguageData) d[row.Id] = row;
+            return d;
+        }
+
+        public static readonly Dictionary<int, UnlockDataRow> UnlockDataById = BuildUnlockDataById();
+        private static Dictionary<int, UnlockDataRow> BuildUnlockDataById()
+        {
+            var d = new Dictionary<int, UnlockDataRow>(UnlockData.Length);
+            foreach (var row in UnlockData) d[row.Id] = row;
             return d;
         }
 
@@ -865,6 +910,7 @@ namespace SnailPet.Data
             { "[보유중인알]", 98 },
             { "[상점]", 99 },
             { "[먹이기]", 100 },
+            { "[해금조건01]", 101 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

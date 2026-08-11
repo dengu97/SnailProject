@@ -137,6 +137,23 @@ namespace SnailPet.Ui
         public static readonly Color RowSlot = Hex("4472C4");   // 목록 행의 썸네일 자리
         public static readonly Color Selected = Hex("FF0000");  // 선택된 음식 칸의 테두리
 
+        /// <summary>알 탭의 부화기 패널. 패널 왼쪽 위가 원점.</summary>
+        public static class Egg
+        {
+            public static readonly RectInt Title = new RectInt(0, 4, PanelW, 21);
+
+            /// <summary>부화 칸. 지금은 3개, 나중에 UnlockData 로 늘어난다.</summary>
+            public static readonly RectInt[] Slots =
+            {
+                new RectInt( 12, 34, 47, 46),
+                new RectInt( 64, 34, 47, 46),
+                new RectInt(116, 34, 47, 46),
+            };
+
+            public static readonly RectInt Empty = new RectInt(10, 100, PanelW - 20, 20);
+            public static readonly RectInt Buy   = new RectInt(137, 189, 25, 22);
+        }
+
         /// <summary>화면 모서리에서 띄우는 여백.</summary>
         public const int ScreenMargin = 16;
     }
