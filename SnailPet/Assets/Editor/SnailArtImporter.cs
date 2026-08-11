@@ -61,7 +61,7 @@ namespace SnailPet.EditorTools
             {
                 "panel" or "panelborder" => 32,   // 96px 캔버스 → 화면 8px
                 "slot" or "badge" or "button" => 24,   // 64px 캔버스 → 화면 6px
-                "fill" => 6,                      // 20px 캔버스 → 화면 1.5px
+                "fill" or "fill_happy" => 6,       // 20px 캔버스 → 화면 1.5px
                 _ => 0,
             };
             return new Vector4(m, m, m, m);

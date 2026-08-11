@@ -223,8 +223,10 @@ namespace SnailPet.Ui
             Box(_panel, At.Age, UiTheme.Slot, UiSprites.Shape.Badge, "AgeBadge");
             _ageText = Label(_panel, At.Age, "00살", 9, UiTheme.Ink);
 
-            _fullFill  = Gauge(At.FullBar,  At.FullIcon,  "icon_food",  UiTheme.GaugeFull,  "Full");
-            _happyFill = Gauge(At.HappyBar, At.HappyIcon, "icon_happy", UiTheme.GaugeHappy, "Happy");
+            _fullFill  = Gauge(At.FullBar,  At.FullIcon,  "icon_food",  UiTheme.GaugeFull,
+                               UiSprites.Shape.Fill,      "Full");
+            _happyFill = Gauge(At.HappyBar, At.HappyIcon, "icon_happy", UiTheme.GaugeHappy,
+                               UiSprites.Shape.FillHappy, "Happy");
         }
 
         /// <summary>
@@ -232,14 +234,15 @@ namespace SnailPet.Ui
         /// 채우기는 <b>왼쪽부터</b> 찬다. 목업에서는 오른쪽에 붙어 있는데,
         /// 게이지는 왼쪽부터 차는 것이 표준이라 그렇게 뒀다.
         /// </summary>
-        private RectTransform Gauge(RectInt bar, RectInt icon, string iconKey, Color fillColor, string name)
+        private RectTransform Gauge(RectInt bar, RectInt icon, string iconKey, Color fillColor,
+                                    UiSprites.Shape fillShape, string name)
         {
             Box(_panel, bar, UiTheme.Slot, UiSprites.Shape.Slot, name + "Track");
 
             const int inset = 2;
             var fill = Box(_panel, new RectInt(bar.x + inset, bar.y + inset,
                                                bar.width - inset * 2, bar.height - inset * 2),
-                           fillColor, UiSprites.Shape.Fill, name + "Fill");
+                           fillColor, fillShape, name + "Fill");
 
             // 왼쪽을 축으로 가로만 줄였다 늘렸다 한다
             var rt = (RectTransform)fill.transform;
@@ -548,7 +551,7 @@ namespace SnailPet.Ui
             img.type = Image.Type.Sliced;
             // 아트에는 색이 이미 칠해져 있다. 거기에 테마색을 곱하면 탁해진다.
             // 게이지 채우기만 예외 — 포만/행복 두 색이 필요해 어쩔 수 없이 물들인다.
-            img.color = UiSprites.IsArt(shape) && shape != UiSprites.Shape.Fill ? Color.white : color;
+            img.color = UiSprites.IsArt(shape) ? Color.white : color;
             img.raycastTarget = false;
             return img;
         }

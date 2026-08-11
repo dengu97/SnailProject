@@ -31,7 +31,8 @@ namespace SnailPet.Ui
             PanelBorder,    // 판의 테두리 (판과 따로 물들여야 해서 분리돼 있다)
             Slot,           // 안쪽 홈 — 이름칸·게이지 트랙·목록 행·음식 슬롯
             Badge,          // 알약 — 등급·나이·코인
-            Fill,           // 게이지 채우기
+            Fill,           // 게이지 채우기 (포만도)
+            FillHappy,      // 게이지 채우기 (행복 지수)
             Button,         // 버튼 배경
         }
 
@@ -41,11 +42,22 @@ namespace SnailPet.Ui
             Shape.Panel or Shape.PanelBorder => 6,
             Shape.Slot  => 6,
             Shape.Badge => 6,
-            Shape.Fill  => 5,
+            Shape.Fill or Shape.FillHappy => 5,
             _           => 4,
         };
 
         private static readonly Dictionary<Shape, Sprite> _art = new Dictionary<Shape, Sprite>();
+
+        /// <summary>
+        /// 역할 → 파일 이름. enum 이름을 그대로 소문자로 만들면 FillHappy 가 fillhappy 가 되어
+        /// fill_happy.png 를 못 찾는다. 어긋나는 것만 여기에 적는다.
+        /// </summary>
+        private static string FileOf(Shape s) => s switch
+        {
+            Shape.PanelBorder => "panelborder",
+            Shape.FillHappy   => "fill_happy",
+            _ => s.ToString().ToLowerInvariant(),
+        };
 
         /// <summary>
         /// 역할에 맞는 스프라이트. 아트가 있으면 아트, 없으면 코드 생성.
@@ -54,7 +66,7 @@ namespace SnailPet.Ui
         {
             if (_art.TryGetValue(shape, out var art)) return art;
 
-            art = Resources.Load<Sprite>("Ui/Shape/" + shape.ToString().ToLowerInvariant());
+            art = Resources.Load<Sprite>("Ui/Shape/" + FileOf(shape));
             if (art != null) _fromArt.Add(shape);
             else art = shape == Shape.PanelBorder ? Border(RadiusOf(shape), 1) : Fill(RadiusOf(shape));
 
@@ -82,7 +94,7 @@ namespace SnailPet.Ui
             var sb = new System.Text.StringBuilder();
             foreach (Shape s in System.Enum.GetValues(typeof(Shape)))
             {
-                bool fromArt = Resources.Load<Sprite>("Ui/Shape/" + s.ToString().ToLowerInvariant()) != null;
+                bool fromArt = Resources.Load<Sprite>("Ui/Shape/" + FileOf(s)) != null;
                 if (sb.Length > 0) sb.Append(", ");
                 sb.Append(s).Append(fromArt ? "=아트" : "=생성");
             }
