@@ -6,6 +6,7 @@ using At = SnailPet.Ui.UiTheme.At;
 using Max = SnailPet.Ui.UiTheme.Max;
 using Fd = SnailPet.Ui.UiTheme.Food;
 using Sh = SnailPet.Ui.UiTheme.Shop;
+using Pop = SnailPet.Ui.UiTheme.Popup;
 using ShopRow = SnailPet.Data.ShopDataRow;
 
 namespace SnailPet.Ui
@@ -39,6 +40,11 @@ namespace SnailPet.Ui
             public const string Incubator = "[부화기]";
             public const string NoEgg     = "[부화시킬알없음]";
             public const string HatchDone = "[부화완료]";
+
+            public const string AskBuy  = "[구매문구]";   // "{0}을(를) 구매할까요?"
+            public const string AskSell = "[판매문구]";
+            public const string Yes     = "[동의]";
+            public const string No      = "[거부]";
 
             public const string Wardrobe = "[옷장]";
             public const string Worn     = "[장착중]";
@@ -170,6 +176,7 @@ namespace SnailPet.Ui
 
             // 프리팹에는 편집용으로 펼친 채 구워져 있다. 실행은 접힌 상태로 시작한다.
             SetMaximized(false);
+            HidePopup();
             SetTab(_tab);
         }
 
@@ -218,7 +225,10 @@ namespace SnailPet.Ui
                     ToggleFavorite?.Invoke(_foodIds[_selectedFood]);
             });
             Hook(_foodBuyBtn,  () => GoShop?.Invoke());
-            Hook(_foodSellBtn, () => Sell?.Invoke());
+            Hook(_foodSellBtn, () =>
+            {
+                if (_selectedFood >= 0 && _selectedFood < _foodIds.Length) SellFood?.Invoke(_foodIds[_selectedFood]);
+            });
             Hook(_eggShopBtn,  () => GoShop?.Invoke());
 
             Hook(_pickBuyBtn, () => { if (_pickId > 0) BuyProduct?.Invoke(_pickId, true); });
@@ -228,6 +238,18 @@ namespace SnailPet.Ui
                     BuyProduct?.Invoke(_shopIds[_selectedShop], false);
             });
             Hook(_backBtn, LeaveShopCategory);
+
+            // 팝업
+            Hook(_popupMinus, () => StepPopup(-1));
+            Hook(_popupPlus,  () => StepPopup(+1));
+            Hook(_popupNo,    HidePopup);
+            Hook(_popupClose, HidePopup);
+            Hook(_popupYes,   () =>
+            {
+                int id = _popupItemId, qty = _popupQty;
+                HidePopup();
+                PopupConfirmed?.Invoke(id, qty);
+            });
 
             // 옷장
             Hook(_wardrobeRenameBtn, () => Rename?.Invoke());
@@ -316,6 +338,7 @@ namespace SnailPet.Ui
             BuildEggPanel();
             BuildShopPanels();
             BuildWardrobePanel();
+            BuildPopup();
 
             // 프리팹에는 목록을 펼친 채로 굽는다. 접힌 채로 구우면 프리팹을 열었을 때
             // 왼쪽 절반이 통째로 안 보여 배치를 손볼 수가 없다.
@@ -516,6 +539,9 @@ namespace SnailPet.Ui
 
         /// <summary>즐겨찾기 별을 눌렀다. 고른 음식의 Id 가 나간다.</summary>
         public event Action<int> ToggleFavorite;
+
+        /// <summary>음식 상세의 「판매」. 달팽이 판매(Sell)와는 다른 것이라 따로 둔다.</summary>
+        public event Action<int> SellFood;
 
         private static string FavoriteArt(bool on) => on ? "icon_favorite_on" : "icon_favorite_off";
 
@@ -1640,6 +1666,133 @@ namespace SnailPet.Ui
 
         /// <summary>필터가 바뀌었으니 목록을 다시 달라는 신호.</summary>
         public event Action FilterChanged;
+
+        // ── 구매·판매 팝업 ──
+        //
+        // 목업에서 구매와 판매는 제목과 가격 부호만 다르므로 하나로 만든다.
+        // 위젯 안이 아니라 화면 한가운데에 뜨고, 떠 있는 동안 뒤를 가린다.
+
+        [SerializeField] private RectTransform _popup, _popupBlocker;
+        [SerializeField] private Text _popupTitle, _popupCount, _popupCost;
+        [SerializeField] private Button _popupMinus, _popupPlus, _popupYes, _popupNo, _popupClose;
+
+        private int _popupQty = 1, _popupMax = 1;
+        private double _popupUnit;      // 한 개당 값. 판매면 음수로 들어온다.
+        private int _popupItemId;
+
+        /// <summary>팝업에서 「네」를 눌렀다. (아이템 Id, 수량).</summary>
+        public event Action<int, int> PopupConfirmed;
+
+        public bool PopupOpen => _popup != null && _popup.gameObject.activeSelf;
+
+        private void BuildPopup()
+        {
+            // 위젯을 덮어 뒤쪽 클릭이 안 먹게 한다. 투명해도 raycastTarget 이면 막힌다.
+            //
+            // 화면 전체가 아니라 위젯에 붙이는 것이 중요하다. 이 창은 모니터 두 대를 덮는
+            // 가상 화면이라(Screen 이 3840x1084 로 나온다) 화면 한가운데가 모니터 경계에
+            // 온다. 목업에서도 팝업은 위젯 위에 떠 있다.
+            _popupBlocker = NewRect("Popup", _widget);
+            _popupBlocker.anchorMin = Vector2.zero; _popupBlocker.anchorMax = Vector2.one;
+            _popupBlocker.offsetMin = Vector2.zero; _popupBlocker.offsetMax = Vector2.zero;
+            var shade = _popupBlocker.gameObject.AddComponent<Image>();
+            shade.color = new Color(0f, 0f, 0f, 0.35f);
+            _popupBlocker.gameObject.SetActive(false);
+
+            // 위젯 한가운데
+            _popup = NewRect("Panel", _popupBlocker);
+            _popup.anchorMin = _popup.anchorMax = _popup.pivot = new Vector2(0.5f, 0.5f);
+            _popup.sizeDelta = new Vector2(Pop.W, Pop.H);
+            _popup.anchoredPosition = Vector2.zero;
+
+            var bg = Backdrop(_popup.gameObject, UiSprites.Shape.Panel, UiTheme.PanelFill);
+            bg.raycastTarget = true;
+
+            _popupTitle = Label(_popup, Pop.Title, "", 12, UiTheme.Ink);
+
+            // +/- 아트가 아직 없어 글자로 그린다. 아트가 들어오면 IconButton 으로 바꾸면 된다
+            // (btn_minus / btn_plus). 스프라이트 없는 Image 를 쓰면 색 사각형이 된다.
+            _popupMinus = StepButton(Pop.Minus, "−", "Minus");
+            _popupPlus  = StepButton(Pop.Plus,  "+", "Plus");
+
+            Box(_popup, Pop.Count, UiTheme.Slot, UiSprites.Shape.LevelBadge, "CountBox");
+            _popupCount = Label(_popup, Pop.Count, "1", 11, UiTheme.Ink);
+
+            Box(_popup, Pop.CostPill, UiTheme.Slot, UiSprites.Shape.LevelBadge, "CostPill");
+            Icon(_popup, Pop.CostIcon, "icon_coin", Color.white, "CostIcon").raycastTarget = false;
+            _popupCost = Label(_popup, Pop.CostText, "", 11, UiTheme.Ink);
+
+            _popupNo  = TextButton(Pop.No,  Keys.No,  "No");
+            _popupYes = TextButton(Pop.Yes, Keys.Yes, "Yes");
+
+            _popupClose = IconButton(_popup, Pop.Close, "btn_close", "Close", tint: Color.white);
+        }
+
+        /// <summary>수량 조절 버튼. 아트가 없어 배경 도형 + 글자로 만든다.</summary>
+        private Button StepButton(RectInt at, string glyph, string name)
+        {
+            var box = Box(_popup, at, UiTheme.Slot, UiSprites.Shape.Button, name);
+            box.raycastTarget = true;
+            Label(_popup, at, glyph, 14, UiTheme.Ink);
+
+            var btn = box.gameObject.AddComponent<Button>();
+            btn.targetGraphic = box;
+            return btn;
+        }
+
+        private Button TextButton(RectInt at, string token, string name)
+        {
+            var box = Box(_popup, at, UiTheme.Slot, UiSprites.Shape.Button, name);
+            box.raycastTarget = true;
+            LocLabel(_popup, at, token, 10, UiTheme.Ink);
+
+            var btn = box.gameObject.AddComponent<Button>();
+            btn.targetGraphic = box;
+            return btn;
+        }
+
+        /// <summary>
+        /// 팝업을 띄운다.
+        /// <paramref name="unitCost"/> 는 한 개당 값이며 <b>판매면 음수</b>로 넣는다 —
+        /// 목업의 -5,000 이 그것이다.
+        /// <paramref name="max"/> 는 살 수 있는/팔 수 있는 최대 수량.
+        /// </summary>
+        public void ShowPopup(bool selling, int itemId, string itemName, double unitCost, int max)
+        {
+            _popupItemId = itemId;
+            _popupUnit = unitCost;
+            _popupMax = Mathf.Max(1, max);
+            _popupQty = 1;
+
+            _popupTitle.text = SnailPet.Data.Loc.Format(selling ? Keys.AskSell : Keys.AskBuy, itemName);
+            _popupBlocker.gameObject.SetActive(true);
+            PaintPopup();
+        }
+
+        public void HidePopup()
+        {
+            if (_popupBlocker != null) _popupBlocker.gameObject.SetActive(false);
+        }
+
+        private void StepPopup(int delta)
+        {
+            _popupQty = Mathf.Clamp(_popupQty + delta, 1, _popupMax);
+            PaintPopup();
+        }
+
+        private void PaintPopup()
+        {
+            _popupCount.text = _popupQty.ToString();
+
+            // 합계는 반올림이 아니라 버림. 판매값이 2.5 처럼 소수라 두 개를 팔면 5 가 되어야 한다.
+            double total = _popupUnit * _popupQty;
+            long shown = (long)(total < 0 ? -System.Math.Floor(-total) : System.Math.Floor(total));
+            _popupCost.text = shown.ToString("N0");
+
+            // 더 못 올리거나 못 내리면 눌러도 소용없다는 것을 보인다
+            if (_popupMinus != null) _popupMinus.interactable = _popupQty > 1;
+            if (_popupPlus != null)  _popupPlus.interactable  = _popupQty < _popupMax;
+        }
 
         /// <summary>목록을 펼칠지. 상세 패널은 화면에서 제자리에 남는다.</summary>
         public void SetMaximized(bool on)

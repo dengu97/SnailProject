@@ -158,6 +158,8 @@
       "같은_부류": "런타임 생성 스프라이트가 저장되지 않는 것(UiShapeRef)과 같은 함정임. 프리팹에 저장되지 않는 것이 무엇인지 항상 의심할 것"
     },
 
+    "화면_한가운데는_모니터_경계": "이 창은 가상 화면 전체를 덮으므로 Unity 의 Screen 이 3840x1084 로 나온다(모니터 두 대). 그래서 캔버스 한가운데에 무언가를 놓으면 두 모니터 경계에 걸려 사실상 안 보인다. 팝업을 화면이 아니라 위젯에 붙인 이유이며, 앞으로 「가운데」가 필요할 때마다 같은 함정이 있다",
+
     "Win32_입력_대역": "창이 WS_EX_NOACTIVATE 라 Unity 의 Input 이 죽어 있다. Win32UiInput(BaseInput 서브클래스)을 StandaloneInputModule.inputOverride 에 꽂아 EventSystem 전체가 그 값을 쓰게 한다. 프레임당 한 번만 폴링해 입력 모듈 실행 순서와 무관하게 만들었다.",
 
     "한글_폰트": "TMP 대신 Font.CreateDynamicFontFromOSFont(\"Malgun Gothic\") 로 OS 폰트를 잡는다. 폰트는 에셋이 아니라 프리팹에 저장되지 않으므로 Bind 가 매번 다시 꽂는다.",

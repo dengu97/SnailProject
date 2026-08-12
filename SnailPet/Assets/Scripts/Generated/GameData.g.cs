@@ -760,6 +760,10 @@ namespace SnailPet.Data
             new LanguageDataRow(131, "기타"),
             new LanguageDataRow(132, "옷장"),
             new LanguageDataRow(133, "장착중"),
+            new LanguageDataRow(141, "{0}을(를) 구매할까요?"),
+            new LanguageDataRow(142, "{0}을(를) 판매할까요?"),
+            new LanguageDataRow(143, "네"),
+            new LanguageDataRow(144, "아니오"),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -1011,6 +1015,10 @@ namespace SnailPet.Data
             { "[일반_오목더듬이01]", 138 },
             { "[일반_오목더듬이01정보]", 139 },
             { "[일반_오목더듬이02]", 140 },
+            { "[구매문구]", 141 },
+            { "[판매문구]", 142 },
+            { "[동의]", 143 },
+            { "[거부]", 144 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

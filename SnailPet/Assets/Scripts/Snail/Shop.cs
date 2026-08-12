@@ -92,31 +92,79 @@ namespace SnailPet.Snail
         /// 오늘의 할인 칸에서 산 것인지. 할인가는 그 칸에서만 적용된다 —
         /// 카테고리 목록에서는 같은 상품이라도 정가다.
         /// </param>
-        public static Result TryBuy(PlayerState player, int shopId, bool discounted = false)
+        public static Result TryBuy(PlayerState player, int shopId, bool discounted = false, int qty = 1)
         {
-            if (player == null) return Result.NoSuchProduct;
+            if (player == null || qty <= 0) return Result.NoSuchProduct;
 
-            ShopDataRow row = null;
-            foreach (var r in GameData.ShopData)
-                if (r.Id == shopId) { row = r; break; }
-
+            var row = Find(shopId);
             if (row == null) return Result.NoSuchProduct;
             if (!row.CostItem.HasValue || !row.CostCount.HasValue || row.CostCount.Value <= 0)
                 return Result.NoPrice;
 
-            // 할인 칸에서 왔더라도 실제로 할인 중인 상품일 때만 깎아 준다
-            int price = discounted && IsDiscounted(row) ? row.DiscountCostCount.Value : row.CostCount.Value;
-
-            if (!player.Items.TrySpend(row.CostItem.Value, price))
+            // 여러 개를 살 때는 한 번에 값을 치른다. 낱개로 빼면 중간에 모자라
+            // 절반만 산 상태로 끝날 수 있다.
+            if (!player.Items.TrySpend(row.CostItem.Value, (long)UnitCost(row, discounted) * qty))
                 return Result.NotEnough;
 
-            int count = row.ItemCount > 0 ? row.ItemCount : 1;
+            int each = row.ItemCount > 0 ? row.ItemCount : 1;
+            Grant(player, row, each * qty);
+            return Result.Ok;
+        }
+
+        /// <summary>한 개당 값. 할인 칸에서 왔고 실제로 할인 중일 때만 깎아 준다.</summary>
+        public static int UnitCost(ShopDataRow row, bool discounted) =>
+            discounted && IsDiscounted(row) ? row.DiscountCostCount.Value : row.CostCount ?? 0;
+
+        /// <summary>한 개당 파는 값. 소수라서(2.5 등) 합계를 낸 뒤에 버림한다.</summary>
+        public static double UnitSell(ShopDataRow row) =>
+            row != null && row.SellItem.HasValue ? row.SellCount : 0;
+
+        /// <summary>
+        /// 판다. 알은 낱개 목록에서, 나머지는 개수에서 뺀다.
+        /// 값은 <b>합계를 낸 뒤 버림</b>한다 — 2.5 짜리를 둘 팔면 5 가 되어야 한다.
+        /// </summary>
+        public static Result TrySell(PlayerState player, int shopId, int qty = 1)
+        {
+            if (player == null || qty <= 0) return Result.NoSuchProduct;
+
+            var row = Find(shopId);
+            if (row == null) return Result.NoSuchProduct;
+            if (!row.SellItem.HasValue || row.SellCount <= 0) return Result.NoPrice;
+
+            if (OwnedCount(player, row) < qty) return Result.NotEnough;
+
+            if (row.CategoryType == CategoryType.Egg)
+                for (int i = 0; i < qty; i++) player.Eggs.Remove(row.Id);
+            else if (!player.Items.TrySpend(row.Id, qty))
+                return Result.NotEnough;
+
+            player.Items.Add(row.SellItem.Value, (long)System.Math.Floor(row.SellCount * qty));
+            return Result.Ok;
+        }
+
+        /// <summary>지금 몇 개 가지고 있는가. 알만 낱개 목록에 들어 있다.</summary>
+        public static int OwnedCount(PlayerState player, ShopDataRow row)
+        {
+            if (player == null || row == null) return 0;
+            if (row.CategoryType != CategoryType.Egg) return (int)player.Items.CountOf(row.Id);
+
+            int n = 0;
+            foreach (int id in player.Eggs) if (id == row.Id) n++;
+            return n;
+        }
+
+        public static ShopDataRow Find(int shopId)
+        {
+            foreach (var r in GameData.ShopData) if (r.Id == shopId) return r;
+            return null;
+        }
+
+        private static void Grant(PlayerState player, ShopDataRow row, int count)
+        {
             if (row.CategoryType == CategoryType.Egg)
                 for (int i = 0; i < count; i++) player.Eggs.Add(row.Id);
             else
                 player.Items.Add(row.Id, count);
-
-            return Result.Ok;
         }
     }
 }

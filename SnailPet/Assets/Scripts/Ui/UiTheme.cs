@@ -249,6 +249,33 @@ namespace SnailPet.Ui
             public static readonly RectInt Buy   = new RectInt(137, 189, 25, 22);
         }
 
+        /// <summary>
+        /// 구매·판매를 묻는 팝업. 목업에서 둘은 <b>제목과 가격 부호만</b> 다르므로 하나로 만든다.
+        /// 좌표는 팝업 패널 왼쪽 위가 원점. 위젯과 달리 화면 한가운데에 뜬다.
+        /// </summary>
+        public static class Popup
+        {
+            public const int W = 241, H = 145;
+
+            public static readonly RectInt Title = new RectInt(0, 19, W, 21);
+
+            // 수량 조절. 아직 +/- 아트가 없어 글자로 그린다.
+            public static readonly RectInt Minus  = new RectInt( 76, 56, 16, 16);
+            public static readonly RectInt Count  = new RectInt( 93, 56, 52, 18);
+            public static readonly RectInt Plus   = new RectInt(148, 56, 16, 16);
+
+            // 값. 코인이 알약 왼쪽 끝에 걸쳐 놓인다.
+            public static readonly RectInt CostPill = new RectInt(77, 83, 85, 18);
+            public static readonly RectInt CostIcon = new RectInt(73, 82, 21, 21);
+            public static readonly RectInt CostText = new RectInt(95, 83, 65, 18);
+
+            public static readonly RectInt No  = new RectInt( 37, 112, 63, 22);
+            public static readonly RectInt Yes = new RectInt(135, 112, 63, 22);
+
+            /// <summary>닫기 X. 패널 오른쪽 위에 걸친다.</summary>
+            public static readonly RectInt Close = new RectInt(220, -6, 28, 28);
+        }
+
         /// <summary>화면 모서리에서 띄우는 여백.</summary>
         public const int ScreenMargin = 16;
     }

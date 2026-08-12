@@ -422,7 +422,8 @@ namespace SnailPet
             _ui.ToggleEquip += EquipAccessory;
             _ui.FilterChanged += RefreshWardrobe;
             _ui.Gene     += () => Say("      [UI] 유전 정보");
-            _ui.Sell     += () => Say("      [UI] 판매");
+            _ui.Sell     += () => Say("      [UI] 달팽이 판매");
+            _ui.SellFood += SellFromUi;
             _ui.Settings += () => Say("      [UI] 설정");
             _ui.Close    += () => Say("      [UI] 최소화");
             _ui.Maximize += () => Say("      [UI] 최대화");
@@ -444,7 +445,8 @@ namespace SnailPet
             _ui.PutEgg       += PutEggInIncubator;
             _ui.ClaimHatched += ClaimHatched;
             _ui.GoShop       += () => _ui.SetTab(3);
-            _ui.BuyProduct   += BuyFromShop;
+            _ui.BuyProduct     += BuyFromShop;
+            _ui.PopupConfirmed += ConfirmPopup;
 
             SnailPortrait.ExcludeFrom(_cam);
 
@@ -546,29 +548,65 @@ namespace SnailPet
             Say($"      [UI] {name} {(snail.Equipped.Contains(accessoryId) ? "착용" : "해제")} → {snail.Dressed()}");
         }
 
-        /// <summary>상점에서 「구매하기」를 눌렀다. 오늘의 할인 칸에서 누른 것만 깎아 준다.</summary>
+        // ── 구매·판매 팝업 ──
+        //
+        // 「구매하기」·「판매」는 바로 처리하지 않고 수량을 묻는다. 확인을 받으면
+        // PopupConfirmed 로 돌아오므로, 그때 무엇을 하려던 것이었는지 여기 들고 있는다.
+
+        private bool _popupSelling;
+        private bool _popupDiscounted;
+
+        /// <summary>상점에서 「구매하기」를 눌렀다. 몇 개 살지부터 묻는다.</summary>
         private void BuyFromShop(int shopId, bool discounted)
         {
-            var result = Shop.TryBuy(_player, shopId, discounted);
+            var row = Shop.Find(shopId);
+            if (row == null) { Say($"      [UI] 구매: 그런 상품이 없습니다 ({shopId})"); return; }
+
+            int unit = Shop.UnitCost(row, discounted);
+            if (unit <= 0) { Say("      [UI] 구매: 가격이 없습니다"); return; }
+
+            _popupSelling = false;
+            _popupDiscounted = discounted;
+
+            // 가진 코인으로 살 수 있는 만큼까지만 올릴 수 있다
+            int max = (int)System.Math.Max(1, _player.Coins / unit);
+            _ui.ShowPopup(false, shopId, Shop.NameOf(row), unit, max);
+        }
+
+        /// <summary>음식 상세의 「판매」. 가진 만큼까지 팔 수 있다.</summary>
+        private void SellFromUi(int shopId)
+        {
+            var row = Shop.Find(shopId);
+            if (row == null) { Say($"      [UI] 판매: 그런 상품이 없습니다 ({shopId})"); return; }
+
+            double unit = Shop.UnitSell(row);
+            int owned = Shop.OwnedCount(_player, row);
+            if (unit <= 0) { Say("      [UI] 판매: 팔 수 없는 물건입니다"); return; }
+            if (owned <= 0) { Say($"      [UI] 판매: {Shop.NameOf(row)} 를 가지고 있지 않습니다"); return; }
+
+            _popupSelling = true;
+            _ui.ShowPopup(true, shopId, Shop.NameOf(row), -unit, owned);
+        }
+
+        /// <summary>팝업에서 「네」를 눌렀다.</summary>
+        private void ConfirmPopup(int shopId, int qty)
+        {
+            var result = _popupSelling
+                       ? Shop.TrySell(_player, shopId, qty)
+                       : Shop.TryBuy(_player, shopId, _popupDiscounted, qty);
+
             if (result != Shop.Result.Ok)
             {
-                string why = result switch
-                {
-                    Shop.Result.NotEnough     => "코인이 모자랍니다",
-                    Shop.Result.NoPrice       => "가격이 없습니다",
-                    _                         => "그런 상품이 없습니다",
-                };
-                Say($"      [UI] 구매 실패 ({shopId}, 할인 {discounted}): {why}  보유 {_player.Coins}코인");
+                Say($"      [UI] {(_popupSelling ? "판매" : "구매")} 실패: {result}  보유 {_player.Coins}코인");
                 return;
             }
 
-            // 산 것이 음식일 수도 알일 수도 있어 양쪽을 다 새로 그린다
             RefreshFoods();
             RefreshEggs();
             _ui.SetCoin(_player.Coins);
             _ui.RefreshShop();
 
-            Say($"      [UI] 구매: {shopId}{(discounted ? " (할인가)" : "")} → {_player}");
+            Say($"      [UI] {(_popupSelling ? "판매" : "구매")}: {shopId} x{qty} → {_player}");
         }
 
         /// <summary>목록에서 다른 달팽이를 골랐다.</summary>
