@@ -296,7 +296,7 @@ namespace SnailPet.Ui
             // 등급 아트는 글자까지 그려진 가로형 알약이라 뱃지 자리를 통째로 쓴다.
             _rarityIcon = Icon(_panel, At.Rarity, null, Color.white, "RarityIcon");
             _rarityIcon.raycastTarget = false;
-            _rarityIcon.enabled = false;
+            BakeRarity(_rarityIcon, _rarityBadge, _rarityText);
 
             // 달팽이 모습이 들어갈 자리. 그림은 부트스트랩이 초상 텍스처를 넘겨 준다.
             var rt = NewRect("Portrait", _panel);
@@ -534,11 +534,7 @@ namespace SnailPet.Ui
             var root = NewRect("Slot" + index, content);
             Place(root, at);
 
-            var bg = root.gameObject.AddComponent<Image>();
-            bg.sprite = UiSprites.Of(UiSprites.Shape.Slot2);
-            bg.type = Image.Type.Sliced;
-            bg.color = UiSprites.IsArt(UiSprites.Shape.Slot2) ? Color.white : UiTheme.RowSlot;
-            root.gameObject.AddComponent<UiShapeRef>().Shape = UiSprites.Shape.Slot2;
+            var bg = Backdrop(root.gameObject, UiSprites.Shape.Slot2, UiTheme.RowSlot);
 
             var slot = new GridSlot { Root = root };
             slot.Icon = Icon(root, new RectInt(2, 2, s.width - 4, s.height - 4), null, Color.white, "Icon");
@@ -580,7 +576,12 @@ namespace SnailPet.Ui
             Shrink(_foodRarityText);
             _foodRarityIcon = Icon(_foodPanel, Fd.Rarity, null, Color.white, "RarityIcon");
             _foodRarityIcon.raycastTarget = false;
+
+            // 음식에는 등급이 없다. 자리는 목업에 있으므로 비운 모습 그대로 굽는다 —
+            // 안 그러면 프리팹에 어두운 알약만 남아 실제 화면과 달라진다.
             _foodRarityIcon.enabled = false;
+            _foodRarityBadge.enabled = false;
+            _foodRarityText.text = "";
 
             Box(_foodPanel, Fd.Preview, UiTheme.Slot, UiSprites.Shape.Slot, "Preview");
             _foodIcon = Icon(_foodPanel, Fd.Preview, null, Color.white, "PreviewIcon");
@@ -719,11 +720,7 @@ namespace SnailPet.Ui
             var root = NewRect("Hatch" + index, _eggPanel);
             Place(root, at);
 
-            var bg = root.gameObject.AddComponent<Image>();
-            bg.sprite = UiSprites.Of(UiSprites.Shape.Button);
-            bg.type = Image.Type.Sliced;
-            bg.color = UiTheme.Slot;
-            root.gameObject.AddComponent<UiShapeRef>().Shape = UiSprites.Shape.Button;
+            var bg = Backdrop(root.gameObject, UiSprites.Shape.Button, UiTheme.Slot);
 
             var slot = new HatchSlot { Root = root };
 
@@ -817,10 +814,7 @@ namespace SnailPet.Ui
             var rowRt = NewRect("Row" + index, parent);
             Place(rowRt, at);
 
-            var bg = rowRt.gameObject.AddComponent<Image>();
-            bg.sprite = UiSprites.Of(UiSprites.Shape.Slot);
-            bg.type = Image.Type.Sliced;
-            bg.color = UiTheme.Slot;
+            var bg = Backdrop(rowRt.gameObject, UiSprites.Shape.Slot, UiTheme.Slot);
 
             var row = new ListRow
             {
@@ -836,7 +830,7 @@ namespace SnailPet.Ui
             Shrink(row.Rarity);
             row.RarityIcon = Icon(rowRt, Max.RowRarity, null, Color.white, "RarityIcon");
             row.RarityIcon.raycastTarget = false;
-            row.RarityIcon.enabled = false;
+            BakeRarity(row.RarityIcon, row.RarityBadge, row.Rarity);
 
             Box(rowRt, Max.RowAge, UiTheme.Slot, UiSprites.Shape.LevelBadge, "AgeBadge");
             row.Age = Label(rowRt, Max.RowAge, "", 8, UiTheme.Ink);
@@ -963,11 +957,7 @@ namespace SnailPet.Ui
                 var root = NewRect("Category" + i, _shopCatRoot);
                 Place(root, at);
 
-                var bg = root.gameObject.AddComponent<Image>();
-                bg.sprite = UiSprites.Of(UiSprites.Shape.Slot);
-                bg.type = Image.Type.Sliced;
-                bg.color = UiTheme.Slot;
-                root.gameObject.AddComponent<UiShapeRef>().Shape = UiSprites.Shape.Slot;
+                var bg = Backdrop(root.gameObject, UiSprites.Shape.Slot, UiTheme.Slot);
 
                 var name = LocLabel(root, UiTheme.Shop.CategoryName, Keys.CategoryOf(cats[i]), 11, UiTheme.Ink);
                 name.alignment = TextAnchor.MiddleLeft;
@@ -995,7 +985,7 @@ namespace SnailPet.Ui
             Shrink(_pickRarityText);
             _pickRarityIcon = Icon(_shopPanel, Sh.Rarity, null, Color.white, "PickRarityIcon");
             _pickRarityIcon.raycastTarget = false;
-            _pickRarityIcon.enabled = false;
+            BakeRarity(_pickRarityIcon, _pickRarityBadge, _pickRarityText);
 
             Box(_shopPanel, Sh.Preview, UiTheme.Slot, UiSprites.Shape.Slot, "PickPreview");
             _pickIcon = Icon(_shopPanel, Sh.Preview, null, Color.white, "PickIcon");
@@ -1031,7 +1021,7 @@ namespace SnailPet.Ui
             Shrink(_shopRarityText);
             _shopRarityIcon = Icon(_shopItemPanel, Fd.Rarity, null, Color.white, "RarityIcon");
             _shopRarityIcon.raycastTarget = false;
-            _shopRarityIcon.enabled = false;
+            BakeRarity(_shopRarityIcon, _shopRarityBadge, _shopRarityText);
 
             Box(_shopItemPanel, Fd.Preview, UiTheme.Slot, UiSprites.Shape.Slot, "Preview");
             _shopIcon = Icon(_shopItemPanel, Fd.Preview, null, Color.white, "PreviewIcon");
@@ -1316,6 +1306,16 @@ namespace SnailPet.Ui
         /// 아이콘이 있으면 아이콘만 남기고 알약과 글자를 끈다. 등급 아트에 글자가
         /// 이미 그려져 있어 알약을 같이 두면 겹친다.
         /// </summary>
+        /// <summary>
+        /// 프리팹에 등급 아이콘의 「보통」 모습을 굽는다.
+        ///
+        /// 등급은 런타임에 <see cref="ApplyRarity"/> 가 꽂는데, 그러면 프리팹을 열었을 때는
+        /// 아이콘 자리에 뒤에 깔린 어두운 알약만 보인다. 실제 화면과 달라 배치를 손보기
+        /// 어렵다. 그래서 굽는 시점에 한 번 채워 둔다 — 실행하면 진짜 등급으로 덮인다.
+        /// </summary>
+        private static void BakeRarity(Image icon, Image badge, Text text) =>
+            ApplyRarity(icon, badge, text, SnailPet.Data.RarityType.Common);
+
         private static void ApplyRarity(Image icon, Image badge, Text text, SnailPet.Data.RarityType rarity)
         {
             string key = SnailPet.Data.Enums.IconOf(rarity);
@@ -1436,14 +1436,26 @@ namespace SnailPet.Ui
             var rt = NewRect(name, parent);
             Place(rt, r);
 
-            var img = rt.gameObject.AddComponent<Image>();
-            img.sprite = UiSprites.Of(shape);
-            rt.gameObject.AddComponent<UiShapeRef>().Shape = shape;
-            img.type = Image.Type.Sliced;
-            // 아트에는 색이 이미 칠해져 있다. 거기에 테마색을 곱하면 탁해진다.
-            // 게이지 채우기만 예외 — 포만/행복 두 색이 필요해 어쩔 수 없이 물들인다.
-            img.color = UiSprites.IsArt(shape) ? Color.white : color;
+            var img = Backdrop(rt.gameObject, shape, color);
             img.raycastTarget = false;
+            return img;
+        }
+
+        /// <summary>
+        /// 이미 있는 오브젝트에 도형 배경을 붙인다. 버튼처럼 루트가 먼저 필요한 곳에서 쓴다.
+        ///
+        /// 아트에는 색이 이미 칠해져 있다. 거기에 테마색을 곱하면 탁해진다 —
+        /// 실제로 목록 행과 부화 칸이 이 규칙을 지나치는 바람에 연한 아트가
+        /// 거무튀튀하게 나오고 있었다. 배경을 까는 곳은 반드시 여기를 지날 것.
+        /// (게이지 채우기만 예외로 물들인다. 포만/행복 두 색이 필요하다.)
+        /// </summary>
+        private static Image Backdrop(GameObject go, UiSprites.Shape shape, Color color)
+        {
+            var img = go.AddComponent<Image>();
+            img.sprite = UiSprites.Of(shape);
+            img.type = Image.Type.Sliced;
+            img.color = UiSprites.IsArt(shape) ? Color.white : color;
+            go.AddComponent<UiShapeRef>().Shape = shape;
             return img;
         }
 
