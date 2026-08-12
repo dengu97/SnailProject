@@ -250,6 +250,39 @@ namespace SnailPet.Ui
         }
 
         /// <summary>
+        /// 달팽이 상세보기. 상세 패널의 유전정보 버튼으로 들어가는 모드다.
+        /// 왼쪽은 파츠마다 설명까지 펼친 목록, 오른쪽은 초상 아래 한 줄짜리 목록이다.
+        ///
+        /// 이름칸·연필·등급·닫기는 <see cref="At"/> 와 같고, 초상 자리는 옷장과 같다.
+        /// </summary>
+        public static class Gene
+        {
+            // ── 왼쪽: 「보유 특징」 ──
+            // 행 하나가 동그란 썸네일 + 가로로 긴 바로 되어 있고, 썸네일이 바 왼쪽에 걸친다.
+            public static readonly RectInt Row = new RectInt(7, 27, 158, 47);
+            public const int RowStep = 48;
+
+            // 아래는 행 왼쪽 위가 원점
+            public static readonly RectInt RowThumb  = new RectInt(  0,  7, 25, 25);
+            public static readonly RectInt RowBar    = new RectInt( 19,  0, 140, 40);
+            public static readonly RectInt RowName   = new RectInt( 20,  3, 98, 18);
+            public static readonly RectInt RowInfo   = new RectInt( 20, 18, 128, 18);
+            public static readonly RectInt RowRarity = new RectInt(117,  4, 35, 12);
+
+            // ── 오른쪽: 초상 + 한 줄짜리 목록 ──
+            public static readonly RectInt Preview = new RectInt(27, 38, 125, 105);
+
+            public static readonly RectInt Slim = new RectInt(20, 141, 145, 17);
+            public const int SlimStep = 18;
+
+            // 아래는 줄 왼쪽 위가 원점
+            public static readonly RectInt SlimThumb  = new RectInt( 0, 0, 16, 16);
+            public static readonly RectInt SlimBar    = new RectInt(10, 2, 123, 14);
+            public static readonly RectInt SlimRarity = new RectInt(18, 3, 30, 11);
+            public static readonly RectInt SlimName   = new RectInt(52, 0, 90, 17);
+        }
+
+        /// <summary>
         /// 구매·판매를 묻는 팝업. 목업에서 둘은 <b>제목과 가격 부호만</b> 다르므로 하나로 만든다.
         /// 좌표는 팝업 패널 왼쪽 위가 원점. 위젯과 달리 화면 한가운데에 뜬다.
         /// </summary>

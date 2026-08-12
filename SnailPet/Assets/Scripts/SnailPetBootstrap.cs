@@ -421,7 +421,7 @@ namespace SnailPet
             _ui.Wardrobe += OpenWardrobe;
             _ui.ToggleEquip += EquipAccessory;
             _ui.FilterChanged += RefreshWardrobe;
-            _ui.Gene     += () => Say("      [UI] 유전 정보");
+            _ui.Gene     += OpenGene;
             _ui.Sell     += SellSnailFromUi;
             _ui.SellFood += SellFromUi;
             _ui.Settings += () => Say("      [UI] 설정");
@@ -499,6 +499,32 @@ namespace SnailPet
         // ── 옷장 ──
 
         private SnailPortrait _wardrobeView;
+
+        // ── 달팽이 상세보기 ──
+
+        private SnailPortrait _geneView;
+
+        /// <summary>유전정보 버튼. 이 개체가 가진 파츠를 이름·설명과 함께 펼친다.</summary>
+        private void OpenGene()
+        {
+            var snail = _player.Active;
+            if (snail == null) return;
+
+            _ui.OpenGene(true);
+
+            // 타고난 파츠만 보여 준다. 갈아입는 악세서리는 특징이 아니다.
+            var ids = new System.Collections.Generic.List<int>();
+            foreach (var p in snail.Appearance.Parts) ids.Add(p.PartsId);
+            _ui.SetGene(snail.Name, snail.Rarity, ids.ToArray());
+
+            // 옷장과 같은 크기라 같은 방식으로 한 장 더 찍는다
+            _geneView?.Dispose();
+            var size = SnailUi.GenePreviewSize;
+            _geneView = new SnailPortrait(transform, _appearance, _bounds, size.x, size.y);
+            _ui.SetGenePreview(_geneView.Texture);
+
+            Say($"      [UI] 상세보기: 파츠 {ids.Count}종");
+        }
 
         /// <summary>「옷장」 버튼. 왼쪽 패널을 옷장으로 바꾸고 입은 모습을 찍어 넣는다.</summary>
         private void OpenWardrobe()

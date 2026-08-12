@@ -47,6 +47,7 @@ namespace SnailPet.Ui
             public const string No      = "[거부]";
 
             public const string Wardrobe = "[옷장]";
+            public const string Traits   = "[보유특징]";
             public const string Worn     = "[장착중]";
 
             /// <summary>악세서리 부위 이름. 부위를 늘리면 여기에도 한 줄 더해야 한다.</summary>
@@ -253,6 +254,7 @@ namespace SnailPet.Ui
 
             // 옷장
             Hook(_wardrobeRenameBtn, () => Rename?.Invoke());
+            Hook(_geneRenameBtn, () => Rename?.Invoke());
             for (int i = 0; i < Count(_filters); i++)
             {
                 int k = i;
@@ -338,6 +340,7 @@ namespace SnailPet.Ui
             BuildEggPanel();
             BuildShopPanels();
             BuildWardrobePanel();
+            BuildGenePanel();
             BuildPopup();
 
             // 프리팹에는 목록을 펼친 채로 굽는다. 접힌 채로 구우면 프리팹을 열었을 때
@@ -495,6 +498,7 @@ namespace SnailPet.Ui
 
             BuildShopCategories(panel);
             BuildWardrobeList(panel);
+            BuildGeneList(panel);
             BuildScrollView(panel, "SnailList", Max.RowView, out _rowGridRoot, out _rowContent);
 
             _rows = new ListRow[Max.RowPool];
@@ -966,12 +970,15 @@ namespace SnailPet.Ui
         {
             _tab = Mathf.Clamp(index, 0, _tabs.Length - 1);
 
-            // 탭을 누르면 옷장에서 빠져나온다. 옷장은 왼쪽 패널을 통째로 쓰기 때문이다.
-            if (_inWardrobe)
+            // 탭을 누르면 옷장·상세보기에서 빠져나온다. 둘 다 왼쪽 패널을 통째로 쓰기 때문이다.
+            if (_inWardrobe || _inGene)
             {
                 _inWardrobe = false;
+                _inGene = false;
                 if (_wardrobeRoot != null)  _wardrobeRoot.gameObject.SetActive(false);
                 if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
+                if (_geneRoot != null)      _geneRoot.gameObject.SetActive(false);
+                if (_genePanel != null)     _genePanel.gameObject.SetActive(false);
             }
 
             // 탭이 왼쪽 목록과 오른쪽 상세를 함께 바꾼다. 둘은 항상 같은 것을 보여 줘야 한다.
@@ -1496,7 +1503,15 @@ namespace SnailPet.Ui
         public void OpenWardrobe(bool on)
         {
             _inWardrobe = on;
-            if (on) SetMaximized(true);   // 옷장은 왼쪽 패널을 쓰므로 펼쳐져 있어야 한다
+            if (on)
+            {
+                // 옷장과 상세보기는 같은 자리를 쓰므로 하나만 떠 있어야 한다.
+                // ApplyGene 을 부르면 안 된다 — 꺼질 때 SetTab 으로 되돌리기 때문이다.
+                _inGene = false;
+                if (_geneRoot != null)  _geneRoot.gameObject.SetActive(false);
+                if (_genePanel != null) _genePanel.gameObject.SetActive(false);
+                SetMaximized(true);
+            }
             ApplyWardrobe();
         }
 
@@ -1666,6 +1681,199 @@ namespace SnailPet.Ui
 
         /// <summary>필터가 바뀌었으니 목록을 다시 달라는 신호.</summary>
         public event Action FilterChanged;
+
+        // ── 달팽이 상세보기 ──
+        //
+        // 옷장과 같은 모드다. 상세 패널의 유전정보 버튼으로 들어가고 탭을 누르면 나온다.
+        // 왼쪽은 파츠마다 설명까지 펼치고, 오른쪽은 초상 아래 한 줄씩 늘어놓는다.
+
+        [Serializable]
+        public sealed class GeneRow
+        {
+            public RectTransform Root;
+            public Image Thumb, RarityBadge, RarityIcon;
+            public Text Name, Info, Rarity;
+        }
+
+        [SerializeField] private RectTransform _geneRoot, _genePanel;
+        [SerializeField] private GeneRow[] _geneRows, _geneSlims;
+        [SerializeField] private RawImage _genePreview;
+        [SerializeField] private Text _geneName, _geneRarityText;
+        [SerializeField] private Image _geneRarityBadge, _geneRarityIcon;
+        [SerializeField] private Button _geneRenameBtn;
+
+        private bool _inGene;
+        public bool InGene => _inGene;
+
+        /// <summary>한 마리가 가질 수 있는 파츠 수. 목업이 넷이고 지금 데이터도 넷이다.</summary>
+        private const int GeneRowCount = 4;
+
+        private void BuildGeneList(RectTransform panel)
+        {
+            _geneRoot = NewRect("Gene", panel);
+            Place(_geneRoot, new RectInt(0, 0, UiTheme.PanelW, UiTheme.PanelH));
+            _geneRoot.gameObject.SetActive(false);
+
+            _geneRows = new GeneRow[GeneRowCount];
+            for (int i = 0; i < _geneRows.Length; i++)
+            {
+                var r = UiTheme.Gene.Row;
+                var at = new RectInt(r.x, r.y + i * UiTheme.Gene.RowStep, r.width, r.height);
+
+                var root = NewRect("Trait" + i, _geneRoot);
+                Place(root, at);
+
+                var row = new GeneRow { Root = root };
+                Box(root, UiTheme.Gene.RowBar, UiTheme.Slot, UiSprites.Shape.Slot, "Bar");
+
+                // 썸네일은 파츠 그림이 들어갈 자리다. 아직 동그란 아트가 없어 칸 도형을 쓴다.
+                row.Thumb = Box(root, UiTheme.Gene.RowThumb, UiTheme.RowSlot, UiSprites.Shape.Slot2, "Thumb");
+
+                row.Name = Label(root, UiTheme.Gene.RowName, "", 10, UiTheme.Ink);
+                row.Name.alignment = TextAnchor.MiddleLeft;
+
+                row.Info = Label(root, UiTheme.Gene.RowInfo, "", 8, UiTheme.Ink);
+                row.Info.alignment = TextAnchor.MiddleLeft;
+                row.Info.horizontalOverflow = HorizontalWrapMode.Wrap;
+
+                row.RarityBadge = Box(root, UiTheme.Gene.RowRarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
+                row.Rarity = Label(root, UiTheme.Gene.RowRarity, "", 8, UiTheme.OnBadge);
+                Shrink(row.Rarity);
+                row.RarityIcon = Icon(root, UiTheme.Gene.RowRarity, null, Color.white, "RarityIcon");
+                row.RarityIcon.raycastTarget = false;
+                BakeRarity(row.RarityIcon, row.RarityBadge, row.Rarity);
+
+                _geneRows[i] = row;
+            }
+        }
+
+        private void BuildGenePanel()
+        {
+            _genePanel = Panel(_detailRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
+            _genePanel.gameObject.SetActive(false);
+
+            Box(_genePanel, At.NameField, UiTheme.Slot, UiSprites.Shape.Name, "NameField");
+            _geneName = Label(_genePanel, At.NameField, "", 12, UiTheme.Ink);
+            _geneRenameBtn = IconButton(_genePanel, At.RenameBtn, "icon_rename", "Rename");
+
+            _geneRarityBadge = Box(_genePanel, At.Rarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
+            _geneRarityText  = Label(_genePanel, At.Rarity, "", 9, UiTheme.OnBadge);
+            Shrink(_geneRarityText);
+            _geneRarityIcon = Icon(_genePanel, At.Rarity, null, Color.white, "RarityIcon");
+            _geneRarityIcon.raycastTarget = false;
+            BakeRarity(_geneRarityIcon, _geneRarityBadge, _geneRarityText);
+
+            var pv = NewRect("Preview", _genePanel);
+            Place(pv, UiTheme.Gene.Preview);
+            _genePreview = pv.gameObject.AddComponent<RawImage>();
+            _genePreview.raycastTarget = false;
+
+            _geneSlims = new GeneRow[GeneRowCount];
+            for (int i = 0; i < _geneSlims.Length; i++)
+            {
+                var s = UiTheme.Gene.Slim;
+                var at = new RectInt(s.x, s.y + i * UiTheme.Gene.SlimStep, s.width, s.height);
+
+                var root = NewRect("Slim" + i, _genePanel);
+                Place(root, at);
+
+                var row = new GeneRow { Root = root };
+                Box(root, UiTheme.Gene.SlimBar, UiTheme.Slot, UiSprites.Shape.Slot, "Bar");
+                row.Thumb = Box(root, UiTheme.Gene.SlimThumb, UiTheme.RowSlot, UiSprites.Shape.Slot2, "Thumb");
+
+                row.RarityBadge = Box(root, UiTheme.Gene.SlimRarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
+                row.Rarity = Label(root, UiTheme.Gene.SlimRarity, "", 7, UiTheme.OnBadge);
+                Shrink(row.Rarity);
+                row.RarityIcon = Icon(root, UiTheme.Gene.SlimRarity, null, Color.white, "RarityIcon");
+                row.RarityIcon.raycastTarget = false;
+                BakeRarity(row.RarityIcon, row.RarityBadge, row.Rarity);
+
+                row.Name = Label(root, UiTheme.Gene.SlimName, "", 9, UiTheme.Ink);
+                row.Name.alignment = TextAnchor.MiddleLeft;
+
+                _geneSlims[i] = row;
+            }
+        }
+
+        /// <summary>상세보기에 들어가거나 나온다.</summary>
+        public void OpenGene(bool on)
+        {
+            _inGene = on;
+            if (on)
+            {
+                _inWardrobe = false;
+                if (_wardrobeRoot != null)  _wardrobeRoot.gameObject.SetActive(false);
+                if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
+                SetMaximized(true);
+            }
+            ApplyGene();
+        }
+
+        private void ApplyGene()
+        {
+            if (_geneRoot == null) return;
+
+            _geneRoot.gameObject.SetActive(_inGene);
+            _genePanel.gameObject.SetActive(_inGene);
+
+            if (!_inGene) { SetTab(_tab); return; }
+
+            // 상세보기에 있는 동안에는 목록·그리드·상세가 전부 물러난다
+            if (_rowGridRoot != null)   _rowGridRoot.gameObject.SetActive(false);
+            if (_foodGridRoot != null)  _foodGridRoot.gameObject.SetActive(false);
+            if (_eggGridRoot != null)   _eggGridRoot.gameObject.SetActive(false);
+            if (_shopCatRoot != null)   _shopCatRoot.gameObject.SetActive(false);
+            if (_shopGridRoot != null)  _shopGridRoot.gameObject.SetActive(false);
+            if (_wardrobeRoot != null)  _wardrobeRoot.gameObject.SetActive(false);
+            if (_panel != null)         _panel.gameObject.SetActive(false);
+            if (_foodPanel != null)     _foodPanel.gameObject.SetActive(false);
+            if (_eggPanel != null)      _eggPanel.gameObject.SetActive(false);
+            if (_shopPanel != null)     _shopPanel.gameObject.SetActive(false);
+            if (_shopItemPanel != null) _shopItemPanel.gameObject.SetActive(false);
+            if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
+
+            _listTitle.text = SnailPet.Data.Loc.Text(Keys.Traits);
+        }
+
+        /// <summary>초상. 옷장과 같은 크기라 같은 것을 쓸 수 있다.</summary>
+        public void SetGenePreview(Texture texture)
+        {
+            if (_genePreview == null) return;
+            _genePreview.texture = texture;
+            _genePreview.enabled = texture != null;
+        }
+
+        public static Vector2Int GenePreviewSize =>
+            new Vector2Int(UiTheme.Gene.Preview.width, UiTheme.Gene.Preview.height);
+
+        /// <summary>파츠 목록을 채운다. 양쪽 패널이 같은 목록을 다른 모양으로 보여 준다.</summary>
+        public void SetGene(string name, SnailPet.Data.RarityType rarity, int[] partsIds)
+        {
+            _geneName.text = string.IsNullOrWhiteSpace(name)
+                           ? SnailPet.Data.Loc.Text(Keys.NoName) : name;
+            ApplyRarity(_geneRarityIcon, _geneRarityBadge, _geneRarityText, rarity);
+
+            int count = partsIds?.Length ?? 0;
+            for (int i = 0; i < GeneRowCount; i++)
+            {
+                bool has = i < count;
+                _geneRows[i].Root.gameObject.SetActive(has);
+                _geneSlims[i].Root.gameObject.SetActive(has);
+                if (!has) continue;
+
+                var row = SnailPet.Data.GameData.PartsDataById.TryGetValue(partsIds[i], out var p) ? p : null;
+                string pname = row == null ? "" : SnailPet.Data.Loc.ById(row.NameId);
+                string pinfo = row == null ? "" : SnailPet.Data.Loc.ById(row.InfoId);
+                var prar = row?.RarityType ?? SnailPet.Data.RarityType.Common;
+
+                _geneRows[i].Name.text = pname;
+                _geneRows[i].Info.text = pinfo;
+                ApplyRarity(_geneRows[i].RarityIcon, _geneRows[i].RarityBadge, _geneRows[i].Rarity, prar);
+
+                _geneSlims[i].Name.text = pname;
+                ApplyRarity(_geneSlims[i].RarityIcon, _geneSlims[i].RarityBadge, _geneSlims[i].Rarity, prar);
+            }
+        }
 
         // ── 구매·판매 팝업 ──
         //
