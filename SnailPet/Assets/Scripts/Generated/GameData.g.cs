@@ -492,7 +492,7 @@ namespace SnailPet.Data
             new PartsDataRow(13, 13, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c04" }, 10, 68),
             new PartsDataRow(14, 14, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c05" }, 10, 69),
             new PartsDataRow(15, 15, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c06" }, 10, 70),
-            new PartsDataRow(16, 16, 17, RarityType.Rare, PartsType.Shell, "rareshell01", true, new string[] { "rareshell01_c01" }, 10, 71),
+            new PartsDataRow(16, 16, 17, RarityType.Rare, PartsType.Shell, "rareshell01", true, new string[] { "rareshell01_c01" }, 7, 71),
             new PartsDataRow(18, 18, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c01" }, 10, 72),
             new PartsDataRow(19, 19, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c02" }, 10, 73),
             new PartsDataRow(20, 20, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c03" }, 10, 74),
@@ -502,6 +502,7 @@ namespace SnailPet.Data
             new PartsDataRow(21, 21, 2, RarityType.Common, PartsType.Body, "commonbody02", true, new string[] { "commonbody02_c01" }, 10, 75),
             new PartsDataRow(53, 53, 2, RarityType.Common, PartsType.Body, "commonbody03", true, new string[] { "commonbody03_c01" }, 10, 76),
             new PartsDataRow(108, 108, 2, RarityType.Common, PartsType.Body, "commonbody03", true, new string[] { "commonbody03_c02" }, 10, 109),
+            new PartsDataRow(122, 122, 2, RarityType.Rare, PartsType.Body, "rarebody01", true, new string[] { "rarebody01_c01" }, 7, 123),
             new PartsDataRow(22, 22, 2, RarityType.Common, PartsType.Eyes, "commoneyes01", false, System.Array.Empty<string>(), 10, 77),
             new PartsDataRow(23, 23, 2, RarityType.Common, PartsType.Eyes, "commoneyes02", false, System.Array.Empty<string>(), 10, 78),
             new PartsDataRow(24, 24, 2, RarityType.Common, PartsType.Eyes, "commoneyes03", false, System.Array.Empty<string>(), 10, 79),
@@ -518,10 +519,10 @@ namespace SnailPet.Data
 
         public static readonly FoodDataRow[] FoodData = new FoodDataRow[]
         {
-            new FoodDataRow(31, FoodType.vegetable, 31, RarityType.Common, 5d, 3d, 0, 0, "food_lettuce"),
-            new FoodDataRow(32, FoodType.vegetable, 32, RarityType.Common, 7d, 5d, 0, 0, null),
-            new FoodDataRow(33, FoodType.vegetable, 33, RarityType.Common, 7d, 5d, 0, 0, "food_zucchini"),
-            new FoodDataRow(34, FoodType.bean, 34, RarityType.Common, 15d, 10d, 35, 0, "food_tofu"),
+            new FoodDataRow(31, FoodType.vegetable, 31, RarityType.Common, 5d, 3d, 0, 124, "food_lettuce"),
+            new FoodDataRow(32, FoodType.vegetable, 32, RarityType.Common, 7d, 5d, 0, 125, "food_tomato"),
+            new FoodDataRow(33, FoodType.vegetable, 33, RarityType.Common, 7d, 5d, 0, 126, "food_zucchini"),
+            new FoodDataRow(34, FoodType.bean, 34, RarityType.Common, 15d, 10d, 35, 127, "food_tofu"),
         };
 
         public static readonly LevelDataRow[] LevelData = new LevelDataRow[]
@@ -953,6 +954,12 @@ namespace SnailPet.Data
             { "[부화시킬알없음]", 119 },
             { "[부화완료]", 120 },
             { "[준비중]", 121 },
+            { "[일반달팽이_아이스크림01]", 122 },
+            { "[일반달팽이_아이스크림01정보]", 123 },
+            { "[상추정보]", 124 },
+            { "[토마토정보]", 125 },
+            { "[애호박정보]", 126 },
+            { "[두부정보]", 127 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

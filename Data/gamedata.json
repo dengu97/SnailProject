@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-12 00:08:43",
+  "generatedAt": "2026-08-12 11:11:32",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -131,7 +131,13 @@
     "[부화기]": 118,
     "[부화시킬알없음]": 119,
     "[부화완료]": 120,
-    "[준비중]": 121
+    "[준비중]": 121,
+    "[일반달팽이_아이스크림01]": 122,
+    "[일반달팽이_아이스크림01정보]": 123,
+    "[상추정보]": 124,
+    "[토마토정보]": 125,
+    "[애호박정보]": 126,
+    "[두부정보]": 127
   },
   "tables": {
     "EnumData": [
@@ -210,7 +216,7 @@
       {"Id": 13, "NameId": 13, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Shell", "ResourceKey": "commonshell02", "IsUseColor": true, "Colors": ["commonshell02_c04"], "AppearWeight": 10, "InfoId": 68},
       {"Id": 14, "NameId": 14, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Shell", "ResourceKey": "commonshell02", "IsUseColor": true, "Colors": ["commonshell02_c05"], "AppearWeight": 10, "InfoId": 69},
       {"Id": 15, "NameId": 15, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Shell", "ResourceKey": "commonshell02", "IsUseColor": true, "Colors": ["commonshell02_c06"], "AppearWeight": 10, "InfoId": 70},
-      {"Id": 16, "NameId": 16, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Shell", "ResourceKey": "rareshell01", "IsUseColor": true, "Colors": ["rareshell01_c01"], "AppearWeight": 10, "InfoId": 71},
+      {"Id": 16, "NameId": 16, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Shell", "ResourceKey": "rareshell01", "IsUseColor": true, "Colors": ["rareshell01_c01"], "AppearWeight": 7, "InfoId": 71},
       {"Id": 18, "NameId": 18, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Body", "ResourceKey": "commonbody01", "IsUseColor": true, "Colors": ["commonbody01_c01"], "AppearWeight": 10, "InfoId": 72},
       {"Id": 19, "NameId": 19, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Body", "ResourceKey": "commonbody01", "IsUseColor": true, "Colors": ["commonbody01_c02"], "AppearWeight": 10, "InfoId": 73},
       {"Id": 20, "NameId": 20, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Body", "ResourceKey": "commonbody01", "IsUseColor": true, "Colors": ["commonbody01_c03"], "AppearWeight": 10, "InfoId": 74},
@@ -220,6 +226,7 @@
       {"Id": 21, "NameId": 21, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Body", "ResourceKey": "commonbody02", "IsUseColor": true, "Colors": ["commonbody02_c01"], "AppearWeight": 10, "InfoId": 75},
       {"Id": 53, "NameId": 53, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Body", "ResourceKey": "commonbody03", "IsUseColor": true, "Colors": ["commonbody03_c01"], "AppearWeight": 10, "InfoId": 76},
       {"Id": 108, "NameId": 108, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Body", "ResourceKey": "commonbody03", "IsUseColor": true, "Colors": ["commonbody03_c02"], "AppearWeight": 10, "InfoId": 109},
+      {"Id": 122, "NameId": 122, "PartsGroupId": 2, "RarityType": "Rare", "PartsType": "Body", "ResourceKey": "rarebody01", "IsUseColor": true, "Colors": ["rarebody01_c01"], "AppearWeight": 7, "InfoId": 123},
       {"Id": 22, "NameId": 22, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "commoneyes01", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 77},
       {"Id": 23, "NameId": 23, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "commoneyes02", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 78},
       {"Id": 24, "NameId": 24, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "commoneyes03", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 79},
@@ -234,10 +241,10 @@
       {"Id": 55, "NameId": 55, "PartsGroupId": 17, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler05", "IsUseColor": true, "Colors": ["commonfeeler05_c02"], "AppearWeight": 10, "InfoId": 87}
     ],
     "FoodData": [
-      {"Id": 31, "FoodType": "vegetable", "NameId": 31, "RarityType": "Common", "FullPoint": 5, "HappyPoint": 3, "BuffId": 0, "InfoId": 0, "ResourceKey": "food_lettuce"},
-      {"Id": 32, "FoodType": "vegetable", "NameId": 32, "RarityType": "Common", "FullPoint": 7, "HappyPoint": 5, "BuffId": 0, "InfoId": 0, "ResourceKey": null},
-      {"Id": 33, "FoodType": "vegetable", "NameId": 33, "RarityType": "Common", "FullPoint": 7, "HappyPoint": 5, "BuffId": 0, "InfoId": 0, "ResourceKey": "food_zucchini"},
-      {"Id": 34, "FoodType": "bean", "NameId": 34, "RarityType": "Common", "FullPoint": 15, "HappyPoint": 10, "BuffId": 35, "InfoId": 0, "ResourceKey": "food_tofu"}
+      {"Id": 31, "FoodType": "vegetable", "NameId": 31, "RarityType": "Common", "FullPoint": 5, "HappyPoint": 3, "BuffId": 0, "InfoId": 124, "ResourceKey": "food_lettuce"},
+      {"Id": 32, "FoodType": "vegetable", "NameId": 32, "RarityType": "Common", "FullPoint": 7, "HappyPoint": 5, "BuffId": 0, "InfoId": 125, "ResourceKey": "food_tomato"},
+      {"Id": 33, "FoodType": "vegetable", "NameId": 33, "RarityType": "Common", "FullPoint": 7, "HappyPoint": 5, "BuffId": 0, "InfoId": 126, "ResourceKey": "food_zucchini"},
+      {"Id": 34, "FoodType": "bean", "NameId": 34, "RarityType": "Common", "FullPoint": 15, "HappyPoint": 10, "BuffId": 35, "InfoId": 127, "ResourceKey": "food_tofu"}
     ],
     "LevelData": [
       {"Level": 1, "LevelUpTime": 0, "NeedFullPoint": 10, "NeedHappyPoint": 10, "UseFullPointTime": 120, "UseHappyPointTime": 240, "Speed": 1, "Size": 4, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 10},
