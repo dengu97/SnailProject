@@ -60,7 +60,19 @@ namespace SnailPet.Ui
 
             // 패널 밖에 걸치는 것들 (y 가 음수면 패널 위)
             public static readonly RectInt Settings = new RectInt(  9, -25, 28, 25);
+
+            /// <summary>
+            /// 코인 줄이 차지하는 띠. <b>이 값의 y 가 위젯 상자를 얼마나 위로 늘릴지를 정한다</b> —
+            /// 패널 위치와 <see cref="Above"/> 의 기준이 전부 여기에 매여 있으므로 함부로 바꾸지 말 것.
+            /// 알약을 옮기고 싶으면 아래 <see cref="CoinPill"/> 셋을 고치면 된다.
+            /// </summary>
             public static readonly RectInt Coin     = new RectInt( 47, -31, 90, 35);
+
+            // 코인 알약과 그 안의 아이콘·숫자. 위 띠 안에서의 자리이며 위젯 상자 기준이다.
+            // (프리팹에서 손으로 맞춘 값을 옮겨 온 것이라, 다시 구워도 그대로 나온다.)
+            public static readonly RectInt CoinPill = new RectInt(54, 10, 63, 21);
+            public static readonly RectInt CoinIcon = new RectInt(49,  5, 22, 22);
+            public static readonly RectInt CoinText = new RectInt(72, 10, 45, 21);
             public static readonly RectInt Close    = new RectInt(152,  -9, 28, 28);
             public static readonly RectInt Maximize = new RectInt(152,  19, 28, 28);
         }

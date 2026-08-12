@@ -167,6 +167,9 @@ namespace SnailPet.Ui
 
             Rewire();
             EnsureEventSystem();
+
+            // 프리팹에는 편집용으로 펼친 채 구워져 있다. 실행은 접힌 상태로 시작한다.
+            SetMaximized(false);
             SetTab(_tab);
         }
 
@@ -314,7 +317,10 @@ namespace SnailPet.Ui
             BuildShopPanels();
             BuildWardrobePanel();
 
-            SetMaximized(false);
+            // 프리팹에는 목록을 펼친 채로 굽는다. 접힌 채로 구우면 프리팹을 열었을 때
+            // 왼쪽 절반이 통째로 안 보여 배치를 손볼 수가 없다.
+            // 실행할 때는 Bind 가 다시 접으므로 게임이 펼친 채로 시작하지는 않는다.
+            SetMaximized(true);
 
             SetSnail("달팽이 이름", SnailPet.Data.RarityType.Epic, 0);
             SetGauges(0.62f, 0.28f);
@@ -414,12 +420,9 @@ namespace SnailPet.Ui
         {
             _settingsBtn = IconButton(_detailRoot, Above(At.Settings), "icon_settings", "Settings");
 
-            var coin = Above(At.Coin);
-            Box(_detailRoot, coin, UiTheme.Slot, UiSprites.Shape.Badge, "CoinPill");
-            Icon(_detailRoot, new RectInt(coin.x + 4, coin.y + 6, 22, 22), "icon_coin",
-                 Color.white, "CoinIcon").raycastTarget = false;
-            _coinText = Label(_detailRoot, new RectInt(coin.x + 30, coin.y, coin.width - 34, coin.height),
-                              "5,000", 12, UiTheme.Ink);
+            Box(_detailRoot, At.CoinPill, UiTheme.Slot, UiSprites.Shape.Badge, "CoinPill");
+            Icon(_detailRoot, At.CoinIcon, "icon_coin", Color.white, "CoinIcon").raycastTarget = false;
+            _coinText = Label(_detailRoot, At.CoinText, "5,000", 12, UiTheme.Ink);
 
             // 이 둘은 다른 아이콘과 달리 아트에 색이 들어 있다. 물들이면 안 된다.
             _closeBtn = IconButton(_detailRoot, Above(At.Close), "btn_close", "Close", tint: Color.white);
