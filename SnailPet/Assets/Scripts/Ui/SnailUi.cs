@@ -670,7 +670,7 @@ namespace SnailPet.Ui
             _feedBtn = feed.gameObject.AddComponent<Button>();
             _feedBtn.targetGraphic = feed;
 
-            _foodBuyBtn  = IconButton(_foodPanel, Fd.Buy,  "tab_shop", "Buy");
+            _foodBuyBtn  = IconButton(_foodPanel, Fd.Buy,  "btn_shop", "Buy");
             _foodSellBtn = IconButton(_foodPanel, Fd.Sell, "icon_sell", "Sell");
         }
 
@@ -775,7 +775,7 @@ namespace SnailPet.Ui
             // 알이 하나도 없을 때만 보이는 안내
             _eggEmpty = LocLabel(_eggPanel, UiTheme.Egg.Empty, Keys.NoEgg, 10, UiTheme.Slot);
 
-            _eggShopBtn = IconButton(_eggPanel, UiTheme.Egg.Buy, "tab_shop", "BuyEgg");
+            _eggShopBtn = IconButton(_eggPanel, UiTheme.Egg.Buy, "btn_shop", "BuyEgg");
         }
 
         private HatchSlot BuildHatchSlot(int index)

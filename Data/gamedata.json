@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-12 12:29:33",
+  "generatedAt": "2026-08-12 12:53:37",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -143,7 +143,9 @@
     "[마스크]": 130,
     "[기타]": 131,
     "[옷장]": 132,
-    "[장착중]": 133
+    "[장착중]": 133,
+    "[천사링01]": 134,
+    "[천사링01정보]": 135
   },
   "tables": {
     "EnumData": [
@@ -296,7 +298,8 @@
     "AccessoriesData": [
       {"Id": 39, "NameId": 39, "AccessoriesType": "Hat", "ResourceKey": "hat01", "InfoId": 91},
       {"Id": 40, "NameId": 40, "AccessoriesType": "Hat", "ResourceKey": "hat02", "InfoId": 92},
-      {"Id": 41, "NameId": 41, "AccessoriesType": "Bag", "ResourceKey": "bag01", "InfoId": 93}
+      {"Id": 41, "NameId": 41, "AccessoriesType": "Bag", "ResourceKey": "bag01", "InfoId": 93},
+      {"Id": 134, "NameId": 134, "AccessoriesType": "Etc", "ResourceKey": "etc01", "InfoId": 135}
     ],
     "ShopData": [
       {"CategoryType": "Food", "Id": 31, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 5, "DiscountCostCount": 3, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 2.5},
