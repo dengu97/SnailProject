@@ -71,7 +71,7 @@ namespace SnailPet.EditorTools
                 "name" => 40,        // 535x104 → 화면 10px
                 "guage" => 20,       // 527x56  → 화면 5px  (높이의 절반 미만)
                 "levelbadge" => 28,  // 155x63  → 화면 7px
-                "slot2" => 40,       // 134x131 → 화면 10px (정사각이라 넉넉히)
+                "slot2" or "slotline" => 40,       // 134x131 → 화면 10px (정사각이라 넉넉히)
                 _ => 0,
             };
             return new Vector4(m, m, m, m);

@@ -34,7 +34,7 @@ namespace SnailPet.Ui
             Fill,           // 게이지 채우기 (포만도)
             FillHappy,      // 게이지 채우기 (행복 지수)
             Button,         // 버튼 배경
-            Selection,      // 고른 칸을 두르는 테두리
+            Selection,      // 고른 칸에 덧그리는 테두리 (아트 이름은 slotline)
 
             // 아래는 아트가 들어오면서 Slot 하나로 쓰던 것을 갈라낸 것들이다.
             // 손그림이라 가로로 긴 홈과 정사각 칸의 모양이 서로 다르다.
@@ -65,6 +65,7 @@ namespace SnailPet.Ui
         {
             Shape.PanelBorder => "panelborder",
             Shape.FillHappy   => "fill_happy",
+            Shape.Selection   => "slotline",   // 고른 칸에 덧그리는 테두리
             _ => s.ToString().ToLowerInvariant(),
         };
 

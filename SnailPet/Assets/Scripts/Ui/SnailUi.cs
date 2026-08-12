@@ -643,15 +643,13 @@ namespace SnailPet.Ui
             slot.Icon = Icon(root, new RectInt(2, 2, s.width - 4, s.height - 4), null, Color.white, "Icon");
             slot.Icon.raycastTarget = false;
 
-            // 선택 표시. 목업에서 고른 칸에 빨간 테두리가 둘린다.
+            // 고른 칸에 덧그리는 테두리(slotline). 칸 위에 같은 크기로 겹친다.
             slot.Frame = NewRect("Frame", root).gameObject.AddComponent<Image>();
-            var fr = (RectTransform)slot.Frame.transform;
-            fr.anchorMin = Vector2.zero; fr.anchorMax = Vector2.one;
-            fr.offsetMin = Vector2.zero; fr.offsetMax = Vector2.zero;
+            Fill((RectTransform)slot.Frame.transform);
             slot.Frame.sprite = UiSprites.Of(UiSprites.Shape.Selection);
             slot.Frame.type = Image.Type.Sliced;
             slot.Frame.gameObject.AddComponent<UiShapeRef>().Shape = UiSprites.Shape.Selection;
-            slot.Frame.color = UiTheme.Selected;
+            slot.Frame.color = UiSprites.IsArt(UiSprites.Shape.Selection) ? Color.white : UiTheme.Selected;
             slot.Frame.raycastTarget = false;
             slot.Frame.enabled = false;
 
@@ -2295,6 +2293,22 @@ namespace SnailPet.Ui
             rt.anchoredPosition = new Vector2(r.x, -r.y);
         }
 
+        /// <summary>
+        /// 같은 자리에 놓되 피벗만 가운데로 둔다.
+        ///
+        /// <b>Image.preserveAspect 는 피벗을 기준으로 정렬한다.</b> 목업 좌표를 그대로 쓰려고
+        /// 피벗을 왼쪽 위로 잡아 두었더니, 가로로 넓은 그림은 남는 세로 공간이 전부 아래로
+        /// 몰려 칸 위쪽에 붙어 보였다 (상추처럼 납작할수록 심하다).
+        /// 아이콘은 그림이 칸 한가운데 있어야 하므로 이쪽을 쓴다.
+        /// </summary>
+        private static void PlaceCentered(RectTransform rt, RectInt r)
+        {
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(r.width, r.height);
+            rt.anchoredPosition = new Vector2(r.x + r.width * 0.5f, -(r.y + r.height * 0.5f));
+        }
+
         private Image Box(RectTransform parent, RectInt r, Color color, UiSprites.Shape shape, string name)
         {
             var rt = NewRect(name, parent);
@@ -2376,7 +2390,7 @@ namespace SnailPet.Ui
         private Image Icon(RectTransform parent, RectInt r, string key, Color color, string name)
         {
             var rt = NewRect(name, parent);
-            Place(rt, r);
+            PlaceCentered(rt, r);
 
             var img = rt.gameObject.AddComponent<Image>();
             img.color = color;
