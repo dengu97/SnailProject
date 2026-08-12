@@ -43,7 +43,9 @@ namespace SnailPet.Ui
 
             public const string AskBuy  = "[구매문구]";   // "{0}을(를) 구매할까요?"
             public const string AskSell = "[판매문구]";
-            public const string Yes     = "[동의]";
+            public const string Yes       = "[동의]";
+            public const string AskRename = "[이름변경]";   // "이름을 변경합니다."
+            public const string DoRename  = "[변경]";
             public const string No      = "[거부]";
 
             public const string Wardrobe = "[옷장]";
@@ -245,6 +247,12 @@ namespace SnailPet.Ui
             Hook(_popupPlus,  () => StepPopup(+1));
             Hook(_popupNo,    HidePopup);
             Hook(_popupClose, HidePopup);
+            Hook(_renameOk, () =>
+            {
+                string name = _renameField != null ? _renameField.text : "";
+                HidePopup();
+                Renamed?.Invoke(name);
+            });
             Hook(_popupYes,   () =>
             {
                 int id = _popupItemId, qty = _popupQty;
@@ -1891,7 +1899,14 @@ namespace SnailPet.Ui
         /// <summary>팝업에서 「네」를 눌렀다. (아이템 Id, 수량).</summary>
         public event Action<int, int> PopupConfirmed;
 
-        public bool PopupOpen => _popup != null && _popup.gameObject.activeSelf;
+        /// <summary>
+        /// 팝업이 떠 있는가.
+        ///
+        /// 켜고 끄는 것은 덮개(_popupBlocker)이므로 그쪽을 봐야 한다. 안쪽 판을 보면
+        /// activeSelf 가 제 플래그만 보기 때문에 덮개를 꺼도 계속 true 로 남는다 —
+        /// 그러면 팝업을 닫은 뒤에도 클릭 통과가 꺼진 채라 펫이 바탕화면을 막는다.
+        /// </summary>
+        public bool PopupOpen => _popupBlocker != null && _popupBlocker.gameObject.activeSelf;
 
         private void BuildPopup()
         {
@@ -1916,43 +1931,130 @@ namespace SnailPet.Ui
             var bg = Backdrop(_popup.gameObject, UiSprites.Shape.Panel, UiTheme.PanelFill);
             bg.raycastTarget = true;
 
-            _popupTitle = Label(_popup, Pop.Title, "", 12, UiTheme.Ink);
+            // 닫기는 두 모습이 공유한다. 나머지는 묶음별로 갈아 끼운다.
+            _popupClose = IconButton(_popup, Pop.Close, "btn_close", "Close", tint: Color.white);
+
+            _buyGroup = Fill(NewRect("BuyGroup", _popup));
+            _popupTitle = Label(_buyGroup, Pop.Title, "", 12, UiTheme.Ink);
 
             // +/- 아트가 아직 없어 글자로 그린다. 아트가 들어오면 IconButton 으로 바꾸면 된다
             // (btn_minus / btn_plus). 스프라이트 없는 Image 를 쓰면 색 사각형이 된다.
-            _popupMinus = StepButton(Pop.Minus, "−", "Minus");
-            _popupPlus  = StepButton(Pop.Plus,  "+", "Plus");
+            _popupMinus = StepButton(_buyGroup, Pop.Minus, "−", "Minus");
+            _popupPlus  = StepButton(_buyGroup, Pop.Plus,  "+", "Plus");
 
-            Box(_popup, Pop.Count, UiTheme.Slot, UiSprites.Shape.LevelBadge, "CountBox");
-            _popupCount = Label(_popup, Pop.Count, "1", 11, UiTheme.Ink);
+            Box(_buyGroup, Pop.Count, UiTheme.Slot, UiSprites.Shape.LevelBadge, "CountBox");
+            _popupCount = Label(_buyGroup, Pop.Count, "1", 11, UiTheme.Ink);
 
-            Box(_popup, Pop.CostPill, UiTheme.Slot, UiSprites.Shape.LevelBadge, "CostPill");
-            Icon(_popup, Pop.CostIcon, "icon_coin", Color.white, "CostIcon").raycastTarget = false;
-            _popupCost = Label(_popup, Pop.CostText, "", 11, UiTheme.Ink);
+            Box(_buyGroup, Pop.CostPill, UiTheme.Slot, UiSprites.Shape.LevelBadge, "CostPill");
+            Icon(_buyGroup, Pop.CostIcon, "icon_coin", Color.white, "CostIcon").raycastTarget = false;
+            _popupCost = Label(_buyGroup, Pop.CostText, "", 11, UiTheme.Ink);
 
-            _popupNo  = TextButton(Pop.No,  Keys.No,  "No");
-            _popupYes = TextButton(Pop.Yes, Keys.Yes, "Yes");
+            _popupNo  = TextButton(_buyGroup, Pop.No,  Keys.No,  "No");
+            _popupYes = TextButton(_buyGroup, Pop.Yes, Keys.Yes, "Yes");
 
-            _popupClose = IconButton(_popup, Pop.Close, "btn_close", "Close", tint: Color.white);
+            BuildRenameGroup();
+        }
+
+        /// <summary>부모를 가득 채우게 편다.</summary>
+        private static RectTransform Fill(RectTransform rt)
+        {
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            return rt;
+        }
+
+        [SerializeField] private RectTransform _renameGroup, _buyGroup;
+        [SerializeField] private InputField _renameField;
+        [SerializeField] private Button _renameOk;
+
+        /// <summary>이름을 바꿨다. 빈 문자열이면 「이름 없음」으로 되돌린 것이다.</summary>
+        public event Action<string> Renamed;
+
+        /// <summary>
+        /// 이름 변경도 같은 판을 쓴다. 목업에서 크기와 닫기 자리가 구매·판매와 같다.
+        /// 가운데만 갈아 끼우려고 두 묶음으로 나눠 하나씩 켠다.
+        /// </summary>
+        private void BuildRenameGroup()
+        {
+            _renameGroup = Fill(NewRect("RenameGroup", _popup));
+            _renameGroup.gameObject.SetActive(false);
+
+            LocLabel(_renameGroup, Pop.RenameTitle, Keys.AskRename, 12, UiTheme.Ink);
+
+            var box = Box(_renameGroup, Pop.RenameField, UiTheme.Slot, UiSprites.Shape.Name, "Field");
+            box.raycastTarget = true;
+
+            // 글자는 InputField 의 <b>자식</b>이어야 한다. 형제로 두면 선택은 되는데
+            // 글자가 안 들어간다 — 캐럿과 표시가 그 자식을 기준으로 돌기 때문이다.
+            var field = (RectTransform)box.transform;
+            var text = Label(field, new RectInt(6, 0, Pop.RenameField.width - 12, Pop.RenameField.height),
+                             "", 11, UiTheme.Ink);
+            text.supportRichText = false;
+
+            _renameField = box.gameObject.AddComponent<InputField>();
+            _renameField.textComponent = text;
+            _renameField.characterLimit = 12;      // 이름칸이 131px 이라 그 이상은 잘린다
+            _renameField.lineType = InputField.LineType.SingleLine;
+
+            var okBox = Box(_renameGroup, Pop.RenameOk, UiTheme.Slot, UiSprites.Shape.Button, "Ok");
+            okBox.raycastTarget = true;
+            LocLabel(_renameGroup, Pop.RenameOk, Keys.DoRename, 10, UiTheme.Ink);
+            _renameOk = okBox.gameObject.AddComponent<Button>();
+            _renameOk.targetGraphic = okBox;
+        }
+
+        /// <summary>
+        /// 이름 변경 팝업을 띄운다.
+        /// 글자를 받아야 하므로 <b>여는 동안만</b> 창이 키보드 포커스를 빌린다.
+        /// </summary>
+        public void ShowRename(string current)
+        {
+            _buyGroup.gameObject.SetActive(false);
+            _renameGroup.gameObject.SetActive(true);
+            _popupBlocker.gameObject.SetActive(true);
+
+            _renameField.text = current ?? "";
+
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            // 포커스를 먼저 빌린다. 반대로 하면 창이 활성화되면서 EventSystem 의 선택이
+            // 풀려 글자가 들어가지 않는다.
+            SnailPet.Desktop.TransparentWindow.SetKeyboardFocus(true);
+#endif
+            StartCoroutine(FocusFieldNextFrame());
+        }
+
+        /// <summary>
+        /// 창이 활성화된 <b>다음 프레임에</b> 입력칸을 잡는다.
+        /// 같은 프레임에 잡으면 활성화 처리가 그 선택을 지운다.
+        /// </summary>
+        private System.Collections.IEnumerator FocusFieldNextFrame()
+        {
+            yield return null;
+            if (_renameField == null || !_renameGroup.gameObject.activeInHierarchy) yield break;
+
+            EventSystem.current?.SetSelectedGameObject(_renameField.gameObject);
+            _renameField.Select();
+            _renameField.ActivateInputField();
+            _renameField.caretPosition = _renameField.text.Length;
         }
 
         /// <summary>수량 조절 버튼. 아트가 없어 배경 도형 + 글자로 만든다.</summary>
-        private Button StepButton(RectInt at, string glyph, string name)
+        private Button StepButton(RectTransform parent, RectInt at, string glyph, string name)
         {
-            var box = Box(_popup, at, UiTheme.Slot, UiSprites.Shape.Button, name);
+            var box = Box(parent, at, UiTheme.Slot, UiSprites.Shape.Button, name);
             box.raycastTarget = true;
-            Label(_popup, at, glyph, 14, UiTheme.Ink);
+            Label(parent, at, glyph, 14, UiTheme.Ink);
 
             var btn = box.gameObject.AddComponent<Button>();
             btn.targetGraphic = box;
             return btn;
         }
 
-        private Button TextButton(RectInt at, string token, string name)
+        private Button TextButton(RectTransform parent, RectInt at, string token, string name)
         {
-            var box = Box(_popup, at, UiTheme.Slot, UiSprites.Shape.Button, name);
+            var box = Box(parent, at, UiTheme.Slot, UiSprites.Shape.Button, name);
             box.raycastTarget = true;
-            LocLabel(_popup, at, token, 10, UiTheme.Ink);
+            LocLabel(parent, at, token, 10, UiTheme.Ink);
 
             var btn = box.gameObject.AddComponent<Button>();
             btn.targetGraphic = box;
@@ -1972,6 +2074,8 @@ namespace SnailPet.Ui
             _popupMax = Mathf.Max(1, max);
             _popupQty = 1;
 
+            _buyGroup.gameObject.SetActive(true);
+            _renameGroup.gameObject.SetActive(false);
             _popupTitle.text = SnailPet.Data.Loc.Format(selling ? Keys.AskSell : Keys.AskBuy, itemName);
             _popupBlocker.gameObject.SetActive(true);
             PaintPopup();
@@ -1980,6 +2084,10 @@ namespace SnailPet.Ui
         public void HidePopup()
         {
             if (_popupBlocker != null) _popupBlocker.gameObject.SetActive(false);
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            // 이름 입력 때문에 빌린 포커스를 돌려준다. 안 빌렸으면 아무 일도 없다.
+            SnailPet.Desktop.TransparentWindow.SetKeyboardFocus(false);
+#endif
         }
 
         private void StepPopup(int delta)

@@ -307,6 +307,11 @@ namespace SnailPet.Ui
 
             /// <summary>닫기 X. 패널 오른쪽 위에 걸친다.</summary>
             public static readonly RectInt Close = new RectInt(220, -6, 28, 28);
+
+            // ── 이름 변경 ── 같은 판을 쓰고 가운데만 다르다 (목업에서 크기·닫기 자리가 같다)
+            public static readonly RectInt RenameTitle = new RectInt( 0,  25, W, 21);
+            public static readonly RectInt RenameField = new RectInt(42,  62, 161, 20);
+            public static readonly RectInt RenameOk    = new RectInt(91, 112,  63, 22);
         }
 
         /// <summary>화면 모서리에서 띄우는 여백.</summary>

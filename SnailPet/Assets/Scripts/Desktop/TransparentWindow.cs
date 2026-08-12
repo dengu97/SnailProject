@@ -111,6 +111,93 @@ namespace SnailPet.Desktop
             Win32.SetWindowLong(Hwnd, Win32.GWL_EXSTYLE, ex);
         }
 
+        /// <summary>글자를 받는 동안 포커스를 빌리기 전에 있던 창. 돌려줄 곳이다.</summary>
+        private static IntPtr _focusReturnTo;
+
+        /// <summary>
+        /// 키보드 포커스를 잠깐 빌린다. 이름 입력처럼 <b>글자를 받아야 할 때만</b> 켠다.
+        ///
+        /// 이 창은 평소 WS_EX_NOACTIVATE 라 절대 포커스를 갖지 않는다. 그래서 마우스는
+        /// GetAsyncKeyState 로 우회해 읽지만, 글자는 그럴 수 없다 — 한글은 IME 조합이
+        /// 필요하고 IME 는 포커스를 가진 창에만 붙는다.
+        ///
+        /// 끌 때는 빌리기 전에 앞에 있던 창으로 돌려준다. 안 그러면 쓰던 작업이 뒤로 밀린 채
+        /// 남는다.
+        /// </summary>
+        public static void SetKeyboardFocus(bool on)
+        {
+            if (Hwnd == IntPtr.Zero) return;
+
+            int ex = Win32.GetWindowLong(Hwnd, Win32.GWL_EXSTYLE);
+            bool now = (ex & Win32.WS_EX_NOACTIVATE) == 0;
+            if (now == on) return;
+
+            if (on)
+            {
+                _focusReturnTo = Win32.GetForegroundWindow();
+                if (_focusReturnTo == Hwnd) _focusReturnTo = IntPtr.Zero;
+
+                // 포커스를 받으려면 클릭도 통과시키면 안 된다
+                ex &= ~Win32.WS_EX_NOACTIVATE;
+                ex &= ~Win32.WS_EX_TRANSPARENT;
+                Win32.SetWindowLong(Hwnd, Win32.GWL_EXSTYLE, ex);
+
+                Steal(_focusReturnTo);
+                return;
+            }
+
+            ex |= Win32.WS_EX_NOACTIVATE;
+            Win32.SetWindowLong(Hwnd, Win32.GWL_EXSTYLE, ex);
+
+            // 돌려줄 때도 붙였다 떼야 한다. 그냥 SetForegroundWindow 만 부르면
+            // 포커스가 펫에 남아, 이름을 고친 뒤 쓰던 창이 뒤로 밀린 채 끝난다.
+            if (_focusReturnTo != IntPtr.Zero) Give(_focusReturnTo);
+            _focusReturnTo = IntPtr.Zero;
+        }
+
+        /// <summary>빌린 포커스를 원래 창으로 돌려준다.</summary>
+        private static void Give(IntPtr to)
+        {
+            uint me = Win32.GetCurrentThreadId();
+            uint other = Win32.GetWindowThreadProcessId(to, IntPtr.Zero);
+
+            bool attached = other != 0 && other != me && Win32.AttachThreadInput(me, other, true);
+            try
+            {
+                Win32.BringWindowToTop(to);
+                Win32.SetForegroundWindow(to);
+            }
+            finally
+            {
+                if (attached) Win32.AttachThreadInput(me, other, false);
+            }
+        }
+
+        /// <summary>
+        /// 포그라운드 잠금을 넘어 포커스를 가져온다.
+        ///
+        /// 그냥 SetForegroundWindow 를 부르면 뒤에 있는 프로세스라 조용히 무시된다.
+        /// 지금 앞에 있는 창의 입력 큐에 잠깐 붙으면 같은 큐로 취급되어 넘겨받을 수 있다.
+        /// 붙였으면 반드시 뗀다 — 붙어 있는 동안 두 스레드의 입력 상태가 묶인다.
+        /// </summary>
+        private static void Steal(IntPtr from)
+        {
+            uint me = Win32.GetCurrentThreadId();
+            uint other = from != IntPtr.Zero ? Win32.GetWindowThreadProcessId(from, IntPtr.Zero) : 0;
+
+            bool attached = other != 0 && other != me && Win32.AttachThreadInput(me, other, true);
+            try
+            {
+                Win32.BringWindowToTop(Hwnd);
+                Win32.SetForegroundWindow(Hwnd);
+                Win32.SetFocus(Hwnd);
+            }
+            finally
+            {
+                if (attached) Win32.AttachThreadInput(me, other, false);
+            }
+        }
+
         /// <summary>커서의 가상 화면 좌표.</summary>
         public static bool TryGetCursor(out int x, out int y)
         {

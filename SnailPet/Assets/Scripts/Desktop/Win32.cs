@@ -56,6 +56,38 @@ namespace SnailPet.Desktop
         [DllImport("user32.dll")]
         public static extern IntPtr GetForegroundWindow();
 
+        /// <summary>
+        /// 창을 앞으로 가져오고 키보드 포커스를 준다.
+        /// 이름 입력처럼 <b>글자를 받아야 할 때만</b> 쓴다 — 평소에는 포커스를 갖지 않는 것이
+        /// 이 펫의 성질이다.
+        /// </summary>
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        // 포그라운드 잠금을 넘기 위한 것들.
+        //
+        // Windows 는 뒤에 있는 프로세스가 SetForegroundWindow 를 부르면 조용히 무시한다
+        // (작업표시줄만 깜빡인다). 지금 앞에 있는 창의 입력 큐에 잠깐 붙으면 같은 큐로
+        // 취급되어 포커스를 넘겨받을 수 있다. 붙인 뒤에는 반드시 떼야 한다 —
+        // 붙어 있는 동안은 두 스레드의 입력 상태가 묶인다.
+        [DllImport("user32.dll")]
+        public static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr processId);
+
+        [DllImport("kernel32.dll")]
+        public static extern uint GetCurrentThreadId();
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr SetFocus(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool BringWindowToTop(IntPtr hWnd);
+
         [DllImport("user32.dll", SetLastError = true)]
         public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 

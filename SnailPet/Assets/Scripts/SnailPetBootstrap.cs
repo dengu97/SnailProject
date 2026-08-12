@@ -416,7 +416,21 @@ namespace SnailPet
         {
             _ui = SnailUi.Create(transform);
 
-            _ui.Rename   += () => Say("      [UI] 이름 수정");
+            _ui.Rename   += () =>
+            {
+                var snail = _player.Active;
+                if (snail != null) _ui.ShowRename(snail.Name);
+            };
+            _ui.Renamed  += name =>
+            {
+                var snail = _player.Active;
+                if (snail == null) return;
+
+                // 공백만 넣으면 이름을 지운 것으로 본다. UI 가 「이름 없음」으로 채운다.
+                snail.Name = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+                RefreshSnail(reshoot: false);
+                Say($"      [UI] 이름 변경: {snail.Name ?? "(없음)"}");
+            };
             _ui.Detail   += () => Say("      [UI] 상세정보");
             _ui.Wardrobe += OpenWardrobe;
             _ui.ToggleEquip += EquipAccessory;
@@ -499,6 +513,7 @@ namespace SnailPet
         // ── 옷장 ──
 
         private SnailPortrait _wardrobeView;
+
 
         // ── 달팽이 상세보기 ──
 
@@ -1460,9 +1475,12 @@ namespace SnailPet
             bool hasCursor = TransparentWindow.TryGetCursor(out int cx, out int cy);
             bool onFood = hasCursor && _food.FindAt(cx, cy) != null;
 
+            // 팝업이 떠 있는 동안은 커서가 어디에 있든 통과시키면 안 된다.
+            // 통과시키면 팝업 버튼을 눌러도 클릭이 뒤 창으로 새고, 이름 입력 중이면
+            // 키보드 포커스까지 같이 잃는다.
             // _cursorOnUi 는 StepDrag 에서 이미 이번 프레임 값으로 갱신됐다
             TransparentWindow.SetClickThrough(
-                !(_cursorOnSnail || onFood || _cursorOnUi || _drag != DragTarget.None));
+                !(_cursorOnSnail || onFood || _cursorOnUi || _ui.PopupOpen || _drag != DragTarget.None));
         }
 
         private const float BubbleGapPx = SnailPresent.BubbleGap;
