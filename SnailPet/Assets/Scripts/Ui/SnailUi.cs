@@ -2121,8 +2121,34 @@ namespace SnailPet.Ui
         }
 
         /// <summary>한글이 나오는 글꼴. 내장 Arial 에는 한글 글리프가 없어 네모로 나온다.</summary>
+        /// <summary>
+        /// UI 글꼴을 넣어 두는 곳. 여기에 .ttf / .otf 를 하나 떨어뜨리면 그것이 쓰인다.
+        ///
+        /// 파일 이름은 상관없다 — 폴더에서 처음 찾은 것을 쓴다. 두 벌 이상 두면
+        /// 어느 것이 걸릴지 알 수 없으니 하나만 둘 것.
+        /// </summary>
+        public const string FontFolder = "Ui/Font";
+
+        /// <summary>
+        /// 글꼴을 찾는다. 프로젝트에 넣어 둔 것이 있으면 그것, 없으면 OS 글꼴.
+        ///
+        /// OS 글꼴은 <b>대비책</b>이다. 맑은 고딕은 어느 PC에나 있어 글자가 네모로
+        /// 나오는 일은 없지만, 손그림 UI 와는 결이 맞지 않는다.
+        ///
+        /// 레거시 Text 는 TTF 를 그때그때 렌더하므로 한글 아틀라스를 미리 구울 필요가 없다.
+        /// TMP 를 안 쓰기로 한 것이 여기서 값을 한다.
+        /// </summary>
         private static Font LoadKoreanFont()
         {
+            var art = Resources.LoadAll<Font>(FontFolder);
+            if (art != null && art.Length > 0 && art[0] != null)
+            {
+                if (art.Length > 1)
+                    Debug.LogWarning($"[SnailPet] {FontFolder} 에 글꼴이 {art.Length}벌 있습니다. " +
+                                     $"{art[0].name} 를 씁니다 — 하나만 두세요.");
+                return art[0];
+            }
+
             foreach (var n in new[] { "Malgun Gothic", "맑은 고딕", "Gulim", "굴림", "Batang" })
             {
                 var f = Font.CreateDynamicFontFromOSFont(n, 14);
