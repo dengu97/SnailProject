@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-12 12:12:08",
+  "generatedAt": "2026-08-12 12:29:33",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -141,7 +141,9 @@
     "[모자]": 128,
     "[가방]": 129,
     "[마스크]": 130,
-    "[기타]": 131
+    "[기타]": 131,
+    "[옷장]": 132,
+    "[장착중]": 133
   },
   "tables": {
     "EnumData": [
@@ -434,7 +436,9 @@
       {"Id": 128, "Kr": "모자"},
       {"Id": 129, "Kr": "가방"},
       {"Id": 130, "Kr": "마스크"},
-      {"Id": 131, "Kr": "기타"}
+      {"Id": 131, "Kr": "기타"},
+      {"Id": 132, "Kr": "옷장"},
+      {"Id": 133, "Kr": "장착중"}
     ],
     "UnlockData": [
       {"Id": 101, "ConditionType": "SnailLevel", "NeedConditionValue": 2, "CostItem": null, "CostCount": null}
