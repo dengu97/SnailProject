@@ -84,12 +84,16 @@ namespace SnailPet.Data
     public sealed class PartsColorDataRow
     {
         public readonly PartsType PartsType;
+        public readonly string ResourceKey;
         public readonly string ColorResourceKey;
+        public readonly int MutationWeight;
 
-        public PartsColorDataRow(PartsType partsType, string colorResourceKey)
+        public PartsColorDataRow(PartsType partsType, string resourceKey, string colorResourceKey, int mutationWeight)
         {
             PartsType = partsType;
+            ResourceKey = resourceKey;
             ColorResourceKey = colorResourceKey;
+            MutationWeight = mutationWeight;
         }
     }
 
@@ -411,6 +415,28 @@ namespace SnailPet.Data
         }
     }
 
+    public sealed class GameConfigRow
+    {
+        public readonly int MutationWeight;
+        public readonly double FullDecayPerTick;
+        public readonly double HappyDecayPerTick;
+        public readonly double PixelsPerSpeed;
+        public readonly double PixelsPerSize;
+        public readonly double FoodGravity;
+        public readonly string Info;
+
+        public GameConfigRow(int mutationWeight, double fullDecayPerTick, double happyDecayPerTick, double pixelsPerSpeed, double pixelsPerSize, double foodGravity, string info)
+        {
+            MutationWeight = mutationWeight;
+            FullDecayPerTick = fullDecayPerTick;
+            HappyDecayPerTick = happyDecayPerTick;
+            PixelsPerSpeed = pixelsPerSpeed;
+            PixelsPerSize = pixelsPerSize;
+            FoodGravity = foodGravity;
+            Info = info;
+        }
+    }
+
     public static class GameData
     {
         public static readonly EnumDataRow[] EnumData = new EnumDataRow[]
@@ -445,39 +471,36 @@ namespace SnailPet.Data
 
         public static readonly PartsColorDataRow[] PartsColorData = new PartsColorDataRow[]
         {
-            new PartsColorDataRow(PartsType.Shell, "commonshell01_c01"),
-            new PartsColorDataRow(PartsType.Shell, "commonshell01_c02"),
-            new PartsColorDataRow(PartsType.Shell, "commonshell01_c03"),
-            new PartsColorDataRow(PartsType.Shell, "commonshell01_c04"),
-            new PartsColorDataRow(PartsType.Shell, "commonshell01_c05"),
-            new PartsColorDataRow(PartsType.Shell, "commonshell01_c06"),
-            new PartsColorDataRow(PartsType.Shell, "commonshell01_c07"),
-            new PartsColorDataRow(PartsType.Shell, "commonshell01_c08"),
-            new PartsColorDataRow(PartsType.Shell, "commonshell02_c01"),
-            new PartsColorDataRow(PartsType.Shell, "commonshell02_c02"),
-            new PartsColorDataRow(PartsType.Shell, "commonshell02_c03"),
-            new PartsColorDataRow(PartsType.Shell, "commonshell02_c04"),
-            new PartsColorDataRow(PartsType.Shell, "commonshell02_c05"),
-            new PartsColorDataRow(PartsType.Shell, "commonshell02_c06"),
-            new PartsColorDataRow(PartsType.Shell, "rareshell01_c01"),
-            new PartsColorDataRow(PartsType.Body, "commonbody01_c01"),
-            new PartsColorDataRow(PartsType.Body, "commonbody01_c02"),
-            new PartsColorDataRow(PartsType.Body, "commonbody01_c03"),
-            new PartsColorDataRow(PartsType.Body, "commonbody01_c04"),
-            new PartsColorDataRow(PartsType.Body, "commonbody01_c05"),
-            new PartsColorDataRow(PartsType.Body, "commonbody01_c06"),
-            new PartsColorDataRow(PartsType.Body, "commonbody02_c01"),
-            new PartsColorDataRow(PartsType.Body, "commonbody03_c01"),
-            new PartsColorDataRow(PartsType.Body, "commonbody03_c02"),
-            new PartsColorDataRow(PartsType.Eyes, "eyes_yellow01"),
-            new PartsColorDataRow(PartsType.Eyes, "eyes_black01"),
-            new PartsColorDataRow(PartsType.Mucus, "mucus_purple01"),
-            new PartsColorDataRow(PartsType.Mucus, "mucus_white01"),
-            new PartsColorDataRow(PartsType.Feeler, "commonfeeler01_c01"),
-            new PartsColorDataRow(PartsType.Feeler, "commonfeeler02_c01"),
-            new PartsColorDataRow(PartsType.Feeler, "commonfeeler03_c01"),
-            new PartsColorDataRow(PartsType.Feeler, "commonfeeler04_c01"),
-            new PartsColorDataRow(PartsType.Feeler, "commonfeeler04_c02"),
+            new PartsColorDataRow(PartsType.Shell, "commonshell01", "commonshell01_c01", 5),
+            new PartsColorDataRow(PartsType.Shell, "commonshell01", "commonshell01_c02", 5),
+            new PartsColorDataRow(PartsType.Shell, "commonshell01", "commonshell01_c03", 5),
+            new PartsColorDataRow(PartsType.Shell, "commonshell01", "commonshell01_c04", 5),
+            new PartsColorDataRow(PartsType.Shell, "commonshell01", "commonshell01_c05", 5),
+            new PartsColorDataRow(PartsType.Shell, "commonshell01", "commonshell01_c06", 5),
+            new PartsColorDataRow(PartsType.Shell, "commonshell01", "commonshell01_c07", 5),
+            new PartsColorDataRow(PartsType.Shell, "commonshell01", "commonshell01_c08", 5),
+            new PartsColorDataRow(PartsType.Shell, "commonshell02", "commonshell02_c01", 5),
+            new PartsColorDataRow(PartsType.Shell, "commonshell02", "commonshell02_c02", 5),
+            new PartsColorDataRow(PartsType.Shell, "commonshell02", "commonshell02_c03", 5),
+            new PartsColorDataRow(PartsType.Shell, "commonshell02", "commonshell02_c04", 5),
+            new PartsColorDataRow(PartsType.Shell, "commonshell02", "commonshell02_c05", 5),
+            new PartsColorDataRow(PartsType.Shell, "commonshell02", "commonshell02_c06", 5),
+            new PartsColorDataRow(PartsType.Shell, "rareshell01", "rareshell01_c01", 5),
+            new PartsColorDataRow(PartsType.Body, "commonbody01", "commonbody01_c01", 5),
+            new PartsColorDataRow(PartsType.Body, "commonbody01", "commonbody01_c02", 5),
+            new PartsColorDataRow(PartsType.Body, "commonbody01", "commonbody01_c03", 5),
+            new PartsColorDataRow(PartsType.Body, "commonbody01", "commonbody01_c04", 5),
+            new PartsColorDataRow(PartsType.Body, "commonbody01", "commonbody01_c05", 5),
+            new PartsColorDataRow(PartsType.Body, "commonbody01", "commonbody01_c06", 5),
+            new PartsColorDataRow(PartsType.Body, "commonbody02", "commonbody02_c01", 5),
+            new PartsColorDataRow(PartsType.Body, "commonbody03", "commonbody03_c01", 5),
+            new PartsColorDataRow(PartsType.Body, "commonbody03", "commonbody03_c02", 5),
+            new PartsColorDataRow(PartsType.Body, "rarebody01", "rarebody01_c01", 5),
+            new PartsColorDataRow(PartsType.Feeler, "commonfeeler01", "commonfeeler01_c01", 5),
+            new PartsColorDataRow(PartsType.Feeler, "commonfeeler02", "commonfeeler02_c01", 5),
+            new PartsColorDataRow(PartsType.Feeler, "commonfeeler02", "commonfeeler02_c02", 5),
+            new PartsColorDataRow(PartsType.Feeler, "commonfeeler03", "commonfeeler03_c01", 5),
+            new PartsColorDataRow(PartsType.Feeler, "commonfeeler04", "commonfeeler04_c01", 5),
         };
 
         public static readonly PartsDataRow[] PartsData = new PartsDataRow[]
@@ -513,12 +536,10 @@ namespace SnailPet.Data
             new PartsDataRow(25, 25, 2, RarityType.Common, PartsType.Eyes, "commoneyes04", false, System.Array.Empty<string>(), 10, 80),
             new PartsDataRow(110, 110, 2, RarityType.Common, PartsType.Eyes, "commoneyes05", false, System.Array.Empty<string>(), 10, 111),
             new PartsDataRow(26, 26, 2, RarityType.Common, PartsType.Feeler, "commonfeeler01", true, new string[] { "commonfeeler01_c01" }, 10, 81),
-            new PartsDataRow(27, 27, 2, RarityType.Common, PartsType.Feeler, "commonfeeler02", true, new string[] { "commonfeeler02_c01" }, 10, 82),
-            new PartsDataRow(28, 28, 2, RarityType.Common, PartsType.Feeler, "commonfeeler03", true, new string[] { "commonfeeler03_c01" }, 10, 83),
+            new PartsDataRow(138, 138, 2, RarityType.Common, PartsType.Feeler, "commonfeeler02", true, new string[] { "commonfeeler02_c01" }, 10, 139),
+            new PartsDataRow(140, 140, 2, RarityType.Common, PartsType.Feeler, "commonfeeler02", true, new string[] { "commonfeeler02_c02" }, 10, 139),
+            new PartsDataRow(54, 54, 2, RarityType.Common, PartsType.Feeler, "commonfeeler03", true, new string[] { "commonfeeler03_c01" }, 10, 86),
             new PartsDataRow(29, 29, 2, RarityType.Common, PartsType.Feeler, "commonfeeler04", true, new string[] { "commonfeeler04_c01" }, 10, 84),
-            new PartsDataRow(30, 30, 2, RarityType.Common, PartsType.Feeler, "commonfeeler04", true, new string[] { "commonfeeler04_c02" }, 10, 85),
-            new PartsDataRow(54, 54, 17, RarityType.Common, PartsType.Feeler, "commonfeeler05", true, new string[] { "commonfeeler05_c01" }, 10, 86),
-            new PartsDataRow(55, 55, 17, RarityType.Common, PartsType.Feeler, "commonfeeler05", true, new string[] { "commonfeeler05_c02" }, 10, 87),
         };
 
         public static readonly FoodDataRow[] FoodData = new FoodDataRow[]
@@ -744,6 +765,11 @@ namespace SnailPet.Data
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
         {
             new UnlockDataRow(101, ConditionType.SnailLevel, 2, null, null),
+        };
+
+        public static readonly GameConfigRow[] GameConfig = new GameConfigRow[]
+        {
+            new GameConfigRow(5, 1d, 1d, 24d, 20d, 1600d, null),
         };
 
         public static readonly Dictionary<int, PartsDataRow> PartsDataById = BuildPartsDataById();
@@ -982,6 +1008,9 @@ namespace SnailPet.Data
             { "[천사링01정보]", 135 },
             { "[해골마스크]", 136 },
             { "[해골마스크정보]", 137 },
+            { "[일반_오목더듬이01]", 138 },
+            { "[일반_오목더듬이01정보]", 139 },
+            { "[일반_오목더듬이02]", 140 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

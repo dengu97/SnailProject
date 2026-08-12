@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-12 13:11:44",
+  "generatedAt": "2026-08-12 14:31:36",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -147,7 +147,10 @@
     "[천사링01]": 134,
     "[천사링01정보]": 135,
     "[해골마스크]": 136,
-    "[해골마스크정보]": 137
+    "[해골마스크정보]": 137,
+    "[일반_오목더듬이01]": 138,
+    "[일반_오목더듬이01정보]": 139,
+    "[일반_오목더듬이02]": 140
   },
   "tables": {
     "EnumData": [
@@ -179,39 +182,36 @@
       {"EnumType": "ConditionType", "EnumName": "PayItem", "EnumValue": 3, "IconResourceKey": null, "SortOrder": null, "DeformGroup": null}
     ],
     "PartsColorData": [
-      {"PartsType": "Shell", "ColorResourceKey": "commonshell01_c01"},
-      {"PartsType": "Shell", "ColorResourceKey": "commonshell01_c02"},
-      {"PartsType": "Shell", "ColorResourceKey": "commonshell01_c03"},
-      {"PartsType": "Shell", "ColorResourceKey": "commonshell01_c04"},
-      {"PartsType": "Shell", "ColorResourceKey": "commonshell01_c05"},
-      {"PartsType": "Shell", "ColorResourceKey": "commonshell01_c06"},
-      {"PartsType": "Shell", "ColorResourceKey": "commonshell01_c07"},
-      {"PartsType": "Shell", "ColorResourceKey": "commonshell01_c08"},
-      {"PartsType": "Shell", "ColorResourceKey": "commonshell02_c01"},
-      {"PartsType": "Shell", "ColorResourceKey": "commonshell02_c02"},
-      {"PartsType": "Shell", "ColorResourceKey": "commonshell02_c03"},
-      {"PartsType": "Shell", "ColorResourceKey": "commonshell02_c04"},
-      {"PartsType": "Shell", "ColorResourceKey": "commonshell02_c05"},
-      {"PartsType": "Shell", "ColorResourceKey": "commonshell02_c06"},
-      {"PartsType": "Shell", "ColorResourceKey": "rareshell01_c01"},
-      {"PartsType": "Body", "ColorResourceKey": "commonbody01_c01"},
-      {"PartsType": "Body", "ColorResourceKey": "commonbody01_c02"},
-      {"PartsType": "Body", "ColorResourceKey": "commonbody01_c03"},
-      {"PartsType": "Body", "ColorResourceKey": "commonbody01_c04"},
-      {"PartsType": "Body", "ColorResourceKey": "commonbody01_c05"},
-      {"PartsType": "Body", "ColorResourceKey": "commonbody01_c06"},
-      {"PartsType": "Body", "ColorResourceKey": "commonbody02_c01"},
-      {"PartsType": "Body", "ColorResourceKey": "commonbody03_c01"},
-      {"PartsType": "Body", "ColorResourceKey": "commonbody03_c02"},
-      {"PartsType": "Eyes", "ColorResourceKey": "eyes_yellow01"},
-      {"PartsType": "Eyes", "ColorResourceKey": "eyes_black01"},
-      {"PartsType": "Mucus", "ColorResourceKey": "mucus_purple01"},
-      {"PartsType": "Mucus", "ColorResourceKey": "mucus_white01"},
-      {"PartsType": "Feeler", "ColorResourceKey": "commonfeeler01_c01"},
-      {"PartsType": "Feeler", "ColorResourceKey": "commonfeeler02_c01"},
-      {"PartsType": "Feeler", "ColorResourceKey": "commonfeeler03_c01"},
-      {"PartsType": "Feeler", "ColorResourceKey": "commonfeeler04_c01"},
-      {"PartsType": "Feeler", "ColorResourceKey": "commonfeeler04_c02"}
+      {"PartsType": "Shell", "ResourceKey": "commonshell01", "ColorResourceKey": "commonshell01_c01", "MutationWeight": 5},
+      {"PartsType": "Shell", "ResourceKey": "commonshell01", "ColorResourceKey": "commonshell01_c02", "MutationWeight": 5},
+      {"PartsType": "Shell", "ResourceKey": "commonshell01", "ColorResourceKey": "commonshell01_c03", "MutationWeight": 5},
+      {"PartsType": "Shell", "ResourceKey": "commonshell01", "ColorResourceKey": "commonshell01_c04", "MutationWeight": 5},
+      {"PartsType": "Shell", "ResourceKey": "commonshell01", "ColorResourceKey": "commonshell01_c05", "MutationWeight": 5},
+      {"PartsType": "Shell", "ResourceKey": "commonshell01", "ColorResourceKey": "commonshell01_c06", "MutationWeight": 5},
+      {"PartsType": "Shell", "ResourceKey": "commonshell01", "ColorResourceKey": "commonshell01_c07", "MutationWeight": 5},
+      {"PartsType": "Shell", "ResourceKey": "commonshell01", "ColorResourceKey": "commonshell01_c08", "MutationWeight": 5},
+      {"PartsType": "Shell", "ResourceKey": "commonshell02", "ColorResourceKey": "commonshell02_c01", "MutationWeight": 5},
+      {"PartsType": "Shell", "ResourceKey": "commonshell02", "ColorResourceKey": "commonshell02_c02", "MutationWeight": 5},
+      {"PartsType": "Shell", "ResourceKey": "commonshell02", "ColorResourceKey": "commonshell02_c03", "MutationWeight": 5},
+      {"PartsType": "Shell", "ResourceKey": "commonshell02", "ColorResourceKey": "commonshell02_c04", "MutationWeight": 5},
+      {"PartsType": "Shell", "ResourceKey": "commonshell02", "ColorResourceKey": "commonshell02_c05", "MutationWeight": 5},
+      {"PartsType": "Shell", "ResourceKey": "commonshell02", "ColorResourceKey": "commonshell02_c06", "MutationWeight": 5},
+      {"PartsType": "Shell", "ResourceKey": "rareshell01", "ColorResourceKey": "rareshell01_c01", "MutationWeight": 5},
+      {"PartsType": "Body", "ResourceKey": "commonbody01", "ColorResourceKey": "commonbody01_c01", "MutationWeight": 5},
+      {"PartsType": "Body", "ResourceKey": "commonbody01", "ColorResourceKey": "commonbody01_c02", "MutationWeight": 5},
+      {"PartsType": "Body", "ResourceKey": "commonbody01", "ColorResourceKey": "commonbody01_c03", "MutationWeight": 5},
+      {"PartsType": "Body", "ResourceKey": "commonbody01", "ColorResourceKey": "commonbody01_c04", "MutationWeight": 5},
+      {"PartsType": "Body", "ResourceKey": "commonbody01", "ColorResourceKey": "commonbody01_c05", "MutationWeight": 5},
+      {"PartsType": "Body", "ResourceKey": "commonbody01", "ColorResourceKey": "commonbody01_c06", "MutationWeight": 5},
+      {"PartsType": "Body", "ResourceKey": "commonbody02", "ColorResourceKey": "commonbody02_c01", "MutationWeight": 5},
+      {"PartsType": "Body", "ResourceKey": "commonbody03", "ColorResourceKey": "commonbody03_c01", "MutationWeight": 5},
+      {"PartsType": "Body", "ResourceKey": "commonbody03", "ColorResourceKey": "commonbody03_c02", "MutationWeight": 5},
+      {"PartsType": "Body", "ResourceKey": "rarebody01", "ColorResourceKey": "rarebody01_c01", "MutationWeight": 5},
+      {"PartsType": "Feeler", "ResourceKey": "commonfeeler01", "ColorResourceKey": "commonfeeler01_c01", "MutationWeight": 5},
+      {"PartsType": "Feeler", "ResourceKey": "commonfeeler02", "ColorResourceKey": "commonfeeler02_c01", "MutationWeight": 5},
+      {"PartsType": "Feeler", "ResourceKey": "commonfeeler02", "ColorResourceKey": "commonfeeler02_c02", "MutationWeight": 5},
+      {"PartsType": "Feeler", "ResourceKey": "commonfeeler03", "ColorResourceKey": "commonfeeler03_c01", "MutationWeight": 5},
+      {"PartsType": "Feeler", "ResourceKey": "commonfeeler04", "ColorResourceKey": "commonfeeler04_c01", "MutationWeight": 5}
     ],
     "PartsData": [
       {"Id": 1, "NameId": 1, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Shell", "ResourceKey": "commonshell01", "IsUseColor": true, "Colors": ["commonshell01_c01"], "AppearWeight": 10, "InfoId": 57},
@@ -245,12 +245,10 @@
       {"Id": 25, "NameId": 25, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "commoneyes04", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 80},
       {"Id": 110, "NameId": 110, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "commoneyes05", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 111},
       {"Id": 26, "NameId": 26, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler01", "IsUseColor": true, "Colors": ["commonfeeler01_c01"], "AppearWeight": 10, "InfoId": 81},
-      {"Id": 27, "NameId": 27, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler02", "IsUseColor": true, "Colors": ["commonfeeler02_c01"], "AppearWeight": 10, "InfoId": 82},
-      {"Id": 28, "NameId": 28, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler03", "IsUseColor": true, "Colors": ["commonfeeler03_c01"], "AppearWeight": 10, "InfoId": 83},
-      {"Id": 29, "NameId": 29, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler04", "IsUseColor": true, "Colors": ["commonfeeler04_c01"], "AppearWeight": 10, "InfoId": 84},
-      {"Id": 30, "NameId": 30, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler04", "IsUseColor": true, "Colors": ["commonfeeler04_c02"], "AppearWeight": 10, "InfoId": 85},
-      {"Id": 54, "NameId": 54, "PartsGroupId": 17, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler05", "IsUseColor": true, "Colors": ["commonfeeler05_c01"], "AppearWeight": 10, "InfoId": 86},
-      {"Id": 55, "NameId": 55, "PartsGroupId": 17, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler05", "IsUseColor": true, "Colors": ["commonfeeler05_c02"], "AppearWeight": 10, "InfoId": 87}
+      {"Id": 138, "NameId": 138, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler02", "IsUseColor": true, "Colors": ["commonfeeler02_c01"], "AppearWeight": 10, "InfoId": 139},
+      {"Id": 140, "NameId": 140, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler02", "IsUseColor": true, "Colors": ["commonfeeler02_c02"], "AppearWeight": 10, "InfoId": 139},
+      {"Id": 54, "NameId": 54, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler03", "IsUseColor": true, "Colors": ["commonfeeler03_c01"], "AppearWeight": 10, "InfoId": 86},
+      {"Id": 29, "NameId": 29, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler04", "IsUseColor": true, "Colors": ["commonfeeler04_c01"], "AppearWeight": 10, "InfoId": 84}
     ],
     "FoodData": [
       {"Id": 31, "FoodType": "vegetable", "NameId": 31, "RarityType": "Common", "FullPoint": 5, "HappyPoint": 3, "BuffId": 0, "InfoId": 124, "ResourceKey": "food_lettuce"},
@@ -448,6 +446,9 @@
     ],
     "UnlockData": [
       {"Id": 101, "ConditionType": "SnailLevel", "NeedConditionValue": 2, "CostItem": null, "CostCount": null}
+    ],
+    "GameConfig": [
+      {"MutationWeight": 5, "FullDecayPerTick": 1, "HappyDecayPerTick": 1, "PixelsPerSpeed": 24, "PixelsPerSize": 20, "FoodGravity": 1600, "Info": null}
     ]
   }
 }

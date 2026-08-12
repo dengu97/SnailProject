@@ -16,18 +16,11 @@ namespace SnailPet.Snail
     /// </summary>
     public sealed class SnailGrowth
     {
-        /// <summary>Speed 1 당 초속 픽셀. 현재 데이터(Speed 1~10.5)에서 24~252 px/s 가 된다.</summary>
-        public const float PixelsPerSpeedUnit = 24f;
+        /// <summary>Speed 1 당 초속 픽셀. GameConfig 시트가 소유한다.</summary>
+        public static float PixelsPerSpeedUnit => Config.PixelsPerSpeed;
 
-        /// <summary>Size 1 당 화면 가로 픽셀. 현재 데이터(Size 4~11)에서 80~220 px 가 된다.</summary>
-        public const float PixelsPerSizeUnit = 20f;
-
-        /// <summary>
-        /// UseFullPointTime / UseHappyPointTime 마다 각각 1 씩 줄어든다.
-        /// 레벨 1 기준 120초 · Need 10 이므로 가득 찬 상태에서 바닥까지 20분이다.
-        /// 감소량을 레벨마다 다르게 할 일이 생기면 LevelData 에 열을 추가하면 된다.
-        /// </summary>
-        public const double DecayPerTick = 1.0;
+        /// <summary>Size 1 당 화면 가로 픽셀. GameConfig 시트가 소유한다.</summary>
+        public static float PixelsPerSizeUnit => Config.PixelsPerSize;
 
         private static Dictionary<int, LevelDataRow> _byLevel;
         private static int _maxLevel;
@@ -174,11 +167,13 @@ namespace SnailPet.Snail
 
             // 포만도 감소. BuffType.Full 이 걸려 있으면 허기가 떨어지지 않는다.
             if (!Buffs.IsActive(BuffType.Full))
-                FullPoint = Decay(FullPoint, Current.UseFullPointTime, dt, ref _fullDecayTimer);
+                FullPoint = Decay(FullPoint, Current.UseFullPointTime, Config.FullDecayPerTick,
+                                  dt, ref _fullDecayTimer);
             else
                 _fullDecayTimer = 0;   // 버프가 끝난 직후 밀린 감소가 한꺼번에 터지지 않게
 
-            HappyPoint = Decay(HappyPoint, Current.UseHappyPointTime, dt, ref _happyDecayTimer);
+            HappyPoint = Decay(HappyPoint, Current.UseHappyPointTime, Config.HappyDecayPerTick,
+                               dt, ref _happyDecayTimer);
 
             UpdateTierBuffs();
 
@@ -217,16 +212,20 @@ namespace SnailPet.Snail
             }
         }
 
-        /// <summary>주기마다 1 씩 깎는다. 한 프레임에 여러 주기가 지나도 그만큼 처리한다.</summary>
-        private static double Decay(double value, double interval, double dt, ref double timer)
+        /// <summary>
+        /// 주기마다 <paramref name="perTick"/> 만큼 깎는다.
+        /// 한 프레임에 여러 주기가 지나도 그만큼 처리한다.
+        /// </summary>
+        private static double Decay(double value, double interval, double perTick,
+                                    double dt, ref double timer)
         {
-            if (interval <= 0 || value <= 0) return value;
+            if (interval <= 0 || value <= 0 || perTick <= 0) return value;
 
             timer += dt;
             while (timer >= interval)
             {
                 timer -= interval;
-                value = Math.Max(0, value - DecayPerTick);
+                value = Math.Max(0, value - perTick);
                 if (value <= 0) break;
             }
             return value;

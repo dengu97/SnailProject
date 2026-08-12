@@ -41,8 +41,8 @@ namespace SnailPet.Snail
     /// </summary>
     public sealed class FoodField
     {
-        /// <summary>낙하 가속도(px/s^2). 툭 떨어지는 느낌이 나는 값.</summary>
-        public const float Gravity = 1600f;
+        /// <summary>낙하 가속도(px/s^2). GameConfig 시트가 소유한다.</summary>
+        public static float Gravity => SnailPet.Data.Config.FoodGravity;
 
         /// <summary>화면에 보일 먹이 가로 크기(px).</summary>
         public const float FoodPixels = 64f;

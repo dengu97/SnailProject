@@ -101,7 +101,7 @@ namespace SnailPet
         private float _claimFlashUntil;
 
         /// <summary>낙하 가속도(px/s^2). 먹이와 같은 값을 써서 같은 무게감으로 떨어진다.</summary>
-        private const float Gravity = FoodField.Gravity;
+        private static float Gravity => FoodField.Gravity;
 
         private enum DragTarget { None, Snail, Food }
         private DragTarget _drag = DragTarget.None;
