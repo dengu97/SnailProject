@@ -165,6 +165,18 @@ namespace SnailPet.Snail
             return true;
         }
 
+        /// <summary>보유 악세서리를 옷장이 쓰는 (아이템, 개수) 목록으로. 0개는 빼고 낸다.</summary>
+        public (int accessoryId, int count)[] OwnedAccessories()
+        {
+            var list = new List<(int, int)>();
+            foreach (var a in GameData.AccessoriesData)
+            {
+                long n = Items.CountOf(a.Id);
+                if (n > 0) list.Add((a.Id, (int)n));
+            }
+            return list.ToArray();
+        }
+
         /// <summary>보유 음식을 UI 가 쓰는 (아이템, 개수) 목록으로. 0개는 빼고 낸다.</summary>
         public (int foodId, int count)[] OwnedFoods()
         {

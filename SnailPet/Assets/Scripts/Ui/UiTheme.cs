@@ -190,6 +190,36 @@ namespace SnailPet.Ui
             public static readonly RectInt Back = At.Close;
         }
 
+        /// <summary>
+        /// 옷장. 탭이 아니라 상세 패널의 「옷장」 버튼으로 들어가는 모드다.
+        /// 들어가면 왼쪽은 목록 대신 옷장이 되고 오른쪽은 입은 모습이 된다.
+        ///
+        /// 이름칸·연필·등급·닫기는 <see cref="At"/> 와 좌표가 소수점까지 같아 그대로 쓴다.
+        /// 그리드도 음식 그리드와 칸 크기·간격이 같고 시작 높이만 다르다 —
+        /// 위에 부위 필터 줄이 한 줄 들어가기 때문이다.
+        /// </summary>
+        public static class Wardrobe
+        {
+            /// <summary>
+            /// 부위 필터. 눌러서 켜고 끄며 <b>여러 개를 동시에</b> 켤 수 있다 (기본 전부 ON).
+            /// 칸 수는 EnumData 의 AccessoriesType 행 수를 따라간다.
+            /// </summary>
+            public static readonly RectInt Filter = new RectInt(12, 25, 33, 16);
+            public const int FilterStep = 38;
+
+            /// <summary>보유 악세서리 그리드. 필터 줄 아래에서 시작한다.</summary>
+            public static readonly RectInt View = new RectInt(0, 48, PanelW, PanelH - 48);
+
+            // ── 오른쪽: 입은 모습 ──
+            public static readonly RectInt Preview = new RectInt(28, 38, 125, 105);
+
+            /// <summary>지금 낀 것들을 모아 보여 주는 상자.</summary>
+            public static readonly RectInt WornBox   = new RectInt(  9, 155, PanelW - 18, 55);
+            public static readonly RectInt WornTitle = new RectInt(  0, 155, PanelW,      16);
+            public static readonly RectInt WornSlot  = new RectInt( 14, 174, 32, 32);
+            public const int WornStep = 38;
+        }
+
         /// <summary>알 탭의 부화기 패널. 패널 왼쪽 위가 원점.</summary>
         public static class Egg
         {

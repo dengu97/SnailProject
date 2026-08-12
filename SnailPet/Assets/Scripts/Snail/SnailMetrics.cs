@@ -135,27 +135,38 @@ namespace SnailPet.Snail
         }
 
         /// <summary>스프라이트의 불투명 영역을 피벗 기준 월드 단위로 돌려준다.</summary>
-        private static bool TryGetExtents(Sprite sprite, out Extents e)
+        /// <summary>
+        /// 알파가 있는 부분만 감싸는 텍스처 사각형.
+        ///
+        /// 달팽이 파츠와 악세서리는 1200x1200 공용 캔버스에 「얹힐 자리 그대로」 그려져 있어,
+        /// 아이콘처럼 작은 칸에 그대로 넣으면 그림이 점만 하게 나온다. 잘라 쓸 때 이 값을 쓴다.
+        /// </summary>
+        public static bool TryGetTightRect(Sprite sprite, out Rect rect)
         {
-            if (_cache.TryGetValue(sprite, out e)) return true;
-            e = default;
+            rect = default;
+            if (sprite == null || !TryScan(sprite.texture, out int minX, out int maxX, out int minY, out int maxY))
+                return false;
 
-            var tex = sprite.texture;
+            rect = new Rect(minX, minY, maxX - minX + 1, maxY - minY + 1);
+            return true;
+        }
+
+        private static bool TryScan(Texture2D tex, out int minX, out int maxX, out int minY, out int maxY)
+        {
+            minX = maxX = minY = maxY = 0;
             if (tex == null) return false;
 
             Color32[] px;
             try { px = tex.GetPixels32(); }
             catch (UnityException)
             {
-                // Read/Write 가 꺼져 있으면 여기서 막힌다. SnailArtImporter 가 켜 주지만
-                // 임포트 설정이 어긋나면 조용히 틀린 값을 쓰는 것보다 알리는 게 낫다.
                 Debug.LogWarning($"[SnailPet] {tex.name} 의 픽셀을 읽을 수 없습니다. " +
                                  "Read/Write Enabled 를 켜거나 메뉴 SnailPet > 4. 아트 리임포트 를 실행하세요.");
                 return false;
             }
 
             int w = tex.width, h = tex.height;
-            int minX = w, maxX = -1, minY = h, maxY = -1;
+            minX = w; maxX = -1; minY = h; maxY = -1;
 
             for (int y = 0; y < h; y++)
             {
@@ -169,7 +180,20 @@ namespace SnailPet.Snail
                     if (y > maxY) maxY = y;
                 }
             }
-            if (maxX < 0) return false;                     // 전부 투명
+            return maxX >= 0;                               // 전부 투명이면 false
+        }
+
+        private static bool TryGetExtents(Sprite sprite, out Extents e)
+        {
+            if (_cache.TryGetValue(sprite, out e)) return true;
+            e = default;
+
+            var tex = sprite.texture;
+            if (tex == null) return false;
+
+            // Read/Write 가 꺼져 있으면 여기서 막힌다. SnailArtImporter 가 켜 주지만
+            // 임포트 설정이 어긋나면 조용히 틀린 값을 쓰는 것보다 알리는 게 낫다.
+            if (!TryScan(tex, out int minX, out int maxX, out int minY, out int maxY)) return false;
 
             // 피벗 기준 오프셋. 피벗 설정이 무엇이든 맞도록 sprite.pivot 을 직접 쓴다.
             float ppu = sprite.pixelsPerUnit;

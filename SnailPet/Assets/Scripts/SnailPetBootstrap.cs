@@ -418,7 +418,9 @@ namespace SnailPet
 
             _ui.Rename   += () => Say("      [UI] 이름 수정");
             _ui.Detail   += () => Say("      [UI] 상세정보");
-            _ui.Wardrobe += () => Say("      [UI] 옷장");
+            _ui.Wardrobe += OpenWardrobe;
+            _ui.ToggleEquip += EquipAccessory;
+            _ui.FilterChanged += RefreshWardrobe;
             _ui.Gene     += () => Say("      [UI] 유전 정보");
             _ui.Sell     += () => Say("      [UI] 판매");
             _ui.Settings += () => Say("      [UI] 설정");
@@ -481,6 +483,58 @@ namespace SnailPet
             var size = SnailUi.PortraitSize;
             _portrait = new SnailPortrait(transform, _appearance, _bounds, size.x, size.y);
             _ui.SetPortrait(_portrait.Texture);
+        }
+
+        // ── 옷장 ──
+
+        private SnailPortrait _wardrobeView;
+
+        /// <summary>「옷장」 버튼. 왼쪽 패널을 옷장으로 바꾸고 입은 모습을 찍어 넣는다.</summary>
+        private void OpenWardrobe()
+        {
+            _ui.OpenWardrobe(true);
+            RefreshWardrobe();
+            Say("      [UI] 옷장 — 보유 악세서리 " + _player.OwnedAccessories().Length + "종");
+        }
+
+        /// <summary>옷장의 목록·장착 표시·미리보기를 지금 상태로 맞춘다.</summary>
+        private void RefreshWardrobe()
+        {
+            var snail = _player.Active;
+            if (snail == null) return;
+
+            _ui.SetWardrobe(snail.Name, snail.Rarity, _player.OwnedAccessories(), snail.Equipped.ToArray());
+            ReshootWardrobeView();
+        }
+
+        /// <summary>
+        /// 입은 모습을 다시 찍는다.
+        /// 화면을 도는 달팽이는 벽 따라 돌아가 있고 변형 중이라 그대로 비출 수 없다 —
+        /// 초상과 같은 방식으로 정지 복제본을 하나 더 만들어 찍는다.
+        /// </summary>
+        private void ReshootWardrobeView()
+        {
+            _wardrobeView?.Dispose();
+
+            var size = SnailUi.WardrobePreviewSize;
+            _wardrobeView = new SnailPortrait(transform, _appearance, _bounds, size.x, size.y);
+            _ui.SetWardrobePreview(_wardrobeView.Texture);
+        }
+
+        /// <summary>악세서리를 끼거나 뺐다. 화면의 달팽이도 같이 갈아입는다.</summary>
+        private void EquipAccessory(int accessoryId)
+        {
+            var snail = _player.Active;
+            if (snail == null || !snail.ToggleEquip(accessoryId)) return;
+
+            // 외형이 바뀌었으므로 통째로 다시 합성한다. 발선·껍질 중심도 다시 잰다.
+            ActivateSnail(snail);
+            RefreshSnail();
+            RefreshWardrobe();
+
+            string name = GameData.AccessoriesDataById.TryGetValue(accessoryId, out var row)
+                        ? Loc.ById(row.NameId) : accessoryId.ToString();
+            Say($"      [UI] {name} {(snail.Equipped.Contains(accessoryId) ? "착용" : "해제")} → {snail.Dressed()}");
         }
 
         /// <summary>상점에서 「구매하기」를 눌렀다. 오늘의 할인 칸에서 누른 것만 깎아 준다.</summary>

@@ -50,6 +50,8 @@ namespace SnailPet.Data
     {
         Hat = 1,
         Bag = 2,
+        Mask = 3,
+        Etc = 4,
     }
 
     public enum ConditionType
@@ -434,6 +436,8 @@ namespace SnailPet.Data
             new EnumDataRow("CategoryType", "Event", 6, null, null, null),
             new EnumDataRow("AccessoriesType", "Hat", 1, null, 250, null),
             new EnumDataRow("AccessoriesType", "Bag", 2, null, 260, null),
+            new EnumDataRow("AccessoriesType", "Mask", 3, null, 251, null),
+            new EnumDataRow("AccessoriesType", "Etc", 4, null, 255, null),
             new EnumDataRow("ConditionType", "SnailCount", 1, null, null, null),
             new EnumDataRow("ConditionType", "SnailLevel", 2, null, null, null),
             new EnumDataRow("ConditionType", "PayItem", 3, null, null, null),
@@ -727,6 +731,10 @@ namespace SnailPet.Data
             new LanguageDataRow(119, "부화시킬 알이 없습니다."),
             new LanguageDataRow(120, "부화 완료"),
             new LanguageDataRow(121, "준비중입니다."),
+            new LanguageDataRow(128, "모자"),
+            new LanguageDataRow(129, "가방"),
+            new LanguageDataRow(130, "마스크"),
+            new LanguageDataRow(131, "기타"),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -960,6 +968,10 @@ namespace SnailPet.Data
             { "[토마토정보]", 125 },
             { "[애호박정보]", 126 },
             { "[두부정보]", 127 },
+            { "[모자]", 128 },
+            { "[가방]", 129 },
+            { "[마스크]", 130 },
+            { "[기타]", 131 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

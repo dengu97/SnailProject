@@ -40,6 +40,19 @@ namespace SnailPet.Ui
             public const string NoEgg     = "[부화시킬알없음]";
             public const string HatchDone = "[부화완료]";
 
+            public const string Wardrobe = "[옷장]";
+            public const string Worn     = "[장착중]";
+
+            /// <summary>악세서리 부위 이름. 부위를 늘리면 여기에도 한 줄 더해야 한다.</summary>
+            public static string PartOf(SnailPet.Data.AccessoriesType t) => t switch
+            {
+                SnailPet.Data.AccessoriesType.Hat  => "[모자]",
+                SnailPet.Data.AccessoriesType.Bag  => "[가방]",
+                SnailPet.Data.AccessoriesType.Mask => "[마스크]",
+                SnailPet.Data.AccessoriesType.Etc  => "[기타]",
+                _ => t.ToString(),
+            };
+
             public const string Today    = "[오늘의추천]";
             public const string BuyIt    = "[구매하기]";
             public const string Preparing = "[준비중]";
@@ -207,6 +220,31 @@ namespace SnailPet.Ui
                     BuyProduct?.Invoke(_shopIds[_selectedShop], false);
             });
             Hook(_backBtn, LeaveShopCategory);
+
+            // 옷장
+            Hook(_wardrobeRenameBtn, () => Rename?.Invoke());
+            for (int i = 0; i < Count(_filters); i++)
+            {
+                int k = i;
+                Hook(_filters[i]?.Button, () => ToggleFilter(k));
+            }
+            for (int i = 0; i < Count(_wardrobeSlots); i++)
+            {
+                int k = i;
+                Hook(_wardrobeSlots[i]?.Button, () =>
+                {
+                    if (k < _wardrobeIds.Length) ToggleEquip?.Invoke(_wardrobeIds[k]);
+                });
+            }
+            // 「장착중」 칸을 누르면 그 부위를 벗는다
+            for (int i = 0; i < Count(_wornSlots); i++)
+            {
+                int k = i;
+                Hook(_wornSlots[i]?.Button, () =>
+                {
+                    if (k < _wornIds.Length && _wornIds[k] != 0) ToggleEquip?.Invoke(_wornIds[k]);
+                });
+            }
         }
 
         private static int Count(System.Array a) => a?.Length ?? 0;
@@ -269,6 +307,7 @@ namespace SnailPet.Ui
             BuildFoodDetail();
             BuildEggPanel();
             BuildShopPanels();
+            BuildWardrobePanel();
 
             SetMaximized(false);
 
@@ -424,6 +463,7 @@ namespace SnailPet.Ui
             BuildFoodGrid(panel);
 
             BuildShopCategories(panel);
+            BuildWardrobeList(panel);
             BuildScrollView(panel, "SnailList", Max.RowView, out _rowGridRoot, out _rowContent);
 
             _rows = new ListRow[Max.RowPool];
@@ -873,6 +913,14 @@ namespace SnailPet.Ui
         {
             _tab = Mathf.Clamp(index, 0, _tabs.Length - 1);
 
+            // 탭을 누르면 옷장에서 빠져나온다. 옷장은 왼쪽 패널을 통째로 쓰기 때문이다.
+            if (_inWardrobe)
+            {
+                _inWardrobe = false;
+                if (_wardrobeRoot != null)  _wardrobeRoot.gameObject.SetActive(false);
+                if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
+            }
+
             // 탭이 왼쪽 목록과 오른쪽 상세를 함께 바꾼다. 둘은 항상 같은 것을 보여 줘야 한다.
             bool food = _tab == 1, egg = _tab == 2, shop = _tab == 3;
             if (_foodGridRoot != null) _foodGridRoot.gameObject.SetActive(food);
@@ -1271,6 +1319,300 @@ namespace SnailPet.Ui
         {
             if (_shopCat >= 0) EnterShopCategory(_shopCat);
         }
+
+        // ── 옷장 ──
+        //
+        // 탭이 아니라 상세 패널의 「옷장」 버튼으로 들어가는 모드다. 들어가면 왼쪽은
+        // 목록 대신 옷장(부위 필터 + 보유 악세서리)이 되고, 오른쪽은 입은 모습이 된다.
+        // 탭을 누르면 빠져나온다.
+
+        [Serializable]
+        public sealed class FilterChip
+        {
+            public RectTransform Root;
+            public Image Box;
+            public Text Label;
+            public Button Button;
+            public bool On;
+        }
+
+        [SerializeField] private RectTransform _wardrobeRoot, _wardrobeContent, _wardrobePanel;
+        [SerializeField] private GridSlot[] _wardrobeSlots;
+        [SerializeField] private FilterChip[] _filters;
+        [SerializeField] private RawImage _wardrobePreview;
+        [SerializeField] private GridSlot[] _wornSlots;
+
+        private int[] _wardrobeIds = new int[0];
+        private bool _inWardrobe;
+
+        /// <summary>악세서리를 끼거나 뺐다. AccessoriesData 의 Id 가 나간다.</summary>
+        public event Action<int> ToggleEquip;
+
+        public bool InWardrobe => _inWardrobe;
+
+        private static SnailPet.Data.AccessoriesType[] Parts =>
+            (SnailPet.Data.AccessoriesType[])Enum.GetValues(typeof(SnailPet.Data.AccessoriesType));
+
+        /// <summary>왼쪽 옷장: 부위 필터 한 줄 + 보유 악세서리 그리드.</summary>
+        private void BuildWardrobeList(RectTransform panel)
+        {
+            _wardrobeRoot = NewRect("Wardrobe", panel);
+            Place(_wardrobeRoot, new RectInt(0, 0, UiTheme.PanelW, UiTheme.PanelH));
+            _wardrobeRoot.gameObject.SetActive(false);
+
+            var parts = Parts;
+            _filters = new FilterChip[parts.Length];
+            for (int i = 0; i < parts.Length; i++)
+            {
+                var f = UiTheme.Wardrobe.Filter;
+                var at = new RectInt(f.x + i * UiTheme.Wardrobe.FilterStep, f.y, f.width, f.height);
+
+                var root = NewRect("Filter" + parts[i], _wardrobeRoot);
+                Place(root, at);
+
+                var box = Backdrop(root.gameObject, UiSprites.Shape.LevelBadge, UiTheme.Slot);
+                var label = LocLabel(root, new RectInt(0, 0, at.width, at.height), Keys.PartOf(parts[i]), 8, UiTheme.Ink);
+
+                var btn = root.gameObject.AddComponent<Button>();
+                btn.targetGraphic = box;
+
+                _filters[i] = new FilterChip { Root = root, Box = box, Label = label, Button = btn, On = true };
+            }
+
+            BuildScrollView(_wardrobeRoot, "WardrobeGrid", UiTheme.Wardrobe.View,
+                            out var gridRoot, out _wardrobeContent);
+            gridRoot.gameObject.SetActive(true);   // 옷장 루트가 통째로 켜고 꺼진다
+
+            _wardrobeSlots = new GridSlot[Max.FoodSlotPool];
+            for (int i = 0; i < _wardrobeSlots.Length; i++)
+                _wardrobeSlots[i] = BuildGridSlot(_wardrobeContent, i);
+        }
+
+        /// <summary>오른쪽 옷장 패널: 이름·등급 + 입은 모습 + 지금 낀 것들.</summary>
+        private void BuildWardrobePanel()
+        {
+            _wardrobePanel = Panel(_detailRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
+            _wardrobePanel.gameObject.SetActive(false);
+
+            Box(_wardrobePanel, At.NameField, UiTheme.Slot, UiSprites.Shape.Name, "NameField");
+            _wardrobeName = Label(_wardrobePanel, At.NameField, "", 12, UiTheme.Ink);
+            _wardrobeRenameBtn = IconButton(_wardrobePanel, At.RenameBtn, "icon_rename", "Rename");
+
+            _wardrobeRarityBadge = Box(_wardrobePanel, At.Rarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
+            _wardrobeRarityText  = Label(_wardrobePanel, At.Rarity, "", 9, UiTheme.OnBadge);
+            Shrink(_wardrobeRarityText);
+            _wardrobeRarityIcon = Icon(_wardrobePanel, At.Rarity, null, Color.white, "RarityIcon");
+            _wardrobeRarityIcon.raycastTarget = false;
+            BakeRarity(_wardrobeRarityIcon, _wardrobeRarityBadge, _wardrobeRarityText);
+
+            // 입은 모습. 초상과 같은 방식이지만 옷장은 세로로 더 긴 자리를 쓴다.
+            var pv = NewRect("Preview", _wardrobePanel);
+            Place(pv, UiTheme.Wardrobe.Preview);
+            _wardrobePreview = pv.gameObject.AddComponent<RawImage>();
+            _wardrobePreview.raycastTarget = false;
+
+            Box(_wardrobePanel, UiTheme.Wardrobe.WornBox, UiTheme.Slot, UiSprites.Shape.Slot, "WornBox");
+            LocLabel(_wardrobePanel, UiTheme.Wardrobe.WornTitle, Keys.Worn, 9, UiTheme.Ink);
+
+            // 낀 것을 부위별로 한 칸씩 보여 준다. 부위가 늘면 칸도 같이 는다.
+            var parts = Parts;
+            _wornSlots = new GridSlot[parts.Length];
+            for (int i = 0; i < parts.Length; i++)
+            {
+                var w = UiTheme.Wardrobe.WornSlot;
+                var at = new RectInt(w.x + i * UiTheme.Wardrobe.WornStep, w.y, w.width, w.height);
+
+                var root = NewRect("Worn" + parts[i], _wardrobePanel);
+                Place(root, at);
+
+                var bg = Backdrop(root.gameObject, UiSprites.Shape.Slot2, UiTheme.RowSlot);
+                var slot = new GridSlot { Root = root, Button = root.gameObject.AddComponent<Button>() };
+                slot.Button.targetGraphic = bg;
+                slot.Icon = Icon(root, new RectInt(2, 2, at.width - 4, at.height - 4), null, Color.white, "Icon");
+                slot.Icon.raycastTarget = false;
+                slot.Count = Label(root, new RectInt(0, 0, at.width, at.height), "", 8, UiTheme.Ink);
+                _wornSlots[i] = slot;
+            }
+        }
+
+        [SerializeField] private Text _wardrobeName, _wardrobeRarityText;
+        [SerializeField] private Image _wardrobeRarityBadge, _wardrobeRarityIcon;
+        [SerializeField] private Button _wardrobeRenameBtn;
+
+        /// <summary>옷장에 들어가거나 나온다.</summary>
+        public void OpenWardrobe(bool on)
+        {
+            _inWardrobe = on;
+            if (on) SetMaximized(true);   // 옷장은 왼쪽 패널을 쓰므로 펼쳐져 있어야 한다
+            ApplyWardrobe();
+        }
+
+        private void ApplyWardrobe()
+        {
+            if (_wardrobeRoot == null) return;
+
+            _wardrobeRoot.gameObject.SetActive(_inWardrobe);
+            _wardrobePanel.gameObject.SetActive(_inWardrobe);
+
+            // 옷장에 있는 동안에는 목록·그리드·상세가 전부 물러난다
+            if (_inWardrobe)
+            {
+                if (_rowGridRoot != null)  _rowGridRoot.gameObject.SetActive(false);
+                if (_foodGridRoot != null) _foodGridRoot.gameObject.SetActive(false);
+                if (_eggGridRoot != null)  _eggGridRoot.gameObject.SetActive(false);
+                if (_shopCatRoot != null)  _shopCatRoot.gameObject.SetActive(false);
+                if (_shopGridRoot != null) _shopGridRoot.gameObject.SetActive(false);
+                if (_panel != null)        _panel.gameObject.SetActive(false);
+                if (_foodPanel != null)    _foodPanel.gameObject.SetActive(false);
+                if (_eggPanel != null)     _eggPanel.gameObject.SetActive(false);
+                if (_shopPanel != null)    _shopPanel.gameObject.SetActive(false);
+                if (_shopItemPanel != null)_shopItemPanel.gameObject.SetActive(false);
+                _listTitle.text = SnailPet.Data.Loc.Text(Keys.Wardrobe);
+            }
+            else SetTab(_tab);   // 있던 탭으로 되돌린다
+        }
+
+        /// <summary>입은 모습을 그릴 텍스처. 장착이 바뀔 때마다 다시 찍어 넣는다.</summary>
+        public void SetWardrobePreview(Texture texture)
+        {
+            if (_wardrobePreview == null) return;
+            _wardrobePreview.texture = texture;
+            _wardrobePreview.enabled = texture != null;
+        }
+
+        public static Vector2Int WardrobePreviewSize =>
+            new Vector2Int(UiTheme.Wardrobe.Preview.width, UiTheme.Wardrobe.Preview.height);
+
+        /// <summary>
+        /// 옷장 내용을 채운다.
+        /// <paramref name="owned"/> 는 (악세서리 Id, 개수), <paramref name="equipped"/> 는 낀 것들.
+        /// </summary>
+        public void SetWardrobe(string name, SnailPet.Data.RarityType rarity,
+                                (int accessoryId, int count)[] owned, int[] equipped)
+        {
+            _wardrobeName.text = string.IsNullOrWhiteSpace(name)
+                               ? SnailPet.Data.Loc.Text(Keys.NoName) : name;
+            ApplyRarity(_wardrobeRarityIcon, _wardrobeRarityBadge, _wardrobeRarityText, rarity);
+
+            // 꺼 놓은 부위는 목록에서 빠진다
+            var shown = new System.Collections.Generic.List<int>();
+            if (owned != null)
+                foreach (var o in owned)
+                    if (SnailPet.Data.GameData.AccessoriesDataById.TryGetValue(o.accessoryId, out var row)
+                        && FilterOn(row.AccessoriesType))
+                        shown.Add(o.accessoryId);
+
+            _wardrobeIds = shown.ToArray();
+
+            for (int i = 0; i < _wardrobeSlots.Length; i++)
+            {
+                bool has = i < _wardrobeIds.Length;
+                _wardrobeSlots[i].Root.gameObject.SetActive(has);
+                if (!has) continue;
+
+                int id = _wardrobeIds[i];
+                _wardrobeSlots[i].Icon.sprite = AccessorySprite(id);
+                _wardrobeSlots[i].Icon.enabled = _wardrobeSlots[i].Icon.sprite != null;
+
+                // 낀 것은 빨간 테두리와 「장착중」으로 표시한다 (목업)
+                bool worn = equipped != null && Array.IndexOf(equipped, id) >= 0;
+                _wardrobeSlots[i].Frame.enabled = worn;
+                _wardrobeSlots[i].Count.text = worn ? SnailPet.Data.Loc.Text(Keys.Worn) : "";
+                _wardrobeSlots[i].Count.alignment = TextAnchor.MiddleCenter;
+            }
+            FitContent(_wardrobeContent, _wardrobeIds.Length);
+
+            // 아래쪽 「장착중」 칸은 부위 순서대로 고정이다
+            var parts = Parts;
+            for (int i = 0; i < _wornSlots.Length && i < parts.Length; i++)
+            {
+                int id = 0;
+                if (equipped != null)
+                    foreach (int e in equipped)
+                        if (SnailPet.Data.GameData.AccessoriesDataById.TryGetValue(e, out var row)
+                            && row.AccessoriesType == parts[i]) { id = e; break; }
+
+                _wornSlots[i].Icon.sprite = id == 0 ? null : AccessorySprite(id);
+                _wornSlots[i].Icon.enabled = _wornSlots[i].Icon.sprite != null;
+                _wornSlots[i].Count.text = "";
+            }
+            _wornIds = WornIds(equipped);
+        }
+
+        private int[] _wornIds = new int[0];
+
+        private int[] WornIds(int[] equipped)
+        {
+            var parts = Parts;
+            var ids = new int[parts.Length];
+            if (equipped == null) return ids;
+
+            for (int i = 0; i < parts.Length; i++)
+                foreach (int e in equipped)
+                    if (SnailPet.Data.GameData.AccessoriesDataById.TryGetValue(e, out var row)
+                        && row.AccessoriesType == parts[i]) { ids[i] = e; break; }
+            return ids;
+        }
+
+        private bool FilterOn(SnailPet.Data.AccessoriesType type)
+        {
+            var parts = Parts;
+            for (int i = 0; i < parts.Length && i < Count(_filters); i++)
+                if (parts[i] == type) return _filters[i] == null || _filters[i].On;
+            return true;
+        }
+
+        private static readonly System.Collections.Generic.Dictionary<int, Sprite> _accIcons =
+            new System.Collections.Generic.Dictionary<int, Sprite>();
+
+        /// <summary>
+        /// 칸에 넣을 악세서리 그림.
+        ///
+        /// 악세서리 아트는 달팽이 파츠와 같은 1200x1200 공용 캔버스에 「얹힐 자리 그대로」
+        /// 그려져 있다. 그대로 32px 칸에 넣으면 대부분이 빈 여백이라 그림이 점만 해진다.
+        /// 그래서 알파가 있는 부분만 잘라 새 스프라이트를 만든다. 한 번 만들면 캐시한다.
+        /// </summary>
+        private static Sprite AccessorySprite(int accessoryId)
+        {
+            if (_accIcons.TryGetValue(accessoryId, out var cached)) return cached;
+
+            Sprite icon = null;
+            if (SnailPet.Data.GameData.AccessoriesDataById.TryGetValue(accessoryId, out var row)
+                && !string.IsNullOrEmpty(row.ResourceKey))
+            {
+                var full = Resources.Load<Sprite>("Snail/Accessories/" + row.ResourceKey);
+                if (full != null)
+                    icon = SnailPet.Snail.SnailMetrics.TryGetTightRect(full, out var tight)
+                         ? Sprite.Create(full.texture, tight, new Vector2(0.5f, 0.5f), full.pixelsPerUnit)
+                         : full;
+            }
+
+            _accIcons[accessoryId] = icon;
+            return icon;
+        }
+
+        /// <summary>부위 필터를 켜고 끈다. 꺼진 것은 색을 죽여 표시한다.</summary>
+        private void ToggleFilter(int index)
+        {
+            if (index < 0 || index >= Count(_filters)) return;
+            _filters[index].On = !_filters[index].On;
+            PaintFilters();
+            FilterChanged?.Invoke();
+        }
+
+        private void PaintFilters()
+        {
+            for (int i = 0; i < Count(_filters); i++)
+            {
+                if (_filters[i] == null) continue;
+                bool on = _filters[i].On;
+                _filters[i].Box.color = on ? Color.white : new Color(1f, 1f, 1f, 0.35f);
+                _filters[i].Label.color = on ? UiTheme.Ink : UiTheme.Slot;
+            }
+        }
+
+        /// <summary>필터가 바뀌었으니 목록을 다시 달라는 신호.</summary>
+        public event Action FilterChanged;
 
         /// <summary>목록을 펼칠지. 상세 패널은 화면에서 제자리에 남는다.</summary>
         public void SetMaximized(bool on)

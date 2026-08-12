@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-12 11:11:32",
+  "generatedAt": "2026-08-12 12:12:08",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -7,7 +7,7 @@
     "PartsType": {"Shell": 1, "Body": 2, "Eyes": 3, "Feeler": 4, "Mucus": 5},
     "RarityType": {"Common": 1, "Rare": 2, "Epic": 3, "Legendary": 4},
     "CategoryType": {"Food": 1, "Egg": 2, "Item": 3, "Accessories": 4, "Market": 5, "Event": 6},
-    "AccessoriesType": {"Hat": 1, "Bag": 2},
+    "AccessoriesType": {"Hat": 1, "Bag": 2, "Mask": 3, "Etc": 4},
     "ConditionType": {"SnailCount": 1, "SnailLevel": 2, "PayItem": 3}
   },
   "idByToken": {
@@ -137,7 +137,11 @@
     "[상추정보]": 124,
     "[토마토정보]": 125,
     "[애호박정보]": 126,
-    "[두부정보]": 127
+    "[두부정보]": 127,
+    "[모자]": 128,
+    "[가방]": 129,
+    "[마스크]": 130,
+    "[기타]": 131
   },
   "tables": {
     "EnumData": [
@@ -162,6 +166,8 @@
       {"EnumType": "CategoryType", "EnumName": "Event", "EnumValue": 6, "IconResourceKey": null, "SortOrder": null, "DeformGroup": null},
       {"EnumType": "AccessoriesType", "EnumName": "Hat", "EnumValue": 1, "IconResourceKey": null, "SortOrder": 250, "DeformGroup": null},
       {"EnumType": "AccessoriesType", "EnumName": "Bag", "EnumValue": 2, "IconResourceKey": null, "SortOrder": 260, "DeformGroup": null},
+      {"EnumType": "AccessoriesType", "EnumName": "Mask", "EnumValue": 3, "IconResourceKey": null, "SortOrder": 251, "DeformGroup": null},
+      {"EnumType": "AccessoriesType", "EnumName": "Etc", "EnumValue": 4, "IconResourceKey": null, "SortOrder": 255, "DeformGroup": null},
       {"EnumType": "ConditionType", "EnumName": "SnailCount", "EnumValue": 1, "IconResourceKey": null, "SortOrder": null, "DeformGroup": null},
       {"EnumType": "ConditionType", "EnumName": "SnailLevel", "EnumValue": 2, "IconResourceKey": null, "SortOrder": null, "DeformGroup": null},
       {"EnumType": "ConditionType", "EnumName": "PayItem", "EnumValue": 3, "IconResourceKey": null, "SortOrder": null, "DeformGroup": null}
@@ -424,7 +430,11 @@
       {"Id": 118, "Kr": "부화기"},
       {"Id": 119, "Kr": "부화시킬 알이 없습니다."},
       {"Id": 120, "Kr": "부화 완료"},
-      {"Id": 121, "Kr": "준비중입니다."}
+      {"Id": 121, "Kr": "준비중입니다."},
+      {"Id": 128, "Kr": "모자"},
+      {"Id": 129, "Kr": "가방"},
+      {"Id": 130, "Kr": "마스크"},
+      {"Id": 131, "Kr": "기타"}
     ],
     "UnlockData": [
       {"Id": 101, "ConditionType": "SnailLevel", "NeedConditionValue": 2, "CostItem": null, "CostCount": null}
