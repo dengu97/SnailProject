@@ -422,7 +422,7 @@ namespace SnailPet
             _ui.ToggleEquip += EquipAccessory;
             _ui.FilterChanged += RefreshWardrobe;
             _ui.Gene     += () => Say("      [UI] 유전 정보");
-            _ui.Sell     += () => Say("      [UI] 달팽이 판매");
+            _ui.Sell     += SellSnailFromUi;
             _ui.SellFood += SellFromUi;
             _ui.Settings += () => Say("      [UI] 설정");
             _ui.Close    += () => Say("      [UI] 최소화");
@@ -556,6 +556,37 @@ namespace SnailPet
         private bool _popupSelling;
         private bool _popupDiscounted;
 
+        /// <summary>0 이 아니면 팝업이 물어보고 있는 것이 상품이 아니라 이 달팽이다.</summary>
+        private int _popupSnailId;
+
+        /// <summary>
+        /// 상세 패널의 「판매」. 지금 나와 있는 달팽이를 판다.
+        /// 값은 파츠별 합산에 레벨 배수를 곱한 것이다.
+        /// </summary>
+        private void SellSnailFromUi()
+        {
+            var snail = _player.Active;
+            if (snail == null) return;
+
+            if (_player.Snails.Count <= 1)
+            {
+                Say("      [UI] 판매: 마지막 한 마리는 팔 수 없습니다");
+                return;
+            }
+
+            long price = Shop.SnailPrice(snail);
+            if (price <= 0) { Say("      [UI] 판매: 값을 매길 수 없습니다"); return; }
+
+            _popupSelling = true;
+            _popupSnailId = snail.Id;
+
+            string name = string.IsNullOrWhiteSpace(snail.Name)
+                        ? Loc.Text("[이름없음]") : snail.Name;
+
+            // 달팽이는 한 마리씩만 판다. 수량을 올릴 여지가 없다.
+            _ui.ShowPopup(true, snail.Id, name, -price, 1);
+        }
+
         /// <summary>상점에서 「구매하기」를 눌렀다. 몇 개 살지부터 묻는다.</summary>
         private void BuyFromShop(int shopId, bool discounted)
         {
@@ -567,6 +598,7 @@ namespace SnailPet
 
             _popupSelling = false;
             _popupDiscounted = discounted;
+            _popupSnailId = 0;
 
             // 가진 코인으로 살 수 있는 만큼까지만 올릴 수 있다
             int max = (int)System.Math.Max(1, _player.Coins / unit);
@@ -585,12 +617,15 @@ namespace SnailPet
             if (owned <= 0) { Say($"      [UI] 판매: {Shop.NameOf(row)} 를 가지고 있지 않습니다"); return; }
 
             _popupSelling = true;
+            _popupSnailId = 0;
             _ui.ShowPopup(true, shopId, Shop.NameOf(row), -unit, owned);
         }
 
         /// <summary>팝업에서 「네」를 눌렀다.</summary>
         private void ConfirmPopup(int shopId, int qty)
         {
+            if (_popupSnailId != 0) { ConfirmSellSnail(); return; }
+
             var result = _popupSelling
                        ? Shop.TrySell(_player, shopId, qty)
                        : Shop.TryBuy(_player, shopId, _popupDiscounted, qty);
@@ -607,6 +642,32 @@ namespace SnailPet
             _ui.RefreshShop();
 
             Say($"      [UI] {(_popupSelling ? "판매" : "구매")}: {shopId} x{qty} → {_player}");
+        }
+
+        /// <summary>달팽이 판매 확정. 팔린 것이 화면에 나와 있던 개체면 남은 것으로 갈아탄다.</summary>
+        private void ConfirmSellSnail()
+        {
+            int soldId = _popupSnailId;
+            _popupSnailId = 0;
+
+            bool wasActive = _player.ActiveId == soldId;
+            long before = _player.Coins;
+
+            var result = Shop.TrySellSnail(_player, soldId);
+            if (result != Shop.Result.Ok)
+            {
+                Say($"      [UI] 달팽이 판매 실패: {result}");
+                return;
+            }
+
+            // 판 개체가 화면에 있었으면 외형이 통째로 바뀌므로 다시 합성한다
+            if (wasActive) ActivateSnail(_player.Active);
+
+            RefreshSnail();
+            RefreshFoods();
+            _ui.SetCoin(_player.Coins);
+
+            Say($"      [UI] 달팽이 판매: +{_player.Coins - before}코인 → {_player}");
         }
 
         /// <summary>목록에서 다른 달팽이를 골랐다.</summary>

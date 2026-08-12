@@ -153,6 +153,69 @@ namespace SnailPet.Snail
             return n;
         }
 
+        /// <summary>
+        /// 달팽이를 팔면 얼마인가. <b>파츠별 합산 가격 × 그 레벨의 SellAdvantage</b>.
+        ///
+        /// 장착한 악세서리는 값에 안 들어간다 — 파츠가 아니고, 팔 때 가방으로 돌려주기 때문이다.
+        /// 소수는 마지막에 한 번만 버린다. 파츠마다 버리면 잔돈이 계속 새어 나간다.
+        /// </summary>
+        public static long SnailPrice(OwnedSnail snail)
+        {
+            if (snail == null) return 0;
+
+            double sum = 0;
+            foreach (var p in snail.Appearance.Parts)
+                if (GameData.PartsDataById.TryGetValue(p.PartsId, out var row) && row.SellItem.HasValue)
+                    sum += row.SellCount;
+
+            return (long)System.Math.Floor(sum * SellAdvantageOf(snail.Growth.Level));
+        }
+
+        /// <summary>레벨이 높을수록 비싸게 팔린다. 표에 없는 레벨이면 배수 없음.</summary>
+        public static double SellAdvantageOf(int level)
+        {
+            foreach (var r in GameData.LevelData)
+                if (r.Level == level) return r.SellAdvantage > 0 ? r.SellAdvantage : 1.0;
+            return 1.0;
+        }
+
+        /// <summary>달팽이 판매값이 어느 아이템으로 들어오는가. 파츠가 정한다.</summary>
+        public static int SnailPriceItem(OwnedSnail snail)
+        {
+            if (snail != null)
+                foreach (var p in snail.Appearance.Parts)
+                    if (GameData.PartsDataById.TryGetValue(p.PartsId, out var row) && row.SellItem.HasValue)
+                        return row.SellItem.Value;
+            return PlayerState.CoinItemId;
+        }
+
+        /// <summary>
+        /// 달팽이를 판다. 마지막 한 마리는 못 판다 — 화면에 낼 개체가 없어진다.
+        /// 끼고 있던 악세서리는 가방으로 돌려준다. 500코인짜리가 말없이 사라지면 곤란하다.
+        /// </summary>
+        public static Result TrySellSnail(PlayerState player, int snailId)
+        {
+            if (player == null || player.Snails.Count <= 1) return Result.NotEnough;
+
+            OwnedSnail target = null;
+            foreach (var s in player.Snails) if (s.Id == snailId) { target = s; break; }
+            if (target == null) return Result.NoSuchProduct;
+
+            long price = SnailPrice(target);
+            if (price <= 0) return Result.NoPrice;
+
+            foreach (int acc in target.Equipped) player.Items.Add(acc, 1);
+
+            player.Snails.Remove(target);
+            player.Items.Add(SnailPriceItem(target), price);
+
+            // 팔린 것이 화면에 나와 있던 개체면 남은 것 중 하나로 옮긴다
+            if (player.ActiveId == snailId && player.Snails.Count > 0)
+                player.ActiveId = player.Snails[0].Id;
+
+            return Result.Ok;
+        }
+
         public static ShopDataRow Find(int shopId)
         {
             foreach (var r in GameData.ShopData) if (r.Id == shopId) return r;

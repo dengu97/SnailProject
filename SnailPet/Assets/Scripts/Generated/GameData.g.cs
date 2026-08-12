@@ -109,8 +109,10 @@ namespace SnailPet.Data
         public readonly string[] Colors;
         public readonly int AppearWeight;
         public readonly int InfoId;
+        public readonly int? SellItem;
+        public readonly double SellCount;
 
-        public PartsDataRow(int id, int nameId, int partsGroupId, RarityType rarityType, PartsType partsType, string resourceKey, bool isUseColor, string[] colors, int appearWeight, int infoId)
+        public PartsDataRow(int id, int nameId, int partsGroupId, RarityType rarityType, PartsType partsType, string resourceKey, bool isUseColor, string[] colors, int appearWeight, int infoId, int? sellItem, double sellCount)
         {
             Id = id;
             NameId = nameId;
@@ -122,6 +124,8 @@ namespace SnailPet.Data
             Colors = colors;
             AppearWeight = appearWeight;
             InfoId = infoId;
+            SellItem = sellItem;
+            SellCount = sellCount;
         }
     }
 
@@ -164,8 +168,9 @@ namespace SnailPet.Data
         public readonly double CoinCoolTime;
         public readonly int ItemId;
         public readonly int ItemCount;
+        public readonly double SellAdvantage;
 
-        public LevelDataRow(int level, double levelUpTime, double needFullPoint, double needHappyPoint, double useFullPointTime, double useHappyPointTime, double speed, double size, double coinCoolTime, int itemId, int itemCount)
+        public LevelDataRow(int level, double levelUpTime, double needFullPoint, double needHappyPoint, double useFullPointTime, double useHappyPointTime, double speed, double size, double coinCoolTime, int itemId, int itemCount, double sellAdvantage)
         {
             Level = level;
             LevelUpTime = levelUpTime;
@@ -178,6 +183,7 @@ namespace SnailPet.Data
             CoinCoolTime = coinCoolTime;
             ItemId = itemId;
             ItemCount = itemCount;
+            SellAdvantage = sellAdvantage;
         }
     }
 
@@ -505,41 +511,41 @@ namespace SnailPet.Data
 
         public static readonly PartsDataRow[] PartsData = new PartsDataRow[]
         {
-            new PartsDataRow(1, 1, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c01" }, 10, 57),
-            new PartsDataRow(3, 3, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c02" }, 10, 58),
-            new PartsDataRow(4, 4, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c03" }, 10, 59),
-            new PartsDataRow(5, 5, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c04" }, 10, 60),
-            new PartsDataRow(6, 6, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c05" }, 10, 61),
-            new PartsDataRow(7, 7, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c06" }, 10, 62),
-            new PartsDataRow(8, 8, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c07" }, 10, 63),
-            new PartsDataRow(9, 9, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c08" }, 10, 64),
-            new PartsDataRow(10, 10, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c01" }, 10, 65),
-            new PartsDataRow(11, 11, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c02" }, 10, 66),
-            new PartsDataRow(12, 12, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c03" }, 10, 67),
-            new PartsDataRow(13, 13, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c04" }, 10, 68),
-            new PartsDataRow(14, 14, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c05" }, 10, 69),
-            new PartsDataRow(15, 15, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c06" }, 10, 70),
-            new PartsDataRow(16, 16, 17, RarityType.Rare, PartsType.Shell, "rareshell01", true, new string[] { "rareshell01_c01" }, 7, 71),
-            new PartsDataRow(18, 18, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c01" }, 10, 72),
-            new PartsDataRow(19, 19, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c02" }, 10, 73),
-            new PartsDataRow(20, 20, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c03" }, 10, 74),
-            new PartsDataRow(102, 102, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c04" }, 10, 103),
-            new PartsDataRow(104, 104, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c05" }, 10, 105),
-            new PartsDataRow(106, 106, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c06" }, 10, 107),
-            new PartsDataRow(21, 21, 2, RarityType.Common, PartsType.Body, "commonbody02", true, new string[] { "commonbody02_c01" }, 10, 75),
-            new PartsDataRow(53, 53, 2, RarityType.Common, PartsType.Body, "commonbody03", true, new string[] { "commonbody03_c01" }, 10, 76),
-            new PartsDataRow(108, 108, 2, RarityType.Common, PartsType.Body, "commonbody03", true, new string[] { "commonbody03_c02" }, 10, 109),
-            new PartsDataRow(122, 122, 2, RarityType.Rare, PartsType.Body, "rarebody01", true, new string[] { "rarebody01_c01" }, 7, 123),
-            new PartsDataRow(22, 22, 2, RarityType.Common, PartsType.Eyes, "commoneyes01", false, System.Array.Empty<string>(), 10, 77),
-            new PartsDataRow(23, 23, 2, RarityType.Common, PartsType.Eyes, "commoneyes02", false, System.Array.Empty<string>(), 10, 78),
-            new PartsDataRow(24, 24, 2, RarityType.Common, PartsType.Eyes, "commoneyes03", false, System.Array.Empty<string>(), 10, 79),
-            new PartsDataRow(25, 25, 2, RarityType.Common, PartsType.Eyes, "commoneyes04", false, System.Array.Empty<string>(), 10, 80),
-            new PartsDataRow(110, 110, 2, RarityType.Common, PartsType.Eyes, "commoneyes05", false, System.Array.Empty<string>(), 10, 111),
-            new PartsDataRow(26, 26, 2, RarityType.Common, PartsType.Feeler, "commonfeeler01", true, new string[] { "commonfeeler01_c01" }, 10, 81),
-            new PartsDataRow(138, 138, 2, RarityType.Common, PartsType.Feeler, "commonfeeler02", true, new string[] { "commonfeeler02_c01" }, 10, 139),
-            new PartsDataRow(140, 140, 2, RarityType.Common, PartsType.Feeler, "commonfeeler02", true, new string[] { "commonfeeler02_c02" }, 10, 139),
-            new PartsDataRow(54, 54, 2, RarityType.Common, PartsType.Feeler, "commonfeeler03", true, new string[] { "commonfeeler03_c01" }, 10, 86),
-            new PartsDataRow(29, 29, 2, RarityType.Common, PartsType.Feeler, "commonfeeler04", true, new string[] { "commonfeeler04_c01" }, 10, 84),
+            new PartsDataRow(1, 1, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c01" }, 10, 57, 36, 5d),
+            new PartsDataRow(3, 3, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c02" }, 10, 58, 36, 5d),
+            new PartsDataRow(4, 4, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c03" }, 10, 59, 36, 5d),
+            new PartsDataRow(5, 5, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c04" }, 10, 60, 36, 5d),
+            new PartsDataRow(6, 6, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c05" }, 10, 61, 36, 5d),
+            new PartsDataRow(7, 7, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c06" }, 10, 62, 36, 5d),
+            new PartsDataRow(8, 8, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c07" }, 10, 63, 36, 5d),
+            new PartsDataRow(9, 9, 2, RarityType.Common, PartsType.Shell, "commonshell01", true, new string[] { "commonshell01_c08" }, 10, 64, 36, 5d),
+            new PartsDataRow(10, 10, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c01" }, 10, 65, 36, 5d),
+            new PartsDataRow(11, 11, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c02" }, 10, 66, 36, 5d),
+            new PartsDataRow(12, 12, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c03" }, 10, 67, 36, 5d),
+            new PartsDataRow(13, 13, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c04" }, 10, 68, 36, 5d),
+            new PartsDataRow(14, 14, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c05" }, 10, 69, 36, 5d),
+            new PartsDataRow(15, 15, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c06" }, 10, 70, 36, 5d),
+            new PartsDataRow(16, 16, 17, RarityType.Rare, PartsType.Shell, "rareshell01", true, new string[] { "rareshell01_c01" }, 7, 71, 36, 10d),
+            new PartsDataRow(18, 18, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c01" }, 10, 72, 36, 5d),
+            new PartsDataRow(19, 19, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c02" }, 10, 73, 36, 5d),
+            new PartsDataRow(20, 20, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c03" }, 10, 74, 36, 5d),
+            new PartsDataRow(102, 102, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c04" }, 10, 103, 36, 5d),
+            new PartsDataRow(104, 104, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c05" }, 10, 105, 36, 5d),
+            new PartsDataRow(106, 106, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c06" }, 10, 107, 36, 5d),
+            new PartsDataRow(21, 21, 2, RarityType.Common, PartsType.Body, "commonbody02", true, new string[] { "commonbody02_c01" }, 10, 75, 36, 5d),
+            new PartsDataRow(53, 53, 2, RarityType.Common, PartsType.Body, "commonbody03", true, new string[] { "commonbody03_c01" }, 10, 76, 36, 5d),
+            new PartsDataRow(108, 108, 2, RarityType.Common, PartsType.Body, "commonbody03", true, new string[] { "commonbody03_c02" }, 10, 109, 36, 5d),
+            new PartsDataRow(122, 122, 2, RarityType.Rare, PartsType.Body, "rarebody01", true, new string[] { "rarebody01_c01" }, 7, 123, 36, 10d),
+            new PartsDataRow(22, 22, 2, RarityType.Common, PartsType.Eyes, "commoneyes01", false, System.Array.Empty<string>(), 10, 77, 36, 5d),
+            new PartsDataRow(23, 23, 2, RarityType.Common, PartsType.Eyes, "commoneyes02", false, System.Array.Empty<string>(), 10, 78, 36, 5d),
+            new PartsDataRow(24, 24, 2, RarityType.Common, PartsType.Eyes, "commoneyes03", false, System.Array.Empty<string>(), 10, 79, 36, 5d),
+            new PartsDataRow(25, 25, 2, RarityType.Common, PartsType.Eyes, "commoneyes04", false, System.Array.Empty<string>(), 10, 80, 36, 5d),
+            new PartsDataRow(110, 110, 2, RarityType.Common, PartsType.Eyes, "commoneyes05", false, System.Array.Empty<string>(), 10, 111, 36, 5d),
+            new PartsDataRow(26, 26, 2, RarityType.Common, PartsType.Feeler, "commonfeeler01", true, new string[] { "commonfeeler01_c01" }, 10, 81, 36, 5d),
+            new PartsDataRow(138, 138, 2, RarityType.Common, PartsType.Feeler, "commonfeeler02", true, new string[] { "commonfeeler02_c01" }, 10, 139, 36, 5d),
+            new PartsDataRow(140, 140, 2, RarityType.Common, PartsType.Feeler, "commonfeeler02", true, new string[] { "commonfeeler02_c02" }, 10, 139, 36, 5d),
+            new PartsDataRow(54, 54, 2, RarityType.Common, PartsType.Feeler, "commonfeeler03", true, new string[] { "commonfeeler03_c01" }, 10, 86, 36, 5d),
+            new PartsDataRow(29, 29, 2, RarityType.Common, PartsType.Feeler, "commonfeeler04", true, new string[] { "commonfeeler04_c01" }, 10, 84, 36, 5d),
         };
 
         public static readonly FoodDataRow[] FoodData = new FoodDataRow[]
@@ -552,26 +558,26 @@ namespace SnailPet.Data
 
         public static readonly LevelDataRow[] LevelData = new LevelDataRow[]
         {
-            new LevelDataRow(1, 0d, 10d, 10d, 120d, 240d, 1d, 4d, 1800d, 36, 10),
-            new LevelDataRow(2, 3600d, 15d, 15d, 120d, 240d, 1.5d, 4d, 1800d, 36, 11),
-            new LevelDataRow(3, 3600d, 20d, 20d, 120d, 240d, 2d, 5d, 1800d, 36, 12),
-            new LevelDataRow(4, 3600d, 25d, 25d, 180d, 240d, 2.5d, 5d, 1800d, 36, 13),
-            new LevelDataRow(5, 3600d, 30d, 30d, 180d, 240d, 3d, 6d, 1800d, 36, 14),
-            new LevelDataRow(6, 3600d, 35d, 35d, 180d, 300d, 3.5d, 6d, 1800d, 36, 15),
-            new LevelDataRow(7, 3600d, 40d, 40d, 180d, 300d, 4d, 6d, 1800d, 36, 16),
-            new LevelDataRow(8, 3600d, 45d, 45d, 180d, 300d, 4.5d, 7d, 1800d, 36, 17),
-            new LevelDataRow(9, 3600d, 50d, 50d, 180d, 300d, 5d, 7d, 1800d, 36, 18),
-            new LevelDataRow(10, 3600d, 55d, 55d, 240d, 300d, 5.5d, 7d, 1800d, 36, 19),
-            new LevelDataRow(11, 3600d, 60d, 60d, 240d, 300d, 6d, 8d, 1800d, 36, 20),
-            new LevelDataRow(12, 3600d, 65d, 65d, 240d, 360d, 6.5d, 8d, 1800d, 36, 21),
-            new LevelDataRow(13, 3600d, 70d, 70d, 240d, 360d, 7d, 8d, 1800d, 36, 22),
-            new LevelDataRow(14, 3600d, 75d, 75d, 240d, 360d, 7.5d, 9d, 1800d, 36, 23),
-            new LevelDataRow(15, 3600d, 80d, 80d, 300d, 360d, 8d, 9d, 1200d, 36, 24),
-            new LevelDataRow(16, 3600d, 85d, 85d, 300d, 360d, 8.5d, 9d, 1200d, 36, 25),
-            new LevelDataRow(17, 3600d, 90d, 90d, 300d, 360d, 9d, 10d, 1200d, 36, 26),
-            new LevelDataRow(18, 3600d, 95d, 95d, 300d, 360d, 9.5d, 10d, 1200d, 36, 27),
-            new LevelDataRow(19, 3600d, 100d, 100d, 300d, 360d, 10d, 10d, 1200d, 36, 28),
-            new LevelDataRow(20, 3600d, 105d, 105d, 300d, 360d, 10.5d, 11d, 1200d, 36, 30),
+            new LevelDataRow(1, 0d, 10d, 10d, 120d, 240d, 1d, 4d, 1800d, 36, 10, 1d),
+            new LevelDataRow(2, 3600d, 15d, 15d, 120d, 240d, 1.5d, 4d, 1800d, 36, 11, 1.1d),
+            new LevelDataRow(3, 3600d, 20d, 20d, 120d, 240d, 2d, 5d, 1800d, 36, 12, 1.2d),
+            new LevelDataRow(4, 3600d, 25d, 25d, 180d, 240d, 2.5d, 5d, 1800d, 36, 13, 1.3d),
+            new LevelDataRow(5, 3600d, 30d, 30d, 180d, 240d, 3d, 6d, 1800d, 36, 14, 1.4d),
+            new LevelDataRow(6, 3600d, 35d, 35d, 180d, 300d, 3.5d, 6d, 1800d, 36, 15, 1.5d),
+            new LevelDataRow(7, 3600d, 40d, 40d, 180d, 300d, 4d, 6d, 1800d, 36, 16, 1.6d),
+            new LevelDataRow(8, 3600d, 45d, 45d, 180d, 300d, 4.5d, 7d, 1800d, 36, 17, 1.7d),
+            new LevelDataRow(9, 3600d, 50d, 50d, 180d, 300d, 5d, 7d, 1800d, 36, 18, 1.8d),
+            new LevelDataRow(10, 3600d, 55d, 55d, 240d, 300d, 5.5d, 7d, 1800d, 36, 19, 1.9d),
+            new LevelDataRow(11, 3600d, 60d, 60d, 240d, 300d, 6d, 8d, 1800d, 36, 20, 2d),
+            new LevelDataRow(12, 3600d, 65d, 65d, 240d, 360d, 6.5d, 8d, 1800d, 36, 21, 2.1d),
+            new LevelDataRow(13, 3600d, 70d, 70d, 240d, 360d, 7d, 8d, 1800d, 36, 22, 2.2d),
+            new LevelDataRow(14, 3600d, 75d, 75d, 240d, 360d, 7.5d, 9d, 1800d, 36, 23, 2.3d),
+            new LevelDataRow(15, 3600d, 80d, 80d, 300d, 360d, 8d, 9d, 1200d, 36, 24, 2.4d),
+            new LevelDataRow(16, 3600d, 85d, 85d, 300d, 360d, 8.5d, 9d, 1200d, 36, 25, 2.5d),
+            new LevelDataRow(17, 3600d, 90d, 90d, 300d, 360d, 9d, 10d, 1200d, 36, 26, 2.6d),
+            new LevelDataRow(18, 3600d, 95d, 95d, 300d, 360d, 9.5d, 10d, 1200d, 36, 27, 2.7d),
+            new LevelDataRow(19, 3600d, 100d, 100d, 300d, 360d, 10d, 10d, 1200d, 36, 28, 2.8d),
+            new LevelDataRow(20, 3600d, 105d, 105d, 300d, 360d, 10.5d, 11d, 1200d, 36, 30, 3d),
         };
 
         public static readonly BubbleDataRow[] BubbleData = new BubbleDataRow[]
