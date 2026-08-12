@@ -16,6 +16,24 @@ namespace SnailPet.Snail
         public string ResourceKey;
         public string ColorKey;
 
+        /// <summary>
+        /// 악세서리면 그 부위, 타고난 파츠면 null.
+        ///
+        /// 악세서리는 <see cref="PartsType"/> 이 아니라 <see cref="AccessoriesType"/> 인데,
+        /// SortOrder 는 같은 숫자 축을 쓴다 (모자 250 · 가방 260 이 몸통 200 과 더듬이 300 사이).
+        /// 그래서 그리는 쪽에서는 둘을 구분할 필요가 없고, 아래 세 값만 보면 된다.
+        /// </summary>
+        public AccessoriesType? Accessory;
+
+        public int SortOrder => Accessory.HasValue
+            ? PartsLayer.SortOrderOf(Accessory.Value) : PartsLayer.SortOrderOf(Type);
+
+        public int DeformGroup => Accessory.HasValue
+            ? PartsLayer.DeformGroupOf(Accessory.Value) : PartsLayer.DeformGroupOf(Type);
+
+        /// <summary>아트가 있는 폴더. 악세서리는 부위별로 나뉘어 있지 않고 한 곳에 모여 있다.</summary>
+        public string Folder => Accessory.HasValue ? "Accessories" : Type.ToString();
+
         public override string ToString() =>
             ColorKey == null ? ResourceKey : ResourceKey + " (" + ColorKey + ")";
     }
@@ -47,6 +65,10 @@ namespace SnailPet.Snail
         private static Dictionary<PartsType, int> _order;
         private static Dictionary<PartsType, int> _deform;
 
+        // 악세서리도 같은 숫자 축을 쓴다. 표만 따로 둔다.
+        private static Dictionary<AccessoriesType, int> _accOrder;
+        private static Dictionary<AccessoriesType, int> _accDeform;
+
         /// <summary>DeformGroup 이 비어 있는 파츠. 변형되지 않는 강체다.</summary>
         public const int RigidGroup = 0;
 
@@ -56,13 +78,35 @@ namespace SnailPet.Snail
             _order = new Dictionary<PartsType, int>();
             _deform = new Dictionary<PartsType, int>();
 
+            _accOrder = new Dictionary<AccessoriesType, int>();
+            _accDeform = new Dictionary<AccessoriesType, int>();
+
             foreach (var e in GameData.EnumData)
             {
-                if (e.EnumType != "PartsType") continue;
-                if (!System.Enum.TryParse(e.EnumName, out PartsType t)) continue;
-                _order[t] = e.SortOrder ?? e.EnumValue;
-                _deform[t] = e.DeformGroup ?? RigidGroup;
+                if (e.EnumType == "PartsType" && System.Enum.TryParse(e.EnumName, out PartsType t))
+                {
+                    _order[t] = e.SortOrder ?? e.EnumValue;
+                    _deform[t] = e.DeformGroup ?? RigidGroup;
+                }
+                else if (e.EnumType == "AccessoriesType" && System.Enum.TryParse(e.EnumName, out AccessoriesType a))
+                {
+                    _accOrder[a] = e.SortOrder ?? e.EnumValue;
+                    _accDeform[a] = e.DeformGroup ?? RigidGroup;
+                }
             }
+        }
+
+        public static int SortOrderOf(AccessoriesType type)
+        {
+            EnsureIndex();
+            return _accOrder.TryGetValue(type, out int v) ? v : 0;
+        }
+
+        /// <summary>악세서리는 지금 전부 강체다. 몸이 늘어나도 모자는 안 늘어난다.</summary>
+        public static int DeformGroupOf(AccessoriesType type)
+        {
+            EnsureIndex();
+            return _accDeform.TryGetValue(type, out int v) ? v : RigidGroup;
         }
 
         public static int SortOrderOf(PartsType type)

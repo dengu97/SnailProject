@@ -372,7 +372,9 @@ namespace SnailPet
             if (_composed != null) Destroy(_composed.Root);
 
             _player.ActiveId = snail.Id;
-            _appearance = snail.Appearance;
+            // 타고난 파츠에 장착한 악세서리를 얹은 것이 화면에 나온다.
+            // 가로 경계도 이걸로 재야 가방이 화면 끝에서 잘리지 않는다.
+            _appearance = snail.Dressed();
             _growth     = snail.Growth;
             _rarity     = snail.Rarity;
 

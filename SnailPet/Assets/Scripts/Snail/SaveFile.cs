@@ -41,6 +41,12 @@ namespace SnailPet.Snail
             public int level;
             public double full, happy, progress;
             public PartDto[] parts;
+
+            /// <summary>
+            /// 장착한 악세서리. 나중에 더한 칸이라 옛 세이브에는 없는데,
+            /// JsonUtility 가 없는 필드를 빈 배열로 두므로 형식 번호를 올릴 필요가 없다.
+            /// </summary>
+            public int[] equipped;
         }
 
         [Serializable]
@@ -102,6 +108,7 @@ namespace SnailPet.Snail
                     happy = s.Growth.HappyPoint,
                     progress = s.Growth.LevelUpProgress,
                     parts = parts,
+                    equipped = s.Equipped.ToArray(),
                 };
             }
 
@@ -173,6 +180,11 @@ namespace SnailPet.Snail
                                 ColorKey = string.IsNullOrEmpty(p.color) ? null : p.color,
                             });
                         }
+
+                    // 데이터에서 빠진 악세서리는 되살리지 않는다. 그냥 안 낀 상태가 된다.
+                    if (s.equipped != null)
+                        foreach (int id in s.equipped)
+                            if (GameData.AccessoriesDataById.ContainsKey(id)) snail.Equipped.Add(id);
 
                     snail.Growth.Restore(s.level, s.full, s.happy, s.progress);
                     player.RestoreSnail(snail);

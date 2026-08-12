@@ -27,8 +27,11 @@ namespace SnailPet.Snail
             return s;
         }
 
-        public static string LinePath(PartsType type, string key)  => $"{ResourceRoot}/{type}/{key}";
-        public static string ColorPath(PartsType type, string key) => $"{ResourceRoot}/{type}/Color/{key}";
+        public static string LinePath(string folder, string key)  => $"{ResourceRoot}/{folder}/{key}";
+        public static string ColorPath(string folder, string key) => $"{ResourceRoot}/{folder}/Color/{key}";
+
+        public static string LinePath(PartsType type, string key)  => LinePath(type.ToString(), key);
+        public static string ColorPath(PartsType type, string key) => ColorPath(type.ToString(), key);
 
         /// <summary>
         /// 합성 결과. 변형 그룹별 루트를 들고 있어 나중에 스켈레톤을 붙일 때
@@ -65,22 +68,24 @@ namespace SnailPet.Snail
             root.AddComponent<SortingGroup>();
             composed.Root = root;
 
+            // 악세서리도 파츠와 같은 SortOrder 축을 쓰므로 한 줄에 세워 놓고 순서대로 깐다
             var parts = new List<SnailPartRef>(appearance.Parts);
-            parts.Sort((a, b) => PartsLayer.SortOrderOf(a.Type).CompareTo(PartsLayer.SortOrderOf(b.Type)));
+            parts.Sort((a, b) => a.SortOrder.CompareTo(b.SortOrder));
 
             foreach (var p in parts)
             {
-                int group = PartsLayer.DeformGroupOf(p.Type);
+                int group = p.DeformGroup;
                 var parent = GroupRoot(composed, group);
                 bool soft = group != PartsLayer.RigidGroup;
 
                 // 색상과 선화가 같은 순서 공간을 쓰되 항상 색상이 아래로 가도록 2칸씩 벌린다
-                int baseOrder = PartsLayer.SortOrderOf(p.Type) * 2;
+                int baseOrder = p.SortOrder * 2;
+                string label = p.Accessory?.ToString() ?? p.Type.ToString();
 
                 if (!string.IsNullOrEmpty(p.ColorKey))
-                    AddLayer(composed, parent, soft, ColorPath(p.Type, p.ColorKey), baseOrder, p.Type + "_color");
+                    AddLayer(composed, parent, soft, ColorPath(p.Folder, p.ColorKey), baseOrder, label + "_color");
 
-                AddLayer(composed, parent, soft, LinePath(p.Type, p.ResourceKey), baseOrder + 1, p.Type + "_line");
+                AddLayer(composed, parent, soft, LinePath(p.Folder, p.ResourceKey), baseOrder + 1, label + "_line");
             }
             return composed;
         }

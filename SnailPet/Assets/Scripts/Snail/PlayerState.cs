@@ -15,8 +15,63 @@ namespace SnailPet.Snail
         /// <summary>나온 알의 등급을 그대로 물려받는다.</summary>
         public RarityType Rarity;
 
+        /// <summary>타고난 외형. 부화할 때 정해지고 바뀌지 않는다.</summary>
         public SnailAppearance Appearance;
+
         public SnailGrowth Growth;
+
+        /// <summary>
+        /// 장착한 악세서리의 AccessoriesData.Id. 부위마다 하나만 낄 수 있다.
+        ///
+        /// 타고난 외형과 섞지 않는다 — 외형은 신원이고 이건 갈아입는 것이라,
+        /// 섞으면 세이브에서 「타고난 것」과 「입은 것」을 구분할 수 없다.
+        /// </summary>
+        public readonly List<int> Equipped = new List<int>();
+
+        /// <summary>화면에 그릴 것 = 타고난 파츠 + 장착한 악세서리.</summary>
+        public SnailAppearance Dressed()
+        {
+            var dressed = new SnailAppearance();
+            dressed.Parts.AddRange(Appearance.Parts);
+
+            foreach (int id in Equipped)
+            {
+                if (!GameData.AccessoriesDataById.TryGetValue(id, out var row)) continue;
+                dressed.Parts.Add(new SnailPartRef
+                {
+                    PartsId = row.Id,
+                    Accessory = row.AccessoriesType,
+                    ResourceKey = row.ResourceKey,
+                });
+            }
+            return dressed;
+        }
+
+        /// <summary>지금 그 부위에 낀 악세서리. 없으면 0.</summary>
+        public int EquippedAt(AccessoriesType type)
+        {
+            foreach (int id in Equipped)
+                if (GameData.AccessoriesDataById.TryGetValue(id, out var row) && row.AccessoriesType == type)
+                    return id;
+            return 0;
+        }
+
+        /// <summary>
+        /// 끼우거나 뺀다. 이미 낀 것을 다시 누르면 벗는다 (목업의 「다시 누르면 장착해제」).
+        /// 같은 부위에 다른 것을 끼우면 먼저 것이 빠진다.
+        /// 외형이 바뀌었으면 true — 부르는 쪽이 다시 합성해야 한다.
+        /// </summary>
+        public bool ToggleEquip(int accessoryId)
+        {
+            if (!GameData.AccessoriesDataById.TryGetValue(accessoryId, out var row)) return false;
+
+            if (Equipped.Remove(accessoryId)) return true;   // 끼고 있던 것 → 벗기
+
+            int worn = EquippedAt(row.AccessoriesType);
+            if (worn != 0) Equipped.Remove(worn);
+            Equipped.Add(accessoryId);
+            return true;
+        }
     }
 
     /// <summary>
