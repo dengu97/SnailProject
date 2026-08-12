@@ -72,6 +72,9 @@ namespace SnailPet.Snail
             public int[] eggs;
             public ItemDto[] items;
             public SlotDto[] incubator;
+
+            /// <summary>즐겨찾기한 음식. 나중에 더한 칸이라 옛 세이브에는 없다.</summary>
+            public int[] favorites;
         }
 
         public static void Save(PlayerState player)
@@ -83,6 +86,7 @@ namespace SnailPet.Snail
                 version = Version,
                 activeId = player.ActiveId,
                 eggs = player.Eggs.ToArray(),
+                favorites = player.Favorites.ToArray(),
                 snails = new SnailDto[player.Snails.Count],
                 incubator = new SlotDto[player.Incubator.Length],
             };
@@ -191,6 +195,7 @@ namespace SnailPet.Snail
                 }
 
             if (root.eggs != null) player.Eggs.AddRange(root.eggs);
+            if (root.favorites != null) player.Favorites.AddRange(root.favorites);
             if (root.items != null) foreach (var it in root.items) player.Items.Add(it.id, it.count);
 
             if (root.incubator != null)

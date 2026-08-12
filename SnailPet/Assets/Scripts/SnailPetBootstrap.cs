@@ -432,6 +432,15 @@ namespace SnailPet
             // 「먹이기」는 즉시 먹이지 않는다. 화면에 떨어뜨리고 달팽이가 기어가서 먹는다.
             _ui.FeedFood += DropFoodFromUi;
 
+            // 고른 음식이 바뀌면 별도 그 음식의 상태로 갈아 끼운다
+            _ui.FoodSelected += id => _ui.SetFavorite(_player.IsFavorite(id));
+            _ui.ToggleFavorite += id =>
+            {
+                _player.ToggleFavorite(id);
+                _ui.SetFavorite(_player.IsFavorite(id));
+                Say($"      [UI] 즐겨찾기 {(_player.IsFavorite(id) ? "켬" : "끔")}: {Loc.ById(GameData.FoodDataById[id].NameId)}");
+            };
+
             _ui.PutEgg       += PutEggInIncubator;
             _ui.ClaimHatched += ClaimHatched;
             _ui.GoShop       += () => _ui.SetTab(3);

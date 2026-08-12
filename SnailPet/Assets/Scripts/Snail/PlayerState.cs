@@ -101,6 +101,21 @@ namespace SnailPet.Snail
         /// <summary>코인과 음식. 아이템 Id 로 개수를 센다.</summary>
         public readonly Inventory Items = new Inventory();
 
+        /// <summary>
+        /// 즐겨찾기해 둔 음식. 개체가 아니라 <b>유저</b>의 것이라 달팽이를 바꿔도 그대로다.
+        /// 지금은 별이 켜지는 표시까지만 한다.
+        /// </summary>
+        public readonly List<int> Favorites = new List<int>();
+
+        public bool IsFavorite(int foodId) => Favorites.Contains(foodId);
+
+        /// <summary>별을 눌렀다. 켜져 있으면 끄고 꺼져 있으면 켠다.</summary>
+        public void ToggleFavorite(int foodId)
+        {
+            if (foodId <= 0) return;
+            if (!Favorites.Remove(foodId)) Favorites.Add(foodId);
+        }
+
         /// <summary>부화 중인 칸. eggId 가 0 이면 빈 칸이다.</summary>
         public readonly (int eggId, double remain)[] Incubator = new (int, double)[IncubatorSlots];
 

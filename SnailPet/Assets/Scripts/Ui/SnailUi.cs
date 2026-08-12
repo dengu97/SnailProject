@@ -209,6 +209,11 @@ namespace SnailPet.Ui
             {
                 if (_selectedFood >= 0 && _selectedFood < _foodIds.Length) FeedFood?.Invoke(_foodIds[_selectedFood]);
             });
+            Hook(_favoriteBtn, () =>
+            {
+                if (_selectedFood >= 0 && _selectedFood < _foodIds.Length)
+                    ToggleFavorite?.Invoke(_foodIds[_selectedFood]);
+            });
             Hook(_foodBuyBtn,  () => GoShop?.Invoke());
             Hook(_foodSellBtn, () => Sell?.Invoke());
             Hook(_eggShopBtn,  () => GoShop?.Invoke());
@@ -501,7 +506,24 @@ namespace SnailPet.Ui
         private int[] _foodIds = new int[0];
         private int _selectedFood = -1;
 
+        [SerializeField] private Button _favoriteBtn;
+        [SerializeField] private Image _favoriteIcon;
+
         public event Action<int> FoodSelected, FeedFood;
+
+        /// <summary>즐겨찾기 별을 눌렀다. 고른 음식의 Id 가 나간다.</summary>
+        public event Action<int> ToggleFavorite;
+
+        private static string FavoriteArt(bool on) => on ? "icon_favorite_on" : "icon_favorite_off";
+
+        /// <summary>고른 음식이 즐겨찾기인지. 별 그림을 갈아 끼운다.</summary>
+        public void SetFavorite(bool on)
+        {
+            if (_favoriteIcon == null) return;
+            var sprite = Resources.Load<Sprite>("Ui/Icon/" + FavoriteArt(on));
+            _favoriteIcon.sprite = sprite;
+            _favoriteIcon.enabled = sprite != null;
+        }
 
         /// <summary>
         /// 음식 그리드. 목업의 5번째 줄이 잘려 있어 세로로 스크롤한다.
@@ -608,7 +630,9 @@ namespace SnailPet.Ui
             _foodPanel = Panel(_detailRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
             _foodPanel.gameObject.SetActive(false);
 
-            Icon(_foodPanel, Fd.Favorite, "icon_favorite", Color.white, "Favorite").raycastTarget = false;
+            // 즐겨찾기 별. 켜짐/꺼짐이 그림 자체가 달라 색으로 표시하지 않는다.
+            _favoriteBtn = IconButton(_foodPanel, Fd.Favorite, FavoriteArt(false), "Favorite");
+            _favoriteIcon = _favoriteBtn.transform.Find("Glyph").GetComponent<Image>();
             _foodName = Label(_foodPanel, Fd.Name, "", 12, UiTheme.Ink);
 
             _foodRarityBadge = Box(_foodPanel, Fd.Rarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
