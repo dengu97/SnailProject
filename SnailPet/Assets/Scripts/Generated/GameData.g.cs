@@ -492,6 +492,7 @@ namespace SnailPet.Data
             new PartsColorDataRow(PartsType.Shell, "commonshell02", "commonshell02_c05", 5),
             new PartsColorDataRow(PartsType.Shell, "commonshell02", "commonshell02_c06", 5),
             new PartsColorDataRow(PartsType.Shell, "rareshell01", "rareshell01_c01", 5),
+            new PartsColorDataRow(PartsType.Shell, "rareshell02", "rareshell02_c01", 5),
             new PartsColorDataRow(PartsType.Body, "commonbody01", "commonbody01_c01", 5),
             new PartsColorDataRow(PartsType.Body, "commonbody01", "commonbody01_c02", 5),
             new PartsColorDataRow(PartsType.Body, "commonbody01", "commonbody01_c03", 5),
@@ -526,6 +527,7 @@ namespace SnailPet.Data
             new PartsDataRow(14, 14, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c05" }, 10, 69, 36, 5d),
             new PartsDataRow(15, 15, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c06" }, 10, 70, 36, 5d),
             new PartsDataRow(16, 16, 17, RarityType.Rare, PartsType.Shell, "rareshell01", true, new string[] { "rareshell01_c01" }, 7, 71, 36, 10d),
+            new PartsDataRow(147, 147, 17, RarityType.Rare, PartsType.Shell, "rareshell02", true, new string[] { "rareshell02_c01" }, 7, 148, 36, 10d),
             new PartsDataRow(18, 18, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c01" }, 10, 72, 36, 5d),
             new PartsDataRow(19, 19, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c02" }, 10, 73, 36, 5d),
             new PartsDataRow(20, 20, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c03" }, 10, 74, 36, 5d),
@@ -781,7 +783,7 @@ namespace SnailPet.Data
 
         public static readonly GameConfigRow[] GameConfig = new GameConfigRow[]
         {
-            new GameConfigRow(5, 1d, 1d, 24d, 20d, 1600d, null),
+            new GameConfigRow(5, 1d, 1d, 24d, 10d, 1600d, null),
         };
 
         public static readonly Dictionary<int, PartsDataRow> PartsDataById = BuildPartsDataById();
@@ -1029,6 +1031,8 @@ namespace SnailPet.Data
             { "[거부]", 144 },
             { "[이름변경]", 145 },
             { "[변경]", 146 },
+            { "[레어_아이스크림콘껍질]", 147 },
+            { "[레어_아이스크림콘껍질정보]", 148 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

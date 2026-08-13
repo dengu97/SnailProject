@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13 08:28:10",
+  "generatedAt": "2026-08-13 12:59:04",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -156,7 +156,9 @@
     "[동의]": 143,
     "[거부]": 144,
     "[이름변경]": 145,
-    "[변경]": 146
+    "[변경]": 146,
+    "[레어_아이스크림콘껍질]": 147,
+    "[레어_아이스크림콘껍질정보]": 148
   },
   "tables": {
     "EnumData": [
@@ -203,6 +205,7 @@
       {"PartsType": "Shell", "ResourceKey": "commonshell02", "ColorResourceKey": "commonshell02_c05", "MutationWeight": 5},
       {"PartsType": "Shell", "ResourceKey": "commonshell02", "ColorResourceKey": "commonshell02_c06", "MutationWeight": 5},
       {"PartsType": "Shell", "ResourceKey": "rareshell01", "ColorResourceKey": "rareshell01_c01", "MutationWeight": 5},
+      {"PartsType": "Shell", "ResourceKey": "rareshell02", "ColorResourceKey": "rareshell02_c01", "MutationWeight": 5},
       {"PartsType": "Body", "ResourceKey": "commonbody01", "ColorResourceKey": "commonbody01_c01", "MutationWeight": 5},
       {"PartsType": "Body", "ResourceKey": "commonbody01", "ColorResourceKey": "commonbody01_c02", "MutationWeight": 5},
       {"PartsType": "Body", "ResourceKey": "commonbody01", "ColorResourceKey": "commonbody01_c03", "MutationWeight": 5},
@@ -235,6 +238,7 @@
       {"Id": 14, "NameId": 14, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Shell", "ResourceKey": "commonshell02", "IsUseColor": true, "Colors": ["commonshell02_c05"], "AppearWeight": 10, "InfoId": 69, "SellItem": 36, "SellCount": 5},
       {"Id": 15, "NameId": 15, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Shell", "ResourceKey": "commonshell02", "IsUseColor": true, "Colors": ["commonshell02_c06"], "AppearWeight": 10, "InfoId": 70, "SellItem": 36, "SellCount": 5},
       {"Id": 16, "NameId": 16, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Shell", "ResourceKey": "rareshell01", "IsUseColor": true, "Colors": ["rareshell01_c01"], "AppearWeight": 7, "InfoId": 71, "SellItem": 36, "SellCount": 10},
+      {"Id": 147, "NameId": 147, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Shell", "ResourceKey": "rareshell02", "IsUseColor": true, "Colors": ["rareshell02_c01"], "AppearWeight": 7, "InfoId": 148, "SellItem": 36, "SellCount": 10},
       {"Id": 18, "NameId": 18, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Body", "ResourceKey": "commonbody01", "IsUseColor": true, "Colors": ["commonbody01_c01"], "AppearWeight": 10, "InfoId": 72, "SellItem": 36, "SellCount": 5},
       {"Id": 19, "NameId": 19, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Body", "ResourceKey": "commonbody01", "IsUseColor": true, "Colors": ["commonbody01_c02"], "AppearWeight": 10, "InfoId": 73, "SellItem": 36, "SellCount": 5},
       {"Id": 20, "NameId": 20, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Body", "ResourceKey": "commonbody01", "IsUseColor": true, "Colors": ["commonbody01_c03"], "AppearWeight": 10, "InfoId": 74, "SellItem": 36, "SellCount": 5},
@@ -460,7 +464,7 @@
       {"Id": 101, "ConditionType": "SnailLevel", "NeedConditionValue": 2, "CostItem": null, "CostCount": null}
     ],
     "GameConfig": [
-      {"MutationWeight": 5, "FullDecayPerTick": 1, "HappyDecayPerTick": 1, "PixelsPerSpeed": 24, "PixelsPerSize": 20, "FoodGravity": 1600, "Info": null}
+      {"MutationWeight": 5, "FullDecayPerTick": 1, "HappyDecayPerTick": 1, "PixelsPerSpeed": 24, "PixelsPerSize": 10, "FoodGravity": 1600, "Info": null}
     ]
   }
 }

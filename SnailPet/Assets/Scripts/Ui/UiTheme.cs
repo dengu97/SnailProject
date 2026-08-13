@@ -317,6 +317,22 @@ namespace SnailPet.Ui
             public static readonly RectInt RenameTitle = new RectInt( 0,  25, W, 21);
             public static readonly RectInt RenameField = new RectInt(42,  62, 161, 20);
             public static readonly RectInt RenameOk    = new RectInt(91, 112,  63, 22);
+
+            // ── 알 부화 ── 역시 같은 판이다. 목업(UI.pptx 12쪽)을 실측해 그대로 옮겼다.
+            // 그 슬라이드는 왼쪽이 연출 중, 오른쪽이 결과이며 판·닫기·버튼 자리가 서로 같다.
+            public static readonly RectInt HatchTitle  = new RectInt(  0,  13, W, 21);
+            public static readonly RectInt HatchOk     = new RectInt( 92, 110, 63, 22);
+
+            /// <summary>연출 중에 흔들리는 알.</summary>
+            public static readonly RectInt HatchEgg    = new RectInt(102,  50, 38, 38);
+
+            /// <summary>
+            /// 연출이 끝나고 나오는 갓 태어난 달팽이.
+            /// 목업 실측은 (80, 25, 86, 73) 인데 띄워 보니 너무 커서 70% 로 줄였다.
+            /// 가운데는 그대로 두고 크기만 줄인 값이다.
+            /// </summary>
+            public static readonly RectInt HatchSnail  = new RectInt( 93,  36, 60, 51);
+            public static readonly RectInt HatchRarity = new RectInt(105,  90, 35, 12);
         }
 
         /// <summary>화면 모서리에서 띄우는 여백.</summary>

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using SnailPet.Snail;
 using UnityEngine;
 
@@ -20,6 +21,32 @@ namespace SnailPet.Ui
         /// <summary>본 장면과 겹치지 않게 멀리 떨어뜨린다. 레이어로도 갈리지만 이중으로 막는다.</summary>
         private const float FarAway = 100000f;
 
+        /// <summary>
+        /// 초상 여러 개가 동시에 살아 있을 때 서로를 찍지 않게 자리를 비켜 주는 간격.
+        ///
+        /// 레이어는 하나(31)뿐이라 카메라의 cullingMask 로는 남의 복제본을 못 가린다.
+        /// 자리를 떼어 놓아 서로의 시야에서 벗어나게 하는 것이 유일한 방법이다.
+        /// 파츠 캔버스가 1200px 이므로 5000 이면 네 배 넘는 여유가 있다.
+        ///
+        /// 전에는 전부 같은 자리에 있었는데, 상세·옷장·유전정보가 모두 같은 개체라
+        /// 똑같은 그림이 겹쳐 한 마리로 보이는 바람에 드러나지 않았다. 부화 팝업이
+        /// 처음으로 다른 개체를 띄우면서 두 마리가 겹쳐 보였다.
+        /// </summary>
+        private const float Spacing = 5000f;
+
+        /// <summary>쓰고 있는 자리. 버리면 반납해 다시 쓴다 — 안 그러면 좌표가 계속 멀어져 정밀도가 떨어진다.</summary>
+        private static readonly HashSet<int> _usedSlots = new HashSet<int>();
+
+        private readonly int _slot;
+
+        private static int TakeSlot()
+        {
+            int i = 0;
+            while (_usedSlots.Contains(i)) i++;
+            _usedSlots.Add(i);
+            return i;
+        }
+
         /// <summary>화면 크기의 몇 배로 그릴지. 고해상도에서 UI 를 키워도 견디게 여유를 둔다.</summary>
         private const int Supersample = 2;
 
@@ -34,9 +61,11 @@ namespace SnailPet.Ui
         public SnailPortrait(Transform parent, SnailAppearance appearance, SnailBounds bounds,
                              int widthPx, int heightPx)
         {
+            _slot = TakeSlot();
+
             _root = new GameObject("SnailPortrait");
             _root.transform.SetParent(parent, false);
-            _root.transform.position = new Vector3(FarAway, 0f, 0f);
+            _root.transform.position = new Vector3(FarAway + _slot * Spacing, 0f, 0f);
 
             var composed = SnailComposer.Build(appearance, "PortraitSnail");
             composed.Root.transform.SetParent(_root.transform, false);
@@ -97,6 +126,7 @@ namespace SnailPet.Ui
 
         public void Dispose()
         {
+            _usedSlots.Remove(_slot);
             if (_camera != null) _camera.targetTexture = null;
             if (Texture != null) { Texture.Release(); Object.Destroy(Texture); Texture = null; }
             if (_root != null) Object.Destroy(_root);

@@ -48,6 +48,9 @@ namespace SnailPet.Ui
             public const string DoRename  = "[변경]";
             public const string No      = "[거부]";
 
+            public const string Hatched = "[부화문구]";   // "알이 부화했습니다!"
+            public const string Confirm = "[확인]";
+
             public const string Wardrobe = "[옷장]";
             public const string Traits   = "[보유특징]";
             public const string Worn     = "[장착중]";
@@ -174,8 +177,22 @@ namespace SnailPet.Ui
                     text.text = SnailPet.Data.Loc.Text(t.Token);
             }
 
+            // 프리팹에 없던 화면은 살아날 때 지어 붙인다.
+            //
+            // 프리팹이 원본이므로 원래는 다시 구워야 새 화면이 나온다. 그런데 다시 구우면
+            // 손으로 맞춘 배치(배율·소수점 좌표·글자색)가 전부 사라진다 — 그래서 굽는 대신
+            // 없는 것만 런타임에 짓는다. 나중에 다시 구우면 이 조건이 저절로 거짓이 된다.
+            if (_hatchGroup == null) BuildHatchGroup();
+
             Rewire();
             EnsureEventSystem();
+
+            // 닫기와 최대화는 항상 맨 앞에 둔다. UGUI 는 형제 순서대로 그리는데, 탭마다 뜨는
+            // 패널들이 BuildOutside 보다 뒤에 지어져 있어 그대로 두면 달팽이 탭 말고는 이 둘이
+            // 패널에 가려진다. 그림만의 문제가 아니라 패널이 클릭까지 먹는다.
+            // (프리팹의 순서를 고치려면 다시 구워야 하므로 살아날 때마다 여기서 올린다.)
+            if (_closeBtn != null)    _closeBtn.transform.SetAsLastSibling();
+            if (_maximizeBtn != null) _maximizeBtn.transform.SetAsLastSibling();
 
             // 프리팹에는 편집용으로 펼친 채 구워져 있다. 실행은 접힌 상태로 시작한다.
             SetMaximized(false);
@@ -247,6 +264,9 @@ namespace SnailPet.Ui
             Hook(_popupPlus,  () => StepPopup(+1));
             Hook(_popupNo,    HidePopup);
             Hook(_popupClose, HidePopup);
+
+            // 부화 팝업의 「확인」. X 와 하는 일이 같다 — 닫고 목록으로 돌아간다.
+            Hook(_hatchOk,    HidePopup);
             Hook(_renameOk, () =>
             {
                 string name = _renameField != null ? _renameField.text : "";
@@ -1991,6 +2011,7 @@ namespace SnailPet.Ui
             _popupYes = TextButton(_buyGroup, Pop.Yes, Keys.Yes, "Yes");
 
             BuildRenameGroup();
+            BuildHatchGroup();
         }
 
         /// <summary>부모를 가득 채우게 편다.</summary>
@@ -2049,6 +2070,7 @@ namespace SnailPet.Ui
         {
             _buyGroup.gameObject.SetActive(false);
             _renameGroup.gameObject.SetActive(true);
+            ResetHatch();
             _popupBlocker.gameObject.SetActive(true);
 
             _renameField.text = current ?? "";
@@ -2074,6 +2096,191 @@ namespace SnailPet.Ui
             _renameField.Select();
             _renameField.ActivateInputField();
             _renameField.caretPosition = _renameField.text.Length;
+        }
+
+        // ── 알 부화 팝업 ──
+        //
+        // 부화 칸을 눌러 받는 순간 뜬다. 알이 말랑거리며 부들거리다가 빛이 판을 덮고,
+        // 그 사이에 알을 갓 태어난 달팽이로 갈아 끼운다. 목업의 좌·우 두 그림이 곧
+        // 연출 중과 결과이며, 같은 판에서 가운데만 바뀐다.
+        //
+        // 연출을 AnimationClip 이 아니라 코드로 하는 이유: 클립은 Animator 로 프리팹에
+        // 붙는데 이 UI 프리팹은 코드가 굽는 것이라 다시 구우면 사라진다(onClick 과 같은 함정).
+        // 게다가 끝나는 시점을 게임 쪽이 알아야 해서 어차피 코드가 상태를 들고 있어야 한다.
+
+        [SerializeField] private RectTransform _hatchGroup, _hatchLight;
+        [SerializeField] private Image _hatchEgg, _hatchLightFill, _hatchRarityBadge, _hatchRarityIcon;
+        [SerializeField] private RawImage _hatchSnail;
+        [SerializeField] private Text _hatchRarityText;
+        [SerializeField] private Button _hatchOk;
+
+        private void BuildHatchGroup()
+        {
+            _hatchGroup = Fill(NewRect("HatchGroup", _popup));
+            _hatchGroup.gameObject.SetActive(false);
+
+            LocLabel(_hatchGroup, Pop.HatchTitle, Keys.Hatched, 12, UiTheme.Ink);
+
+            // 알은 아래 가운데를 축으로 눌렸다 늘어난다. 떼는 연출이 발을 축으로 하는 것과
+            // 같은 이유다 — 축이 바닥에 있어야 눌리는 것처럼 보인다.
+            _hatchEgg = Icon(_hatchGroup, Pop.HatchEgg, null, Color.white, "Egg");
+            _hatchEgg.raycastTarget = false;
+            _hatchEgg.enabled = false;      // 스프라이트 없는 Image 는 흰 사각형이 된다. 띄울 때 채운다.
+            var eggRt = (RectTransform)_hatchEgg.transform;
+            eggRt.pivot = new Vector2(0.5f, 0f);
+            eggRt.anchoredPosition = new Vector2(Pop.HatchEgg.x + Pop.HatchEgg.width * 0.5f,
+                                                 -(Pop.HatchEgg.y + Pop.HatchEgg.height));
+
+            var pv = NewRect("Snail", _hatchGroup);
+            Place(pv, Pop.HatchSnail);
+            _hatchSnail = pv.gameObject.AddComponent<RawImage>();
+            _hatchSnail.raycastTarget = false;
+
+            _hatchRarityBadge = Box(_hatchGroup, Pop.HatchRarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
+            _hatchRarityText  = Label(_hatchGroup, Pop.HatchRarity, "", 8, UiTheme.OnBadge);
+            Shrink(_hatchRarityText);
+            _hatchRarityIcon = Icon(_hatchGroup, Pop.HatchRarity, null, Color.white, "RarityIcon");
+            _hatchRarityIcon.raycastTarget = false;
+            BakeRarity(_hatchRarityIcon, _hatchRarityBadge, _hatchRarityText);
+
+            _hatchOk = TextButton(_hatchGroup, Pop.HatchOk, Keys.Confirm, "Ok");
+
+            // 빛은 판을 통째로 덮어 알에서 달팽이로 갈아 끼우는 순간을 가린다.
+            // 여기서는 스프라이트 없는 Image 가 맞다 — 색으로 꽉 찬 사각형이 원하는 그림이다.
+            _hatchLight = Fill(NewRect("Light", _hatchGroup));
+            _hatchLightFill = _hatchLight.gameObject.AddComponent<Image>();
+            _hatchLightFill.color = new Color(1f, 1f, 1f, 0f);
+            _hatchLightFill.raycastTarget = false;
+        }
+
+        private enum HatchPhase { None, Wobble, Flash, Result }
+
+        private HatchPhase _hatchPhase;
+        private float _hatchTime;
+
+        /// <summary>부들거리는 시간(초). 목업의 「2~3초」에서 가운데를 잡았다.</summary>
+        private const float HatchWobbleTime = 2.4f;
+
+        /// <summary>빛이 차오르는 시간과 걷히는 시간. 차오르는 쪽이 빨라야 전환이 가려진다.</summary>
+        private const float HatchFlashIn = 0.18f, HatchFlashOut = 0.42f;
+
+        /// <summary>초상을 몇 픽셀로 찍을지. 부르는 쪽이 렌더 텍스처를 그 크기로 만든다.</summary>
+        public static Vector2Int HatchSnailSize =>
+            new Vector2Int(Pop.HatchSnail.width, Pop.HatchSnail.height);
+
+        /// <summary>연출이 아직 도는 중인가. 도는 동안에는 닫을 수 없다.</summary>
+        public bool HatchPlaying => _hatchPhase == HatchPhase.Wobble || _hatchPhase == HatchPhase.Flash;
+
+        /// <summary>
+        /// 알 부화 팝업을 띄우고 연출을 시작한다.
+        /// <paramref name="snail"/> 은 갓 태어난 개체를 찍은 렌더 텍스처다.
+        /// </summary>
+        public void ShowHatch(int eggId, SnailPet.Data.RarityType rarity, Texture snail)
+        {
+            _buyGroup.gameObject.SetActive(false);
+            _renameGroup.gameObject.SetActive(false);
+            _hatchGroup.gameObject.SetActive(true);
+            _popupBlocker.gameObject.SetActive(true);
+
+            var row = SnailPet.Data.GameData.EggDataById.TryGetValue(eggId, out var e) ? e : null;
+            _hatchEgg.sprite = EggSprite(row);
+            _hatchEgg.enabled = _hatchEgg.sprite != null;
+
+            _hatchSnail.texture = snail;
+            ApplyRarity(_hatchRarityIcon, _hatchRarityBadge, _hatchRarityText, rarity);
+
+            _hatchPhase = HatchPhase.Wobble;
+            _hatchTime = 0f;
+            ShowHatchResult(false);
+        }
+
+        /// <summary>연출 중과 결과에서 보이는 것이 갈린다. 빛이 덮고 있는 사이에 바꾼다.</summary>
+        private void ShowHatchResult(bool done)
+        {
+            _hatchEgg.gameObject.SetActive(!done);
+
+            _hatchSnail.enabled = done && _hatchSnail.texture != null;
+            _hatchRarityBadge.enabled = done && _hatchRarityIcon.sprite == null;
+            _hatchRarityIcon.enabled = done && _hatchRarityIcon.sprite != null;
+            _hatchRarityText.enabled = done && _hatchRarityIcon.sprite == null;
+
+            // 연출이 끝나기 전에는 확인도 X 도 안 눌린다 (목업의 「연출동안은 확인 못누름」).
+            if (_hatchOk != null) _hatchOk.interactable = done;
+            if (_popupClose != null) _popupClose.interactable = done;
+        }
+
+        private void Update()
+        {
+            if (_hatchPhase == HatchPhase.None || _hatchPhase == HatchPhase.Result) return;
+
+            _hatchTime += Time.deltaTime;
+
+            if (_hatchPhase == HatchPhase.Wobble)
+            {
+                WobbleEgg(_hatchTime);
+                if (_hatchTime >= HatchWobbleTime) { _hatchPhase = HatchPhase.Flash; _hatchTime = 0f; }
+                return;
+            }
+
+            // 빛: 차오르는 동안은 알이 계속 떨고, 다 덮은 순간 달팽이로 바뀐다.
+            if (_hatchTime < HatchFlashIn)
+            {
+                WobbleEgg(HatchWobbleTime + _hatchTime);
+                SetLight(_hatchTime / HatchFlashIn);
+                return;
+            }
+
+            if (_hatchEgg.gameObject.activeSelf) ShowHatchResult(true);
+
+            float t = (_hatchTime - HatchFlashIn) / HatchFlashOut;
+            SetLight(1f - t);
+
+            if (t >= 1f)
+            {
+                SetLight(0f);
+                _hatchPhase = HatchPhase.Result;
+            }
+        }
+
+        /// <summary>
+        /// 부들거림. 좌우로 빠르게 떨면서 박자에 맞춰 세로로 눌렸다 늘어난다.
+        /// 늘어나는 만큼 가로를 줄여야 부피가 유지되는 것처럼 보인다.
+        /// </summary>
+        private void WobbleEgg(float t)
+        {
+            var rt = (RectTransform)_hatchEgg.transform;
+
+            float beat  = Mathf.Max(0f, Mathf.Sin(t * 3.1f));      // 0..1 로 부풀었다 가라앉는다
+            float shake = Mathf.Sin(t * 34f) * 4f * beat;          // 도
+            float tall  = 1f + beat * 0.16f;
+
+            rt.localRotation = Quaternion.Euler(0f, 0f, shake);
+            rt.localScale = new Vector3(1f / Mathf.Sqrt(tall), tall, 1f);
+        }
+
+        private void SetLight(float alpha) =>
+            _hatchLightFill.color = new Color(1f, 1f, 1f, Mathf.Clamp01(alpha));
+
+        /// <summary>
+        /// 팝업을 닫을 때 부화 연출의 흔적을 지운다.
+        /// 특히 닫기 버튼은 연출 중에 꺼 두므로, 안 돌려놓으면 다음에 뜨는
+        /// 구매·이름 변경 팝업의 X 가 눌리지 않는다.
+        /// </summary>
+        private void ResetHatch()
+        {
+            _hatchPhase = HatchPhase.None;
+            _hatchTime = 0f;
+
+            if (_hatchGroup != null) _hatchGroup.gameObject.SetActive(false);
+            if (_hatchLightFill != null) SetLight(0f);
+            if (_popupClose != null) _popupClose.interactable = true;
+
+            if (_hatchEgg != null)
+            {
+                var rt = (RectTransform)_hatchEgg.transform;
+                rt.localRotation = Quaternion.identity;
+                rt.localScale = Vector3.one;
+            }
         }
 
         /// <summary>수량 조절 버튼. 아트가 없어 배경 도형 + 글자로 만든다.</summary>
@@ -2114,6 +2321,7 @@ namespace SnailPet.Ui
 
             _buyGroup.gameObject.SetActive(true);
             _renameGroup.gameObject.SetActive(false);
+            ResetHatch();
             _popupTitle.text = SnailPet.Data.Loc.Format(selling ? Keys.AskSell : Keys.AskBuy, itemName);
             _popupBlocker.gameObject.SetActive(true);
             PaintPopup();
@@ -2122,6 +2330,7 @@ namespace SnailPet.Ui
         public void HidePopup()
         {
             if (_popupBlocker != null) _popupBlocker.gameObject.SetActive(false);
+            ResetHatch();
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             // 이름 입력 때문에 빌린 포커스를 돌려준다. 안 빌렸으면 아무 일도 없다.
             SnailPet.Desktop.TransparentWindow.SetKeyboardFocus(false);
@@ -2153,6 +2362,9 @@ namespace SnailPet.Ui
         {
             Maximized = on;
             _listRoot.gameObject.SetActive(on);
+
+            // 펼친 상태에서는 최대화 버튼이 할 일이 없다. 접는 것은 X 가 맡는다.
+            if (_maximizeBtn != null) _maximizeBtn.gameObject.SetActive(!on);
         }
 
         public bool Maximized { get; private set; }

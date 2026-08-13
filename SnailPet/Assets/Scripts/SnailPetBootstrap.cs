@@ -1115,6 +1115,9 @@ namespace SnailPet
         }
 
         /// <summary>다 된 칸을 눌렀다. 아직이면 아무 일도 없다.</summary>
+        /// <summary>부화 팝업에 비추는 갓 태어난 개체. 받을 때마다 새로 찍는다.</summary>
+        private SnailPortrait _hatchView;
+
         private void ClaimHatched(int slot)
         {
             int eggId = _player.TakeHatched(slot);
@@ -1130,6 +1133,14 @@ namespace SnailPet
             var born = _player.AddSnail(SnailHatchery.Hatch(egg.Id, new System.Random()), egg.RarityType);
             RefreshEggs();
             RefreshSnail(reshoot: false);   // 화면에 나와 있는 개체는 그대로다
+
+            // 갓 태어난 개체를 한 장 찍어 팝업에 넘긴다. 경계는 그 개체로 다시 재야 한다 —
+            // 껍질이 다르면 실루엣도 달라 화면에 나와 있는 개체의 값으로는 어긋난다.
+            _hatchView?.Dispose();
+            var hatchSize = SnailUi.HatchSnailSize;
+            _hatchView = new SnailPortrait(transform, born.Appearance, SnailMetrics.Measure(born.Appearance),
+                                           hatchSize.x, hatchSize.y);
+            _ui.ShowHatch(eggId, born.Rarity, _hatchView.Texture);
 
             Say($"      [UI] 부화! {GameData.TokenById[eggId]} → {born.Appearance}");
             Say($"      보유 달팽이 {_player.Snails.Count}마리");
