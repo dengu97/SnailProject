@@ -305,6 +305,8 @@ namespace SnailPet
             ActivateSnail(_player.Active);
 
             _food = new FoodField(transform);
+            _crumbs = new CrumbField(transform);
+            _coins = new CoinPop(transform);
             _present = new SnailPresent(transform);
 
             Say("[2] 성장 ............. " + _growth);
@@ -1175,6 +1177,11 @@ namespace SnailPet
             _food.Tick(Time.deltaTime, _box.Bottom);
             UpdateFoodTransforms(px);
 
+            // 부스러기도 먹이와 같은 바닥에 떨어진다. 수명이 다하면 흐려지며 사라진다.
+            _crumbs.Tick(Time.deltaTime, CrumbGravity, _box.Bottom);
+            _coins.Tick(Time.deltaTime);
+            UpdateCrumbTransforms();
+
             StepDrag(footDepth, halfExtent);
 
             SnailPose pose;
@@ -1350,6 +1357,7 @@ namespace SnailPet
 
             _ateSeconds += deltaTime;
             _eatBounceNow = Mathf.Sin(_ateSeconds * EatBounceHz * Mathf.PI * 2f) * EatBounce;
+            StepCrumbs(deltaTime);
 
             float need = Mathf.Max(0f, (float)_eating.Data.EatTime);
             if (_ateSeconds < need) return;
@@ -1368,6 +1376,69 @@ namespace SnailPet
 
         /// <summary>먹이에서 이만큼 벗어나도 계속 먹는다. 없으면 살짝 흔들릴 때마다 끊긴다.</summary>
         private const float EatReach = 12f;
+
+        // ── 먹을 때 튀는 부스러기 ──
+
+        /// <summary>이 간격마다 한 조각씩 튄다.</summary>
+        private const float CrumbEvery = 0.28f;
+
+        /// <summary>
+        /// 부스러기 크기·속도·수명·중력.
+        ///
+        /// 크기는 몸 높이에 대한 비율이되 최소값을 둔다 — 레벨 1 달팽이는 40px 이라
+        /// 비율만 쓰면 7px 짜리 점이 되어 안 보인다.
+        /// 중력은 먹이(1600)보다 훨씬 약하게 준다. 그래야 40px 쯤 튀어오른다.
+        /// </summary>
+        private const float CrumbFraction = 0.3f, CrumbMinPixels = 9f;
+        private const float CrumbSpeed = 170f, CrumbGravity = 420f;
+        private const float CrumbLifeMin = 2f, CrumbLifeMax = 3f;
+
+        private CrumbField _crumbs;
+        private float _nextCrumbAt;
+
+        // ── 선물 받을 때 떠오르는 코인 ──
+        //
+        // 마리오가 코인을 먹듯 머리 위에서 뽀잉 하고 떠올랐다 사라진다. 그림은 6칸짜리
+        // 프레임 시트를 돌려 쓴다. 크기·높이는 몸 크기에 비례시키되 최소값을 둔다 —
+        // 레벨 1 은 40px 이라 비율만 쓰면 안 보인다.
+
+        private const float CoinPopFraction = 0.55f, CoinPopMinPixels = 16f;
+        private const float CoinPopRiseFraction = 1.1f, CoinPopMinRise = 34f;
+        private const float CoinPopLife = 0.9f;
+
+        private CoinPop _coins;
+        private bool _coinPopPending;
+
+        /// <summary>먹는 동안 부스러기를 튀긴다. 나오는 자리는 먹이 위쪽이다.</summary>
+        private void StepCrumbs(float deltaTime)
+        {
+            if (_crumbs == null || _eating == null) return;
+
+            _nextCrumbAt -= deltaTime;
+            if (_nextCrumbAt > 0f) return;
+
+            _nextCrumbAt = CrumbEvery;
+
+            var from = new Vector2(
+                _eating.ScreenX + UnityEngine.Random.Range(-_eating.HalfWidth, _eating.HalfWidth),
+                _eating.ScreenY - _eating.Height * 0.6f);
+
+            float pixels = Mathf.Max(CrumbMinPixels, (_bounds.Top - _bounds.Foot) * _scale * CrumbFraction);
+            _crumbs.Spawn(from, pixels, CrumbSpeed * UnityEngine.Random.Range(0.7f, 1.3f),
+                          UnityEngine.Random.Range(CrumbLifeMin, CrumbLifeMax));
+        }
+
+        /// <summary>부스러기와 코인을 화면 좌표에서 월드로 옮긴다. 먹이와 같은 방식이다.</summary>
+        private void UpdateCrumbTransforms()
+        {
+            if (_crumbs != null)
+                foreach (var c in _crumbs.Items)
+                    if (c.Root != null) c.Root.position = VirtualToWorld(c.Screen.x, c.Screen.y);
+
+            if (_coins != null)
+                foreach (var c in _coins.Items)
+                    if (c.Root != null) c.Root.position = VirtualToWorld(c.Screen.x, c.Screen.y);
+        }
 
         /// <summary>먹던 것을 접는다. 먹이는 그대로 남고 진행은 0 으로 돌아간다.</summary>
         private void CancelEating(string why)
@@ -1591,6 +1662,11 @@ namespace SnailPet
                     {
                         _claimFlashUntil = _t + 1.5f;
                         _ui.SetCoin(_player.Coins);
+
+                        // 코인은 달팽이 머리 위에서 떠오른다. 그 자리는 말풍선을 놓을 때
+                        // 이미 재고 있으므로, 여기서는 「띄워 달라」고만 표시해 둔다.
+                        _coinPopPending = true;
+
                         string name = GameData.TokenById.TryGetValue(itemId, out string t) ? t : itemId.ToString();
                         Say($"      선물 수령: {name} x{count}  → 가방: {_player.Items}");
                     }
@@ -1803,6 +1879,18 @@ namespace SnailPet
             float bubbleHalf = _present.HalfHeightWorld * px;
             Vector2 bubbleScreen = foot - n * (bodyDepth + BubbleGapPx + bubbleHalf);
 
+            // 방금 받은 선물이 있으면 그 자리에서 코인이 떠오른다.
+            if (_coinPopPending)
+            {
+                _coinPopPending = false;
+
+                float bodyPx = (_bounds.Top - _bounds.Foot) * _scale * px;
+                _coins?.Pop(bubbleScreen,
+                            Mathf.Max(CoinPopMinPixels, bodyPx * CoinPopFraction),
+                            Mathf.Max(CoinPopMinRise, bodyPx * CoinPopRiseFraction),
+                            CoinPopLife);
+            }
+
             // 설정에서 코인 알림을 끄면 말풍선만 안 뜬다. 선물 자체는 그대로 쌓이고
             // 달팽이를 눌러 받는 것도 그대로다 — 끄는 것은 알림이지 보상이 아니다.
             bool visible = _present.Ready && _player.Options.CoinBubble;
@@ -1949,7 +2037,8 @@ namespace SnailPet
             else if (_snailFalling)            act = "떨어지는 중";
             else if (_peeling)                 act = $"떼는 중 ({_stretch / PeelMaxStretch * 100:0}%)";
             GUI.Label(new Rect(32, y + 50, 960, 22),
-                act + "   |   벽: " + edgeName + "   먹이 " + (_food != null ? _food.Count : 0) + "개", style);
+                act + "   |   벽: " + edgeName + "   먹이 " + (_food != null ? _food.Count : 0) + "개"
+                    + "   부스러기 " + (_crumbs != null ? _crumbs.Count : 0) + "개", style);
             GUI.Label(new Rect(32, y + 72, 960, 22),
                 (_present != null ? _present + "   가방: " + _player.Items : ""), style);
         }
