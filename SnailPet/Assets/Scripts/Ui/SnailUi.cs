@@ -215,11 +215,23 @@ namespace SnailPet.Ui
                 Place((RectTransform)_eggEmpty.transform, InGrid(UiTheme.Egg.Empty));
             }
 
-            // 목록 행도 프리팹에 구워질 때는 썸네일 그림 자리가 없었다. 행마다 하나씩 붙인다.
+            // 목록 행도 프리팹에 구워질 때는 썸네일 그림 자리가 없었고, 이름은 가운데 정렬로
+            // 굳어 있다. 둘 다 여기서 맞춘다.
             for (int i = 0; i < Count(_rows); i++)
             {
-                if (_rows[i] == null || _rows[i].Root == null || _rows[i].Face != null) continue;
-                _rows[i].Face = FaceView(_rows[i].Root, Max.RowThumb);
+                if (_rows[i] == null || _rows[i].Root == null) continue;
+
+                if (_rows[i].Face == null) _rows[i].Face = FaceView(_rows[i].Root, Max.RowThumb);
+                if (_rows[i].Name != null) _rows[i].Name.alignment = TextAnchor.MiddleLeft;
+            }
+
+            // 상세보기 파츠 줄의 글자 자리는 프리팹에 예전 값으로 구워져 있다. 지금 값으로 다시 놓는다.
+            // (손으로 옮긴 배치를 덮지 않도록, 자리를 옮긴 것만 이렇게 짚어서 되놓는다.)
+            for (int i = 0; i < Count(_geneRows); i++)
+            {
+                if (_geneRows[i] == null) continue;
+                if (_geneRows[i].Name != null) Place((RectTransform)_geneRows[i].Name.transform, UiTheme.Gene.RowName);
+                if (_geneRows[i].Info != null) Place((RectTransform)_geneRows[i].Info.transform, UiTheme.Gene.RowInfo);
             }
 
             // 프리팹에는 덮개가 반투명 검정으로 구워져 있다. 이제 어둡게 하는 일은
@@ -246,6 +258,18 @@ namespace SnailPet.Ui
             // (프리팹의 순서를 고치려면 다시 구워야 하므로 살아날 때마다 여기서 올린다.)
             if (_closeBtn != null)    _closeBtn.transform.SetAsLastSibling();
             if (_maximizeBtn != null) _maximizeBtn.transform.SetAsLastSibling();
+
+            // 좌우 패널을 통째로 쓰는 화면들은 프리팹에 <b>켜진 채로</b> 저장돼 있을 수 있다.
+            // (편집하려고 켜 보고 그대로 저장하면 그렇게 된다. 실제로 유전정보가 그 상태였고,
+            //  목록 행 사이 틈으로 그 줄들이 비쳐 보였다.)
+            // 시작은 언제나 달팽이 목록이므로 여기서 확실히 내린다.
+            _inGene = _inWardrobe = _inSettings = false;
+            if (_geneRoot != null)      _geneRoot.gameObject.SetActive(false);
+            if (_genePanel != null)     _genePanel.gameObject.SetActive(false);
+            if (_wardrobeRoot != null)  _wardrobeRoot.gameObject.SetActive(false);
+            if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
+            if (_settingsRoot != null)  _settingsRoot.gameObject.SetActive(false);
+            if (_settingsPanel != null) _settingsPanel.gameObject.SetActive(false);
 
             // 프리팹에는 편집용으로 펼친 채 구워져 있다. 실행은 접힌 상태로 시작한다.
             SetMaximized(false);
@@ -1110,6 +1134,10 @@ namespace SnailPet.Ui
                 Rarity = null,
                 Age    = null,
             };
+
+            // 이름은 왼쪽 정렬. 가운데 정렬이면 이름 길이에 따라 시작점이 들쭉날쭉해진다
+            // (상세보기의 파츠 줄과 같은 규칙).
+            row.Name.alignment = TextAnchor.MiddleLeft;
 
             row.RarityBadge = Box(rowRt, Max.RowRarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
             row.Rarity = Label(rowRt, Max.RowRarity, "", 8, UiTheme.OnBadge);

@@ -275,8 +275,9 @@ namespace SnailPet.Ui
             // 아래는 행 왼쪽 위가 원점
             public static readonly RectInt RowThumb  = new RectInt(  0,  7, 25, 25);
             public static readonly RectInt RowBar    = new RectInt( 19,  0, 140, 40);
-            public static readonly RectInt RowName   = new RectInt( 20,  3, 98, 18);
-            public static readonly RectInt RowInfo   = new RectInt( 20, 18, 128, 18);
+            // 글자는 썸네일(0~25)을 피해 시작한다. 목업 값(x=20)은 그림 위로 올라와 있었다.
+            public static readonly RectInt RowName   = new RectInt( 30,  3,  85, 18);
+            public static readonly RectInt RowInfo   = new RectInt( 30, 18, 128, 18);
             public static readonly RectInt RowRarity = new RectInt(117,  4, 35, 12);
 
             // ── 오른쪽: 초상 + 한 줄짜리 목록 ──

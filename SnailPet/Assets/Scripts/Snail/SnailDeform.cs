@@ -20,6 +20,18 @@ namespace SnailPet.Snail
         /// <summary>몸 전체 세로 신장. 0 = 평소.</summary>
         public float Stretch;
 
+        /// <summary>
+        /// 껍질 속으로 빨려 들어가는 정도. 0 = 평소, 1 = 한 점으로 사라짐.
+        ///
+        /// 늘어남(<see cref="Stretch"/>)은 부피를 지키느라 세로로 줄면 가로로 퍼지는데,
+        /// 「껍질 속으로 쏙」은 그 반대로 <b>가로·세로가 함께</b> 줄어야 한다. 그래서 축을 따로 뒀다.
+        /// 목표점을 껍질 한가운데로 두면 몸이 껍질 안으로 빨려 들어가는 것으로 보인다.
+        /// </summary>
+        public float Retract;
+
+        /// <summary>빨려 들어가는 목표점(로컬).</summary>
+        public Vector2 RetractTo;
+
         /// <summary>몸 전체 기울기(도). 발을 축으로 돈다.</summary>
         public float LeanDeg;
 
@@ -181,12 +193,22 @@ namespace SnailPet.Snail
             float ay = (y - Foot) * sy;
 
             float lean = Mirrored ? -LeanDeg : LeanDeg;
+
+            Vector2 result;
             if (lean != 0f)
             {
                 float r = lean * Mathf.Deg2Rad, c = Mathf.Cos(r), s = Mathf.Sin(r);
-                return new Vector2(ax * c - ay * s, ax * s + ay * c + Foot);
+                result = new Vector2(ax * c - ay * s, ax * s + ay * c + Foot);
             }
-            return new Vector2(ax, ay + Foot);
+            else result = new Vector2(ax, ay + Foot);
+
+            // 5) 껍질 속으로. 마지막에 목표점 쪽으로 통째로 오므린다.
+            if (Retract > 0f)
+            {
+                float k = 1f - Mathf.Clamp01(Retract);
+                result = RetractTo + (result - RetractTo) * k;
+            }
+            return result;
         }
 
         /// <summary>
@@ -199,6 +221,11 @@ namespace SnailPet.Snail
         /// </summary>
         public void RigidPose(float anchorLocalY, out Vector3 position, out Quaternion rotation)
         {
+            // 껍질은 빨려 들어가지 않는다 — 몸이 들어갈 목적지이지 같이 사라질 것이 아니다.
+            // 오므림을 켠 채로 재면 껍질까지 목표점으로 끌려가고 접선이 사라져 각도가 튄다.
+            float retract = Retract;
+            Retract = 0f;
+
             var anchor = new Vector2(0f, anchorLocalY);
             Vector2 a = Apply(anchor);
 
@@ -208,6 +235,8 @@ namespace SnailPet.Snail
             float deg = t.sqrMagnitude > 1e-8f ? Mathf.Atan2(t.y, t.x) * Mathf.Rad2Deg : 0f;
             rotation = Quaternion.Euler(0f, 0f, deg);
             position = new Vector3(a.x, a.y, 0f) - rotation * new Vector3(anchor.x, anchor.y, 0f);
+
+            Retract = retract;
         }
     }
 }

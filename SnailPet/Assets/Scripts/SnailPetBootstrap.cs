@@ -218,6 +218,9 @@ namespace SnailPet
         /// <summary>껍질 중심의 로컬 y. 몸이 늘어난 만큼 껍질을 평행이동시킬 때 쓴다.</summary>
         private float _shellCenterLocalY;
 
+        /// <summary>껍질 아래 끝의 로컬 y. 껍질만 바닥에 내려놓을 때 쓴다.</summary>
+        private float _shellBottomLocalY;
+
         private int _vLeft, _vTop, _vWidth, _vHeight;
         private string _status = "";
 
@@ -812,8 +815,13 @@ namespace SnailPet
                 if (p.Type != PartsType.Shell) continue;
                 var sprite = SnailComposer.Load(SnailComposer.LinePath(p.Type, p.ResourceKey));
                 if (sprite != null && SnailMetrics.TryMeasure(sprite, out var e))
+                {
+                    _shellBottomLocalY = e.Bottom;
                     return (e.Bottom + e.Top) * 0.5f;
+                }
             }
+
+            _shellBottomLocalY = _bounds.Foot;
             return (_bounds.Foot + _bounds.Top) * 0.5f;
         }
 
@@ -839,6 +847,10 @@ namespace SnailPet
             // 떼는 연출의 늘어남, 먹는 동안의 뽀잉뽀잉, 걸을 때의 끄덕임.
             // 셋이 한꺼번에 걸릴 일은 없다: 들리면 먹기가 취소되고, 먹는 동안은 걷지 않는다.
             _deform.Stretch = _stretch + _eatBounceNow + _walkBob;
+
+            // 몸이 껍질 속으로 빨려 들어가는 축. 목표점은 껍질 한가운데다.
+            _deform.Retract = _hideRetract;
+            _deform.RetractTo = new Vector2(0f, _shellCenterLocalY);
             _deform.LeanDeg = _lean;
             _deform.HalfWidth = _visibleWidth * 0.5f;
 
@@ -856,7 +868,9 @@ namespace SnailPet
                 _deform.RigidPose(_shellCenterLocalY, out var pos, out var rot);
                 rigid.localScale = Vector3.one;
                 rigid.localRotation = rot;
-                rigid.localPosition = pos;
+
+                // 로컬 y 는 벽에서 멀어지는 방향이라, 어느 벽에 붙어 있든 「뜨는」 것이 된다.
+                rigid.localPosition = pos + new Vector3(0f, _shellLift, 0f);
             }
         }
 
@@ -959,6 +973,121 @@ namespace SnailPet
             _walkBob = Mathf.Sin(_deform.WavePhase * Mathf.PI * 2f) * WalkBobAmount * ramp;
         }
 
+        // ── 껍질 속으로 ──
+        //
+        // 연달아 톡톡 건드리면 몸을 접어 껍질 속으로 쏙 들어간다.
+        // 접는 것은 세로 신장을 음수로 주는 것이고(sy = 1 + Stretch 라 −0.5 면 절반),
+        // 껍질은 강체라 따로 밀어 올린다.
+
+        private const int TapsToHide = 5;
+
+        /// <summary>이 시간 안에 다시 건드려야 연속으로 친다.</summary>
+        private const float TapWindow = 0.8f;
+
+        // 앞으로 감기: 몸이 껍질로 빨려 들어감 → 껍질이 떠올랐다 바닥에 내려앉음.
+        // 그 뒤 잠깐 멈췄다가 같은 길을 <b>거꾸로</b> 읽어 되감는다.
+        private const float HideFoldTime = 0.14f, HideHopTime = 0.18f, HideDropTime = 0.22f;
+
+        /// <summary>바닥에 내려앉은 채로 머무는 시간.</summary>
+        private const float HideHoldTime = 2f;
+
+        /// <summary>껍질이 뜨는 높이. 몸 높이에 대한 비율이라 크기가 바뀌어도 같은 느낌이다.</summary>
+        private const float HideLiftFraction = 0.22f;
+
+        private static float HideForwardTime => HideFoldTime + HideHopTime + HideDropTime;
+
+        private int _taps;
+        private float _lastTapAt = -99f;
+
+        /// <summary>연출 진행 시간. 음수면 안 하는 중이다.</summary>
+        private float _hideT = -1f;
+
+        /// <summary>몸이 껍질로 빨려 들어간 정도(0~1)와, 껍질을 밀어 올린 양.</summary>
+        private float _hideRetract, _shellLift;
+
+        private bool Hiding => _hideT >= 0f;
+
+        private void CountTap()
+        {
+            _taps = (_t - _lastTapAt <= TapWindow) ? _taps + 1 : 1;
+            _lastTapAt = _t;
+
+            if (_taps < TapsToHide || Hiding) return;
+
+            _taps = 0;
+            _hideT = 0f;
+            CancelEating("놀라서");
+            Say($"      {TapsToHide}번 연속으로 건드려서 껍질 속으로 들어갑니다");
+        }
+
+        /// <summary>
+        /// 껍질 속으로 들어갔다 나온다. 접는 동안은 걷지 않고, 들어 올리면 없던 일이 된다.
+        ///
+        /// 되감기를 따로 짜지 않는다 — 「앞으로 감은 시간 u 에서의 모습」을 함수 하나로 두고,
+        /// 돌아올 때는 그 u 를 거꾸로 흘려보낸다. 그래서 나오는 모습이 들어가는 모습과 정확히 같다.
+        /// </summary>
+        private void StepHide(float deltaTime)
+        {
+            if (!Hiding) return;
+
+            _hideT += deltaTime;
+
+            float forward = HideForwardTime;
+            float total = forward * 2f + HideHoldTime;
+
+            if (_hideT >= total)
+            {
+                _hideT = -1f;
+                _hideRetract = 0f;
+                _shellLift = 0f;
+                return;
+            }
+
+            float u = _hideT <= forward ? _hideT
+                    : _hideT <= forward + HideHoldTime ? forward
+                    : forward - (_hideT - forward - HideHoldTime);      // 되감기
+
+            EvaluateHide(Mathf.Clamp(u, 0f, forward));
+        }
+
+        /// <summary>앞으로 감은 시간 <paramref name="u"/> 에서의 모습.</summary>
+        private void EvaluateHide(float u)
+        {
+            float bodyHeight = _bounds.Top - _bounds.Foot;
+            float lift = bodyHeight * HideLiftFraction;
+
+            // 1) 몸이 껍질 속으로 빨려 들어간다. 빠르게 시작해 붙는다.
+            if (u < HideFoldTime)
+            {
+                float t = u / HideFoldTime;
+                _hideRetract = 1f - (1f - t) * (1f - t);
+                _shellLift = 0f;
+                return;
+            }
+
+            // 2) 껍질이 떠오른다
+            float hop = u - HideFoldTime;
+            if (hop < HideHopTime)
+            {
+                float t = hop / HideHopTime;
+                _hideRetract = 1f;
+                _shellLift = lift * (1f - (1f - t) * (1f - t));   // 올라갈수록 느려진다
+                return;
+            }
+
+            // 3) 바닥까지 떨어진다. 떨어지는 것이라 갈수록 빨라진다.
+            float drop = hop - HideHopTime;
+            float k = Mathf.Clamp01(drop / HideDropTime);
+            _hideRetract = 1f;
+            _shellLift = Mathf.Lerp(lift, ShellGroundLift, k * k);
+        }
+
+        /// <summary>
+        /// 껍질이 바닥에 닿으려면 얼마나 내려가야 하는지. 껍질 아래 끝이 발선에 오는 양이다.
+        /// 몸이 사라져 있으니 껍질만 지면에 놓인 것으로 보인다.
+        /// </summary>
+        private float ShellGroundLift => _bounds.Foot - _shellBottomLocalY;
+
         /// <summary>걸을 때 머리가 흔들리는 폭. 몸 세로 신장 비율이라 0.05 면 5% 다.</summary>
         private const float WalkBobAmount = 0.05f;
 
@@ -1053,6 +1182,11 @@ namespace SnailPet
             {
                 // 들리거나 떨어지는 중에는 먹던 것이 무효다. 내려놓으면 다시 기어가 처음부터 먹는다.
                 CancelEating("들려서");
+
+                // 껍질에 들어가 있다가 들리면 없던 일이 된다. 손에 들린 채로 접혀 있으면 이상하다.
+                _hideT = -1f;
+                _hideRetract = 0f;
+                _shellLift = 0f;
                 UpdateFreeSnail(footDepth, halfExtent);
 
                 // 들려 있거나 떨어지는 동안은 벽에 붙어 있지 않으므로 똑바로 세운다
@@ -1074,8 +1208,9 @@ namespace SnailPet
             TickIncubator(Time.deltaTime);
 
             // 벽에 붙어 실제로 나아가고 있을 때만 발바닥에 물결이 지나간다
-            StepFootWave(!SnailFree && !_peeling, Time.deltaTime);
+            StepFootWave(!SnailFree && !_peeling && !Hiding, Time.deltaTime);
             StepDangle(Time.deltaTime);
+            StepHide(Time.deltaTime);
 
             if (pose.Valid)
             {
@@ -1112,6 +1247,9 @@ namespace SnailPet
         /// </summary>
         private void StepBehaviour(float halfExtent, float deltaTime)
         {
+            // 껍질 속에 들어가 있는 동안은 아무 데도 안 간다
+            if (Hiding) { _target = null; return; }
+
             // 먹는 중에는 제자리에 선다. 다른 먹이가 코앞에 떨어져도 쳐다보지 않는다.
             if (_eating != null)
             {
@@ -1523,6 +1661,12 @@ namespace SnailPet
             {
                 _stretchTarget = Mathf.Clamp(_snailVelY * FallStretchPerSpeed, 0f, FallMaxStretch);
             }
+            else if (Hiding)
+            {
+                // 접혀 있는 동안은 걷기 흔들림을 얹지 않는다. 접힘은 StepHide 가 직접 준다.
+                _stretchTarget = 0f;
+                _leanTarget = 0f;
+            }
             else
             {
                 // 벽에 붙어 기어가는 중
@@ -1548,6 +1692,7 @@ namespace SnailPet
             {
                 _peeling = false;                 // 덜 당기고 놓으면 그대로 붙어 있는다
                 Say("      놓았습니다. 벽에 그대로 붙어 있습니다.");
+                CountTap();
             }
 
             if (!down && _wasMouseDown && _drag != DragTarget.None)

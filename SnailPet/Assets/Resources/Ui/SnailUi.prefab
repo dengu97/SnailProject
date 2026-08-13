@@ -20306,6 +20306,7 @@ MonoBehaviour:
   _rows:
   - Root: {fileID: 6292332478203158190}
     Thumb: {fileID: 6094987137477029580}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 2732302651142914144}
     RarityIcon: {fileID: 8027669421823936302}
     Name: {fileID: 1160620769911741092}
@@ -20314,6 +20315,7 @@ MonoBehaviour:
     Swap: {fileID: 5304876660875167971}
   - Root: {fileID: 3927486651863411690}
     Thumb: {fileID: 6370395898400289780}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 4296577773929426749}
     RarityIcon: {fileID: 1632995326437803332}
     Name: {fileID: 2138723251045329214}
@@ -20322,6 +20324,7 @@ MonoBehaviour:
     Swap: {fileID: 2010284592720341305}
   - Root: {fileID: 7857754126546317271}
     Thumb: {fileID: 7526559641288819786}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 4297192034254665}
     RarityIcon: {fileID: 8392155498874233223}
     Name: {fileID: 8147794842898443097}
@@ -20330,6 +20333,7 @@ MonoBehaviour:
     Swap: {fileID: 5401321823790312108}
   - Root: {fileID: 3244979613464128897}
     Thumb: {fileID: 8488240019625838454}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 3236487647685593079}
     RarityIcon: {fileID: 149615053013159328}
     Name: {fileID: 5424855751517285463}
@@ -20338,6 +20342,7 @@ MonoBehaviour:
     Swap: {fileID: 5990886261749965050}
   - Root: {fileID: 5890465114777621172}
     Thumb: {fileID: 8425805969087440582}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 7156502677638626162}
     RarityIcon: {fileID: 4978647248556759609}
     Name: {fileID: 7752318043566214868}
@@ -20346,6 +20351,7 @@ MonoBehaviour:
     Swap: {fileID: 6546923513389248325}
   - Root: {fileID: 168822372818826240}
     Thumb: {fileID: 5812295069304666}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 7794744988535085912}
     RarityIcon: {fileID: 7069754547933380737}
     Name: {fileID: 2625347857225520587}
@@ -20354,6 +20360,7 @@ MonoBehaviour:
     Swap: {fileID: 2215011993358007575}
   - Root: {fileID: 5526877723506127404}
     Thumb: {fileID: 5896313445831914198}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 6762492698420950270}
     RarityIcon: {fileID: 6131541403169173921}
     Name: {fileID: 9160310614397724004}
@@ -20362,6 +20369,7 @@ MonoBehaviour:
     Swap: {fileID: 4383374524538475631}
   - Root: {fileID: 1316825460001321827}
     Thumb: {fileID: 4248576448820049253}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 1653259681607061245}
     RarityIcon: {fileID: 972370256996612695}
     Name: {fileID: 6625224597500662665}
@@ -20370,6 +20378,7 @@ MonoBehaviour:
     Swap: {fileID: 3705234529588556045}
   - Root: {fileID: 5680522399196647586}
     Thumb: {fileID: 3935447022849016425}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 7681017296808952378}
     RarityIcon: {fileID: 5401678436437405406}
     Name: {fileID: 3778567328553481123}
@@ -20378,6 +20387,7 @@ MonoBehaviour:
     Swap: {fileID: 7249423030191286649}
   - Root: {fileID: 2747489939744109986}
     Thumb: {fileID: 4367011236591850746}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 4271537834030425161}
     RarityIcon: {fileID: 5366579586239592593}
     Name: {fileID: 1468945437495450055}
@@ -20386,6 +20396,7 @@ MonoBehaviour:
     Swap: {fileID: 1320045856479753254}
   - Root: {fileID: 87130713565584109}
     Thumb: {fileID: 564000632123273538}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 5991857611651913997}
     RarityIcon: {fileID: 6615958776871457849}
     Name: {fileID: 2766265066784538773}
@@ -20394,6 +20405,7 @@ MonoBehaviour:
     Swap: {fileID: 3869019744662537289}
   - Root: {fileID: 8070186839091084530}
     Thumb: {fileID: 5577314113109989387}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 5716596497962464626}
     RarityIcon: {fileID: 72991169973184537}
     Name: {fileID: 8024775141883291761}
@@ -20402,6 +20414,7 @@ MonoBehaviour:
     Swap: {fileID: 3659260767705684357}
   - Root: {fileID: 8671642515702507222}
     Thumb: {fileID: 1542672658413105755}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 4404414612320370597}
     RarityIcon: {fileID: 6772135655223394856}
     Name: {fileID: 2591332291815757476}
@@ -20410,6 +20423,7 @@ MonoBehaviour:
     Swap: {fileID: 1757750496978093325}
   - Root: {fileID: 6422998720338300010}
     Thumb: {fileID: 7438965518116764503}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 8635635343202205111}
     RarityIcon: {fileID: 4316779118829906085}
     Name: {fileID: 2150360167281390990}
@@ -20418,6 +20432,7 @@ MonoBehaviour:
     Swap: {fileID: 5548203764652095110}
   - Root: {fileID: 7469280755768841503}
     Thumb: {fileID: 7129627097750718580}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 58431953641424505}
     RarityIcon: {fileID: 5785055646354144333}
     Name: {fileID: 2139760883338230683}
@@ -20426,6 +20441,7 @@ MonoBehaviour:
     Swap: {fileID: 7353719249182776116}
   - Root: {fileID: 618456960561006883}
     Thumb: {fileID: 5660376516647868569}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 6574132723847959443}
     RarityIcon: {fileID: 7209731835490660118}
     Name: {fileID: 5729842770024930597}
@@ -20434,6 +20450,7 @@ MonoBehaviour:
     Swap: {fileID: 8822290196248880820}
   - Root: {fileID: 6669394114332298150}
     Thumb: {fileID: 4019591619359632286}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 6755896427505697766}
     RarityIcon: {fileID: 3497420783899970159}
     Name: {fileID: 184921284210964732}
@@ -20442,6 +20459,7 @@ MonoBehaviour:
     Swap: {fileID: 7739214317015749138}
   - Root: {fileID: 4295557916395079934}
     Thumb: {fileID: 5172782049060025915}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 8936301805043241646}
     RarityIcon: {fileID: 5040445937367326077}
     Name: {fileID: 5739510277202730799}
@@ -20450,6 +20468,7 @@ MonoBehaviour:
     Swap: {fileID: 5827121712997191266}
   - Root: {fileID: 6174023439317400708}
     Thumb: {fileID: 597236999212507763}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 8885014126071642002}
     RarityIcon: {fileID: 5035425585776043604}
     Name: {fileID: 148116628813694968}
@@ -20458,6 +20477,7 @@ MonoBehaviour:
     Swap: {fileID: 6593831031049009507}
   - Root: {fileID: 5631831764129946429}
     Thumb: {fileID: 4018461082051238942}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 6697847543818937343}
     RarityIcon: {fileID: 3003625264263734704}
     Name: {fileID: 3494932201581343165}
@@ -20466,6 +20486,7 @@ MonoBehaviour:
     Swap: {fileID: 8779236958636722346}
   - Root: {fileID: 4213169020310032807}
     Thumb: {fileID: 2259856852635555782}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 1680179482816929647}
     RarityIcon: {fileID: 838186655928928702}
     Name: {fileID: 381533984365400074}
@@ -20474,6 +20495,7 @@ MonoBehaviour:
     Swap: {fileID: 6245622118506907294}
   - Root: {fileID: 2505853878117781764}
     Thumb: {fileID: 8737625213060766361}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 8731519656001993760}
     RarityIcon: {fileID: 885750349594541809}
     Name: {fileID: 7885483837416658575}
@@ -20482,6 +20504,7 @@ MonoBehaviour:
     Swap: {fileID: 439482658296598029}
   - Root: {fileID: 1252112590267969619}
     Thumb: {fileID: 2213040161267956041}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 1831004867774159115}
     RarityIcon: {fileID: 3313894254548097723}
     Name: {fileID: 1084218127055105018}
@@ -20490,6 +20513,7 @@ MonoBehaviour:
     Swap: {fileID: 3655595995980674179}
   - Root: {fileID: 2955192279683230136}
     Thumb: {fileID: 32036446400920057}
+    Face: {fileID: 0}
     RarityBadge: {fileID: 540440484041058917}
     RarityIcon: {fileID: 1832911181211499928}
     Name: {fileID: 1338781315966504586}
@@ -21331,6 +21355,24 @@ MonoBehaviour:
   _geneRarityBadge: {fileID: 4230222171999303557}
   _geneRarityIcon: {fileID: 8070168287896501773}
   _geneRenameBtn: {fileID: 1867093116425838957}
+  _settingsRoot: {fileID: 0}
+  _settingsPanel: {fileID: 0}
+  _noEggsBtn: {fileID: 0}
+  _hungryBtn: {fileID: 0}
+  _careBtn: {fileID: 0}
+  _coinBtn: {fileID: 0}
+  _langBtn: {fileID: 0}
+  _updateBtn: {fileID: 0}
+  _scaleBtn: {fileID: 0}
+  _alwaysMaxBtn: {fileID: 0}
+  _quitBtn: {fileID: 0}
+  _noEggsMark: {fileID: 0}
+  _hungryMark: {fileID: 0}
+  _careMark: {fileID: 0}
+  _coinMark: {fileID: 0}
+  _alwaysMaxMark: {fileID: 0}
+  _scaleLabel: {fileID: 0}
+  _scaler: {fileID: 0}
   _popup: {fileID: 4809890751318621865}
   _popupBlocker: {fileID: 4176132546171913569}
   _popupTitle: {fileID: 5624630664556342123}
@@ -21345,6 +21387,15 @@ MonoBehaviour:
   _buyGroup: {fileID: 7401762802880124538}
   _renameField: {fileID: 248270530480424292}
   _renameOk: {fileID: 7866861165036560389}
+  _hatchGroup: {fileID: 0}
+  _hatchLight: {fileID: 0}
+  _hatchEgg: {fileID: 0}
+  _hatchLightFill: {fileID: 0}
+  _hatchRarityBadge: {fileID: 0}
+  _hatchRarityIcon: {fileID: 0}
+  _hatchSnail: {fileID: 0}
+  _hatchRarityText: {fileID: 0}
+  _hatchOk: {fileID: 0}
 --- !u!223 &2402583136945358508
 Canvas:
   m_ObjectHideFlags: 0
@@ -22910,7 +22961,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &6940232438453731185
 RectTransform:
   m_ObjectHideFlags: 0
@@ -52199,7 +52250,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &2637756700175152301
 RectTransform:
   m_ObjectHideFlags: 0
@@ -52715,8 +52766,8 @@ RectTransform:
   m_GameObject: {fileID: 5113049383818037140}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.8, y: 0.8, z: 0.8}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 5913503521034746461}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -60414,8 +60465,8 @@ RectTransform:
   m_GameObject: {fileID: 5703981218183940468}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.8, y: 0.8, z: 0.8}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 2637756700175152301}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -66938,7 +66989,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &7217696931978710880
 RectTransform:
   m_ObjectHideFlags: 0
@@ -93880,8 +93931,8 @@ RectTransform:
   m_GameObject: {fileID: 9161396939903600634}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.8, y: 0.8, z: 0.8}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 2424482927820055672}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
