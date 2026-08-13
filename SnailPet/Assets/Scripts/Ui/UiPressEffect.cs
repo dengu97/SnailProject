@@ -29,6 +29,7 @@ namespace SnailPet.Ui
 
         private readonly List<RectTransform> _group = new List<RectTransform>();
         private readonly List<Vector3> _base = new List<Vector3>();
+        private readonly List<Vector2> _basePos = new List<Vector2>();
 
         private bool _down;
         private float _now = 1f;
@@ -43,6 +44,7 @@ namespace SnailPet.Ui
         {
             _group.Clear();
             _base.Clear();
+            _basePos.Clear();
 
             var me = transform as RectTransform;
             if (me == null) return;
@@ -68,6 +70,22 @@ namespace SnailPet.Ui
         {
             _group.Add(rt);
             _base.Add(rt.localScale);
+            _basePos.Add(rt.anchoredPosition);
+        }
+
+        /// <summary>
+        /// 배율이 <paramref name="s"/> 일 때의 자리. 한가운데가 제자리에 남도록 민다.
+        ///
+        /// 크기만 줄이면 <b>피벗</b> 쪽으로 쪼그라든다. 이 UI 는 목업 좌표를 그대로 쓰려고
+        /// 피벗을 왼쪽 위에 두므로 그냥 두면 왼쪽 위로 빨려 들어간다. 피벗에서 한가운데까지의
+        /// 거리가 배율만큼 줄어드니, 줄어든 만큼 되밀어 주면 한가운데가 고정된다.
+        /// </summary>
+        private static Vector2 PlaceFor(RectTransform rt, Vector2 basePos, float s)
+        {
+            var p = rt.pivot;
+            var size = rt.rect.size;
+            var toCenter = new Vector2((0.5f - p.x) * size.x, (0.5f - p.y) * size.y);
+            return basePos + toCenter * (1f - s);
         }
 
         /// <summary>형제의 한가운데가 내 칸 안에 있는가. 글자칸이 버튼보다 넓은 경우가 있어 한가운데로 본다.</summary>
@@ -81,7 +99,17 @@ namespace SnailPet.Ui
                 && c.y >= Mathf.Min(o[0].y, o[2].y) && c.y <= Mathf.Max(o[0].y, o[2].y);
         }
 
-        public void OnPointerDown(PointerEventData eventData) => _down = true;
+        public void OnPointerDown(PointerEventData eventData)
+        {
+            // 제자리로 다 돌아온 상태에서만 기준을 다시 잡는다. 돌아오는 중에 또 누르면
+            // 줄어든 값이 기준으로 굳는다.
+            if (_now >= 0.999f)
+                for (int i = 0; i < _group.Count; i++)
+                    if (_group[i] != null) { _base[i] = _group[i].localScale; _basePos[i] = _group[i].anchoredPosition; }
+
+            _down = true;
+        }
+
         public void OnPointerUp(PointerEventData eventData) => _down = false;
 
         private void OnDisable()
@@ -89,8 +117,7 @@ namespace SnailPet.Ui
             // 눌린 채로 화면이 바뀌면 작아진 상태로 굳는다. 꺼질 때 되돌려 둔다.
             _down = false;
             _now = 1f;
-            for (int i = 0; i < _group.Count; i++)
-                if (_group[i] != null) _group[i].localScale = _base[i];
+            Apply();
         }
 
         private void Update()
@@ -102,8 +129,19 @@ namespace SnailPet.Ui
             _now = Mathf.Lerp(_now, want, 1f - Mathf.Exp(-Speed * Time.deltaTime));
             if (Mathf.Abs(_now - want) < 0.001f) _now = want;
 
+            Apply();
+        }
+
+        private void Apply()
+        {
             for (int i = 0; i < _group.Count; i++)
-                if (_group[i] != null) _group[i].localScale = _base[i] * _now;
+            {
+                var rt = _group[i];
+                if (rt == null) continue;
+
+                rt.localScale = _base[i] * _now;
+                rt.anchoredPosition = PlaceFor(rt, _basePos[i], _now);
+            }
         }
     }
 }

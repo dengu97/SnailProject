@@ -835,9 +835,10 @@ namespace SnailPet
 
             _deform.Foot = _bounds.Foot;
 
-            // 떼는 연출의 늘어남과 먹는 동안의 뽀잉뽀잉은 같은 축이라 더해서 넘긴다.
-            // 둘이 동시에 걸릴 일은 없다 — 들리는 순간 먹던 것이 취소된다.
-            _deform.Stretch = _stretch + _eatBounceNow;
+            // 세로로 늘었다 줄었다 하는 것은 전부 같은 축이라 더해서 넘긴다 —
+            // 떼는 연출의 늘어남, 먹는 동안의 뽀잉뽀잉, 걸을 때의 끄덕임.
+            // 셋이 한꺼번에 걸릴 일은 없다: 들리면 먹기가 취소되고, 먹는 동안은 걷지 않는다.
+            _deform.Stretch = _stretch + _eatBounceNow + _walkBob;
             _deform.LeanDeg = _lean;
             _deform.HalfWidth = _visibleWidth * 0.5f;
 
@@ -949,7 +950,20 @@ namespace SnailPet
 
             if (speed > 0f && _deform.WaveLength > 0f)
                 _deform.WavePhase += speed / (_scale * _deform.WaveLength) * deltaTime;
+
+            // 걸음에 맞춰 머리가 위아래로 흔들린다. 발바닥 물결과 같은 위상을 쓰므로
+            // 물결 한 번에 한 번 끄덕인다 — 따로 흔들면 걸음과 어긋나 보인다.
+            // 세기는 물결 진폭을 그대로 따라가서, 서고 걸을 때 저절로 부드럽게 붙고 떨어진다.
+            float full = Mathf.Max(0.0001f, _visibleWidth * WaveAmplitudeFraction);
+            float ramp = Mathf.Clamp01(_deform.WaveAmplitude / full);
+            _walkBob = Mathf.Sin(_deform.WavePhase * Mathf.PI * 2f) * WalkBobAmount * ramp;
         }
+
+        /// <summary>걸을 때 머리가 흔들리는 폭. 몸 세로 신장 비율이라 0.05 면 5% 다.</summary>
+        private const float WalkBobAmount = 0.05f;
+
+        /// <summary>이번 프레임의 끄덕임. 떼는 연출·먹는 뽀잉뽀잉과 같은 축이라 더해서 쓴다.</summary>
+        private float _walkBob;
 
         /// <summary>변형 그룹이 의도대로 나뉘었는지 확인용. 스켈레톤은 이 루트들에 붙는다.</summary>
         private static string DescribeGroups(SnailComposer.Composed c)

@@ -222,6 +222,19 @@ namespace SnailPet.Ui
                 _rows[i].Face = FaceView(_rows[i].Root, Max.RowThumb);
             }
 
+            // 프리팹에는 덮개가 반투명 검정으로 구워져 있다. 이제 어둡게 하는 일은
+            // 아트의 색이 맡으므로 덮개는 투명하게 두고 클릭만 막는다.
+            if (_popupBlocker != null)
+            {
+                var shade = _popupBlocker.GetComponent<Image>();
+                if (shade != null) shade.color = new Color(0f, 0f, 0f, 0f);
+            }
+
+            // 프리팹에는 포만·행복 아이콘이 값 알약보다 먼저 구워져 있어 알약에 가린다.
+            // 짓는 순서는 고쳤지만 프리팹은 그대로이므로 살아날 때 앞으로 올린다.
+            BringToFront(_foodPanel, "FullIcon", "HappyIcon");
+            BringToFront(_shopStats, "FullIcon", "HappyIcon");
+
             AttachPressEffects();
 
             Rewire();
@@ -238,6 +251,18 @@ namespace SnailPet.Ui
             SetMaximized(false);
             HidePopup();
             SetTab(_tab);
+        }
+
+        /// <summary>이름으로 찾아 형제들 맨 앞으로 올린다. UGUI 는 형제 순서대로 그린다.</summary>
+        private static void BringToFront(RectTransform parent, params string[] names)
+        {
+            if (parent == null) return;
+
+            foreach (var name in names)
+            {
+                var found = parent.Find(name);
+                if (found != null) found.SetAsLastSibling();
+            }
         }
 
         /// <summary>
@@ -816,13 +841,15 @@ namespace SnailPet.Ui
             _foodIcon = Icon(_foodPanel, Fd.Preview, null, Color.white, "PreviewIcon");
             _foodIcon.raycastTarget = false;
 
-            Icon(_foodPanel, Fd.FullIcon, "icon_food", Color.white, "FullIcon").raycastTarget = false;
+            // 값 알약이 아이콘 자리를 조금 물고 들어온다. 아이콘을 나중에 지어 위에 오게 한다
+            // (메인 패널 게이지도 같은 순서다).
             Box(_foodPanel, Fd.FullValue, UiTheme.Slot, UiSprites.Shape.LevelBadge, "FullValue");
             _foodFull = Label(_foodPanel, Fd.FullValue, "", 9, UiTheme.Ink);
+            Icon(_foodPanel, Fd.FullIcon, "icon_food", Color.white, "FullIcon").raycastTarget = false;
 
-            Icon(_foodPanel, Fd.HappyIcon, "icon_happy", Color.white, "HappyIcon").raycastTarget = false;
             Box(_foodPanel, Fd.HappyValue, UiTheme.Slot, UiSprites.Shape.LevelBadge, "HappyValue");
             _foodHappy = Label(_foodPanel, Fd.HappyValue, "", 9, UiTheme.Ink);
+            Icon(_foodPanel, Fd.HappyIcon, "icon_happy", Color.white, "HappyIcon").raycastTarget = false;
 
             Box(_foodPanel, Fd.Info, UiTheme.Slot, UiSprites.Shape.Slot, "InfoBox");
             _foodInfo = Label(_foodPanel, new RectInt(Fd.Info.x + 4, Fd.Info.y, Fd.Info.width - 8, Fd.Info.height),
@@ -1312,13 +1339,13 @@ namespace SnailPet.Ui
             _shopStats.anchorMin = Vector2.zero; _shopStats.anchorMax = Vector2.one;
             _shopStats.offsetMin = Vector2.zero; _shopStats.offsetMax = Vector2.zero;
 
-            Icon(_shopStats, Fd.FullIcon, "icon_food", Color.white, "FullIcon").raycastTarget = false;
             Box(_shopStats, Fd.FullValue, UiTheme.Slot, UiSprites.Shape.LevelBadge, "FullValue");
             _shopFull = Label(_shopStats, Fd.FullValue, "", 9, UiTheme.Ink);
+            Icon(_shopStats, Fd.FullIcon, "icon_food", Color.white, "FullIcon").raycastTarget = false;
 
-            Icon(_shopStats, Fd.HappyIcon, "icon_happy", Color.white, "HappyIcon").raycastTarget = false;
             Box(_shopStats, Fd.HappyValue, UiTheme.Slot, UiSprites.Shape.LevelBadge, "HappyValue");
             _shopHappy = Label(_shopStats, Fd.HappyValue, "", 9, UiTheme.Ink);
+            Icon(_shopStats, Fd.HappyIcon, "icon_happy", Color.white, "HappyIcon").raycastTarget = false;
 
             Box(_shopItemPanel, Fd.Info, UiTheme.Slot, UiSprites.Shape.Slot, "InfoBox");
             _shopInfo = Label(_shopItemPanel, new RectInt(Fd.Info.x + 4, Fd.Info.y, Fd.Info.width - 8, Fd.Info.height),
@@ -2369,6 +2396,54 @@ namespace SnailPet.Ui
         /// <summary>팝업에서 「네」를 눌렀다. (아이템 Id, 수량).</summary>
         public event Action<int, int> PopupConfirmed;
 
+        // ── 팝업 뒤 어둡게 ──
+        //
+        // 반투명 검은 사각형을 덮으면 아트 경계와 어긋난다. 판 모서리는 둥글고 아이콘은
+        // 제각각인데 덮개는 네모라, 아무리 맞춰도 남는 자리가 생긴다.
+        //
+        // 그래서 덮지 않고 <b>그리는 것들의 색을 직접 곱해</b> 어둡게 만든다. 아트가 비어
+        // 있는 자리는 그대로 비어 있으므로 경계가 정확히 아트를 따른다. 덮개는 투명해지고
+        // 클릭을 막는 일만 계속한다.
+
+        /// <summary>얼마나 어두워지는지. 1 이면 그대로, 0 이면 새까맣다.</summary>
+        private const float DimAmount = 0.55f;
+
+        private readonly System.Collections.Generic.List<Graphic> _dimmed =
+            new System.Collections.Generic.List<Graphic>();
+        private readonly System.Collections.Generic.List<Color> _dimBase =
+            new System.Collections.Generic.List<Color>();
+
+        private void SetDim(bool on)
+        {
+            // 되돌리는 것이 먼저다. 겹쳐 걸면 곱이 쌓여 새까매진다.
+            for (int i = 0; i < _dimmed.Count; i++)
+                if (_dimmed[i] != null) _dimmed[i].color = _dimBase[i];
+
+            _dimmed.Clear();
+            _dimBase.Clear();
+
+            if (!on || _widget == null) return;
+
+            foreach (var g in _widget.GetComponentsInChildren<Graphic>(true))
+            {
+                // 팝업 자신은 밝아야 한다
+                if (_popupBlocker != null && g.transform.IsChildOf(_popupBlocker)) continue;
+
+                var c = g.color;
+                _dimmed.Add(g);
+                _dimBase.Add(c);
+                g.color = new Color(c.r * DimAmount, c.g * DimAmount, c.b * DimAmount, c.a);
+            }
+        }
+
+        /// <summary>팝업을 띄우는 세 곳이 공통으로 지나는 자리.</summary>
+        private void OpenBlocker()
+        {
+            _popupBlocker.gameObject.SetActive(true);
+            SetDim(true);
+            StartPopupGrow();
+        }
+
         /// <summary>
         /// 팝업이 떠 있는가.
         ///
@@ -2388,8 +2463,10 @@ namespace SnailPet.Ui
             _popupBlocker = NewRect("Popup", _widget);
             _popupBlocker.anchorMin = Vector2.zero; _popupBlocker.anchorMax = Vector2.one;
             _popupBlocker.offsetMin = Vector2.zero; _popupBlocker.offsetMax = Vector2.zero;
+            // 덮개는 투명하다. 어둡게 하는 일은 SetDim 이 아트의 색으로 하고,
+            // 이 판은 클릭을 막는 일만 한다 (알파가 0 이어도 레이캐스트는 걸린다).
             var shade = _popupBlocker.gameObject.AddComponent<Image>();
-            shade.color = new Color(0f, 0f, 0f, 0.35f);
+            shade.color = new Color(0f, 0f, 0f, 0f);
             _popupBlocker.gameObject.SetActive(false);
 
             // 위젯 한가운데
@@ -2483,8 +2560,7 @@ namespace SnailPet.Ui
             _buyGroup.gameObject.SetActive(false);
             _renameGroup.gameObject.SetActive(true);
             ResetHatch();
-            _popupBlocker.gameObject.SetActive(true);
-            StartPopupGrow();
+            OpenBlocker();
 
             _renameField.text = current ?? "";
 
@@ -2593,8 +2669,7 @@ namespace SnailPet.Ui
             _buyGroup.gameObject.SetActive(false);
             _renameGroup.gameObject.SetActive(false);
             _hatchGroup.gameObject.SetActive(true);
-            _popupBlocker.gameObject.SetActive(true);
-            StartPopupGrow();
+            OpenBlocker();
 
             var row = SnailPet.Data.GameData.EggDataById.TryGetValue(eggId, out var e) ? e : null;
             _hatchEgg.sprite = EggSprite(row);
@@ -2791,14 +2866,14 @@ namespace SnailPet.Ui
             _renameGroup.gameObject.SetActive(false);
             ResetHatch();
             _popupTitle.text = SnailPet.Data.Loc.Format(selling ? Keys.AskSell : Keys.AskBuy, itemName);
-            _popupBlocker.gameObject.SetActive(true);
-            StartPopupGrow();
+            OpenBlocker();
             PaintPopup();
         }
 
         public void HidePopup()
         {
             if (_popupBlocker != null) _popupBlocker.gameObject.SetActive(false);
+            SetDim(false);
             ResetHatch();
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             // 이름 입력 때문에 빌린 포커스를 돌려준다. 안 빌렸으면 아무 일도 없다.
