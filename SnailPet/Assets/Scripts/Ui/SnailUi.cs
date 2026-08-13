@@ -1732,8 +1732,10 @@ namespace SnailPet.Ui
                 var row = new GeneRow { Root = root };
                 Box(root, UiTheme.Gene.RowBar, UiTheme.Slot, UiSprites.Shape.Slot, "Bar");
 
-                // 썸네일은 파츠 그림이 들어갈 자리다. 아직 동그란 아트가 없어 칸 도형을 쓴다.
-                row.Thumb = Box(root, UiTheme.Gene.RowThumb, UiTheme.RowSlot, UiSprites.Shape.Slot2, "Thumb");
+                // 썸네일은 부위 아이콘이다. 아트에 동그란 배경이 그려져 있어 칸을 깔지 않는다.
+                row.Thumb = Icon(root, UiTheme.Gene.RowThumb, null, Color.white, "Thumb");
+                row.Thumb.raycastTarget = false;
+                BakePartIcon(row.Thumb, i);
 
                 row.Name = Label(root, UiTheme.Gene.RowName, "", 10, UiTheme.Ink);
                 row.Name.alignment = TextAnchor.MiddleLeft;
@@ -1785,7 +1787,9 @@ namespace SnailPet.Ui
 
                 var row = new GeneRow { Root = root };
                 Box(root, UiTheme.Gene.SlimBar, UiTheme.Slot, UiSprites.Shape.Slot, "Bar");
-                row.Thumb = Box(root, UiTheme.Gene.SlimThumb, UiTheme.RowSlot, UiSprites.Shape.Slot2, "Thumb");
+                row.Thumb = Icon(root, UiTheme.Gene.SlimThumb, null, Color.white, "Thumb");
+                row.Thumb.raycastTarget = false;
+                BakePartIcon(row.Thumb, i);
 
                 row.RarityBadge = Box(root, UiTheme.Gene.SlimRarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
                 row.Rarity = Label(root, UiTheme.Gene.SlimRarity, "", 7, UiTheme.OnBadge);
@@ -1875,11 +1879,47 @@ namespace SnailPet.Ui
                 _geneRows[i].Name.text = pname;
                 _geneRows[i].Info.text = pinfo;
                 ApplyRarity(_geneRows[i].RarityIcon, _geneRows[i].RarityBadge, _geneRows[i].Rarity, prar);
+                ApplyPartIcon(_geneRows[i].Thumb, row?.PartsType);
 
                 _geneSlims[i].Name.text = pname;
                 ApplyRarity(_geneSlims[i].RarityIcon, _geneSlims[i].RarityBadge, _geneSlims[i].Rarity, prar);
+                ApplyPartIcon(_geneSlims[i].Thumb, row?.PartsType);
             }
         }
+
+        /// <summary>
+        /// 부위 썸네일. 어느 그림을 쓸지는 EnumData 의 IconResourceKey 가 정한다 —
+        /// 등급 아이콘과 같은 길이라 부위가 늘어도 코드는 그대로다.
+        /// 시트가 비어 있으면(아직 아트가 없는 부위) 아무것도 그리지 않는다.
+        /// </summary>
+        private static void ApplyPartIcon(Image icon, SnailPet.Data.PartsType? type)
+        {
+            if (icon == null) return;
+
+            string key = type == null ? null : SnailPet.Data.Enums.IconOf(type.Value);
+            var sprite = string.IsNullOrEmpty(key) ? null : Resources.Load<Sprite>("Ui/Icon/" + key);
+
+            if (sprite == null && !string.IsNullOrEmpty(key))
+                Debug.LogWarning($"[SnailPet] 부위 아이콘을 찾지 못했습니다: Ui/Icon/{key} " +
+                                 $"(EnumData 의 PartsType.{type} 행)");
+
+            icon.sprite = sprite;
+            icon.enabled = sprite != null;
+        }
+
+        /// <summary>
+        /// 프리팹에 썸네일의 채워진 모습을 굽는다. <see cref="BakeRarity"/> 와 같은 이유다 —
+        /// 비워 두면 프리팹에서는 썸네일이 아예 안 보여 배치를 손보기 어렵다.
+        /// 여기 순서는 굽기용 임시일 뿐이고, 실행하면 그 달팽이가 실제로 가진 부위로 덮인다.
+        /// </summary>
+        private static void BakePartIcon(Image icon, int index) =>
+            ApplyPartIcon(icon, BakeParts[index % BakeParts.Length]);
+
+        private static readonly SnailPet.Data.PartsType[] BakeParts =
+        {
+            SnailPet.Data.PartsType.Shell,  SnailPet.Data.PartsType.Body,
+            SnailPet.Data.PartsType.Feeler, SnailPet.Data.PartsType.Eyes,
+        };
 
         // ── 구매·판매 팝업 ──
         //

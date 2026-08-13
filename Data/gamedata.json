@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-12 21:46:20",
+  "generatedAt": "2026-08-13 08:28:10",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -164,10 +164,10 @@
       {"EnumType": "FoodType", "EnumName": "vegetable", "EnumValue": 1, "IconResourceKey": null, "SortOrder": null, "DeformGroup": null},
       {"EnumType": "FoodType", "EnumName": "bean", "EnumValue": 2, "IconResourceKey": null, "SortOrder": null, "DeformGroup": null},
       {"EnumType": "FoodType", "EnumName": "magic", "EnumValue": 3, "IconResourceKey": null, "SortOrder": null, "DeformGroup": null},
-      {"EnumType": "PartsType", "EnumName": "Shell", "EnumValue": 1, "IconResourceKey": null, "SortOrder": 100, "DeformGroup": null},
-      {"EnumType": "PartsType", "EnumName": "Body", "EnumValue": 2, "IconResourceKey": null, "SortOrder": 200, "DeformGroup": 51},
-      {"EnumType": "PartsType", "EnumName": "Eyes", "EnumValue": 3, "IconResourceKey": null, "SortOrder": 400, "DeformGroup": 51},
-      {"EnumType": "PartsType", "EnumName": "Feeler", "EnumValue": 4, "IconResourceKey": null, "SortOrder": 300, "DeformGroup": 51},
+      {"EnumType": "PartsType", "EnumName": "Shell", "EnumValue": 1, "IconResourceKey": "icon_shell", "SortOrder": 100, "DeformGroup": null},
+      {"EnumType": "PartsType", "EnumName": "Body", "EnumValue": 2, "IconResourceKey": "icon_body", "SortOrder": 200, "DeformGroup": 51},
+      {"EnumType": "PartsType", "EnumName": "Eyes", "EnumValue": 3, "IconResourceKey": "icon_eyes", "SortOrder": 400, "DeformGroup": 51},
+      {"EnumType": "PartsType", "EnumName": "Feeler", "EnumValue": 4, "IconResourceKey": "icon_feeler", "SortOrder": 300, "DeformGroup": 51},
       {"EnumType": "PartsType", "EnumName": "Mucus", "EnumValue": 5, "IconResourceKey": null, "SortOrder": 50, "DeformGroup": null},
       {"EnumType": "RarityType", "EnumName": "Common", "EnumValue": 1, "IconResourceKey": "rarity_common", "SortOrder": null, "DeformGroup": null},
       {"EnumType": "RarityType", "EnumName": "Rare", "EnumValue": 2, "IconResourceKey": "rarity_rare", "SortOrder": null, "DeformGroup": null},

@@ -49,17 +49,22 @@ namespace SnailPet.Ui
             public static readonly RectInt HappyIcon = new RectInt(16, 163, 19, 18);
             public static readonly RectInt HappyBar  = new RectInt(29, 167, 127, 12);
 
+            // 주의: 프리팹에는 이 표로 나타낼 수 없는 손 조정이 더 들어 있다 —
+            // Portrait 0.7배, 아래 Actions 넷 1.2배, CoinIcon 0.8배의 localScale.
+            // 여기 좌표는 그 프리팹에서 옮겨 온 것이지만 배율까지는 담지 못하므로,
+            // 다시 구우면 크기가 1배로 돌아간다. 굽기 전에 Tools/Diff-PrefabLayout.ps1 로 확인할 것.
+
             /// <summary>하단 액션 4개. 상세정보 · 옷장 · 유전정보 · 판매.</summary>
             public static readonly RectInt[] Actions =
             {
-                new RectInt( 16, 188, 24, 22),
-                new RectInt( 47, 188, 24, 22),
-                new RectInt(102, 188, 24, 22),
-                new RectInt(132, 188, 24, 22),
+                new RectInt( 16, 186, 24, 22),
+                new RectInt( 78, 186, 24, 22),
+                new RectInt(105, 186, 24, 22),
+                new RectInt(132, 186, 24, 22),
             };
 
             // 패널 밖에 걸치는 것들 (y 가 음수면 패널 위)
-            public static readonly RectInt Settings = new RectInt(  9, -25, 28, 25);
+            public static readonly RectInt Settings = new RectInt(  9, -23, 28, 25);
 
             /// <summary>
             /// 코인 줄이 차지하는 띠. <b>이 값의 y 가 위젯 상자를 얼마나 위로 늘릴지를 정한다</b> —
@@ -71,7 +76,7 @@ namespace SnailPet.Ui
             // 코인 알약과 그 안의 아이콘·숫자. 위 띠 안에서의 자리이며 위젯 상자 기준이다.
             // (프리팹에서 손으로 맞춘 값을 옮겨 온 것이라, 다시 구워도 그대로 나온다.)
             public static readonly RectInt CoinPill = new RectInt(54, 10, 63, 21);
-            public static readonly RectInt CoinIcon = new RectInt(49,  5, 22, 22);
+            public static readonly RectInt CoinIcon = new RectInt(41,  0, 22, 22);
             public static readonly RectInt CoinText = new RectInt(72, 10, 45, 21);
             public static readonly RectInt Close    = new RectInt(152,  -9, 28, 28);
             public static readonly RectInt Maximize = new RectInt(152,  19, 28, 28);
@@ -89,10 +94,10 @@ namespace SnailPet.Ui
             /// <summary>탭 4개. 달팽이 정보 · 음식 목록 · 보유중인 알 · 상점.</summary>
             public static readonly RectInt[] Tabs =
             {
-                new RectInt( 12, -25, 28, 25),
-                new RectInt( 46, -25, 28, 25),
-                new RectInt( 81, -25, 28, 25),
-                new RectInt(116, -25, 28, 25),
+                new RectInt(  6, -22, 28, 25),
+                new RectInt( 37, -22, 28, 25),
+                new RectInt( 69, -22, 28, 25),
+                new RectInt(100, -22, 28, 25),
             };
 
             /// <summary>
