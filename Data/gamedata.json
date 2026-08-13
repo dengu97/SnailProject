@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13 16:00:52",
+  "generatedAt": "2026-08-13 18:26:21",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -276,10 +276,10 @@
       {"Id": 29, "NameId": 29, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler04", "IsUseColor": true, "Colors": ["commonfeeler04_c01"], "AppearWeight": 10, "InfoId": 84, "SellItem": 36, "SellCount": 5}
     ],
     "FoodData": [
-      {"Id": 31, "FoodType": "vegetable", "NameId": 31, "RarityType": "Common", "FullPoint": 5, "HappyPoint": 3, "BuffId": 0, "InfoId": 124, "ResourceKey": "food_lettuce"},
-      {"Id": 32, "FoodType": "vegetable", "NameId": 32, "RarityType": "Common", "FullPoint": 7, "HappyPoint": 5, "BuffId": 0, "InfoId": 125, "ResourceKey": "food_tomato"},
-      {"Id": 33, "FoodType": "vegetable", "NameId": 33, "RarityType": "Common", "FullPoint": 7, "HappyPoint": 5, "BuffId": 0, "InfoId": 126, "ResourceKey": "food_zucchini"},
-      {"Id": 34, "FoodType": "bean", "NameId": 34, "RarityType": "Common", "FullPoint": 15, "HappyPoint": 10, "BuffId": 35, "InfoId": 127, "ResourceKey": "food_tofu"}
+      {"Id": 31, "FoodType": "vegetable", "NameId": 31, "RarityType": "Common", "FullPoint": 5, "HappyPoint": 3, "EatTime": 2, "BuffId": 0, "InfoId": 124, "ResourceKey": "food_lettuce"},
+      {"Id": 32, "FoodType": "vegetable", "NameId": 32, "RarityType": "Common", "FullPoint": 7, "HappyPoint": 5, "EatTime": 2.5, "BuffId": 0, "InfoId": 125, "ResourceKey": "food_tomato"},
+      {"Id": 33, "FoodType": "vegetable", "NameId": 33, "RarityType": "Common", "FullPoint": 7, "HappyPoint": 5, "EatTime": 5, "BuffId": 0, "InfoId": 126, "ResourceKey": "food_zucchini"},
+      {"Id": 34, "FoodType": "bean", "NameId": 34, "RarityType": "Common", "FullPoint": 15, "HappyPoint": 10, "EatTime": 5, "BuffId": 35, "InfoId": 127, "ResourceKey": "food_tofu"}
     ],
     "LevelData": [
       {"Level": 1, "LevelUpTime": 0, "NeedFullPoint": 10, "NeedHappyPoint": 10, "UseFullPointTime": 120, "UseHappyPointTime": 240, "Speed": 1, "Size": 4, "CoinCoolTime": 1800, "ItemId": 36, "ItemCount": 10, "SellAdvantage": 1},

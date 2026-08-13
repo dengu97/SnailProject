@@ -207,12 +207,22 @@ namespace SnailPet.Ui
                 BuildSettingsList((RectTransform)_geneRoot.parent);
             if (_settingsPanel == null) BuildSettingsPanel();
 
+            // 「부화시킬 알이 없습니다」는 프리팹에 부화기 패널에 구워져 있다. 비는 쪽은
+            // 왼쪽 목록이므로 그리로 옮긴다. 다시 구우면 처음부터 그 자리에 지어진다.
+            if (_eggEmpty != null && _eggGridRoot != null && _eggEmpty.transform.parent != _eggGridRoot)
+            {
+                _eggEmpty.transform.SetParent(_eggGridRoot, false);
+                Place((RectTransform)_eggEmpty.transform, InGrid(UiTheme.Egg.Empty));
+            }
+
             // 목록 행도 프리팹에 구워질 때는 썸네일 그림 자리가 없었다. 행마다 하나씩 붙인다.
             for (int i = 0; i < Count(_rows); i++)
             {
                 if (_rows[i] == null || _rows[i].Root == null || _rows[i].Face != null) continue;
                 _rows[i].Face = FaceView(_rows[i].Root, Max.RowThumb);
             }
+
+            AttachPressEffects();
 
             Rewire();
             EnsureEventSystem();
@@ -231,6 +241,37 @@ namespace SnailPet.Ui
         }
 
         /// <summary>
+        /// 눌린 반응을 버튼마다 붙인다.
+        ///
+        /// 컴포넌트는 프리팹에 이미 구워져 있을 수도, 없을 수도 있으므로 없는 것만 붙인다.
+        /// 화면을 고르는 것들(탭 · 상점 카테고리 · 설정)은 뺀다 — 그 자리는 「눌렸다」보다
+        /// 「지금 여기」가 중요해서, 선택 표시와 겹치면 오히려 산만해진다.
+        /// </summary>
+        private void AttachPressEffects()
+        {
+            foreach (var button in GetComponentsInChildren<Button>(true))
+            {
+                if (button == null || IsMenuButton(button)) continue;
+                if (button.GetComponent<UiPressEffect>() == null)
+                    button.gameObject.AddComponent<UiPressEffect>();
+            }
+        }
+
+        private bool IsMenuButton(Button button)
+        {
+            // 설정도 화면을 고르는 버튼이라 탭과 같은 부류로 본다.
+            if (button == _settingsBtn) return true;
+
+            for (int i = 0; i < Count(_tabBtns); i++)
+                if (_tabBtns[i] == button) return true;
+
+            for (int i = 0; i < Count(_shopCats); i++)
+                if (_shopCats[i] != null && _shopCats[i].Button == button) return true;
+
+            return false;
+        }
+
+        /// <summary>
         /// 버튼에 할 일을 붙인다.
         ///
         /// <b>프리팹에는 onClick 이 저장되지 않는다.</b> AddListener 로 단 것은 런타임 전용이라
@@ -246,10 +287,9 @@ namespace SnailPet.Ui
             Hook(_settingsBtn, () => Settings?.Invoke());
             Hook(_closeBtn,    () =>
             {
-                // 옷장·상세보기·설정은 달팽이 정보 화면에서 들어간 곳이다. 그래서 X 는 먼저
-                // 그 화면으로 되돌린다 — 들어온 자리로 돌아가는 것이 X 의 뜻에 가깝다.
-                // 그러고 나서 접는 것은 평소와 같다.
-                if (InOverlay) SetTab(0);
+                // X 는 어디서 눌러도 달팽이 화면으로 돌아간 다음 접는다. 음식·알·상점 탭이나
+                // 옷장·설정에 있던 그대로 접으면, 다시 펼쳤을 때 엉뚱한 화면이 열려 어색하다.
+                SetTab(0);
 
                 // 「항상 최대화」가 막는 것은 접는 동작 하나다. 그래서 설정에서 되돌아가는 것은
                 // 막지 않고, 접기만 건너뛴다.
@@ -679,6 +719,10 @@ namespace SnailPet.Ui
         /// 내용 높이는 채울 때 정해지므로 여기서는 보이는 만큼만 잡아 둔다.
         /// 그 높이가 곧 스크롤 범위라, 안 늘리면 아무리 넣어도 안 밀린다.
         /// </summary>
+        /// <summary>패널 좌표를 스크롤 영역 안의 좌표로 바꾼다. 영역이 패널 위쪽에서 내려와 있다.</summary>
+        private static RectInt InGrid(RectInt at) =>
+            new RectInt(at.x, at.y - Max.FoodView.y, at.width, at.height);
+
         private void BuildScrollView(RectTransform panel, string name, RectInt at,
                                      out RectTransform root, out RectTransform content)
         {
@@ -898,8 +942,9 @@ namespace SnailPet.Ui
             for (int i = 0; i < _hatchSlots.Length; i++)
                 _hatchSlots[i] = BuildHatchSlot(i);
 
-            // 알이 하나도 없을 때만 보이는 안내
-            _eggEmpty = LocLabel(_eggPanel, UiTheme.Egg.Empty, Keys.NoEgg, 10, UiTheme.Slot);
+            // 알이 하나도 없을 때만 보이는 안내. 비는 쪽이 왼쪽 목록이라 그 그리드에 붙인다
+            // (그리드 자식이라 알 탭에서만 보인다).
+            _eggEmpty = LocLabel(_eggGridRoot, InGrid(UiTheme.Egg.Empty), Keys.NoEgg, 10, UiTheme.Slot);
 
             _eggShopBtn = IconButton(_eggPanel, UiTheme.Egg.Buy, "btn_shop", "BuyEgg");
         }
@@ -2295,12 +2340,14 @@ namespace SnailPet.Ui
         private bool InOverlay => _inSettings || _inWardrobe || _inGene;
 
         /// <summary>
-        /// X 를 잠글지 정한다. 「항상 최대화」가 막는 것은 <b>접는 동작</b>이므로,
-        /// X 가 되돌아가는 버튼일 때는 잠그지 않는다.
+        /// X 를 잠글지 정한다. 「항상 최대화」가 막는 것은 <b>접는 동작</b>뿐이고,
+        /// X 에는 「달팽이 화면으로 돌아가기」가 함께 붙어 있다. 그래서 잠그는 때는
+        /// 그 둘이 모두 할 일이 없을 때 — 이미 달팽이 화면에 있는데 접지도 못할 때뿐이다.
         /// </summary>
         private void RefreshClose()
         {
-            if (_closeBtn != null) _closeBtn.interactable = !(_options.AlwaysMax && !InOverlay);
+            if (_closeBtn != null)
+                _closeBtn.interactable = !(_options.AlwaysMax && !InOverlay && _tab == 0);
         }
 
         [SerializeField] private CanvasScaler _scaler;
@@ -2437,6 +2484,7 @@ namespace SnailPet.Ui
             _renameGroup.gameObject.SetActive(true);
             ResetHatch();
             _popupBlocker.gameObject.SetActive(true);
+            StartPopupGrow();
 
             _renameField.text = current ?? "";
 
@@ -2546,6 +2594,7 @@ namespace SnailPet.Ui
             _renameGroup.gameObject.SetActive(false);
             _hatchGroup.gameObject.SetActive(true);
             _popupBlocker.gameObject.SetActive(true);
+            StartPopupGrow();
 
             var row = SnailPet.Data.GameData.EggDataById.TryGetValue(eggId, out var e) ? e : null;
             _hatchEgg.sprite = EggSprite(row);
@@ -2574,7 +2623,60 @@ namespace SnailPet.Ui
             if (_popupClose != null) _popupClose.interactable = done;
         }
 
+        // ── 팝업 등장 연출 ──
+        //
+        // 띡 하고 나타나면 어디서 나왔는지 눈이 못 따라간다. 살짝 작게 시작해 조금 넘겼다
+        // 제자리로 오면 「스르륵」이 산다. 팝업 판은 피벗이 한가운데라 배율만 주면 된다.
+
+        private const float PopupGrowTime = 0.16f;
+
+        /// <summary>0 이상이면 자라는 중. 다 자라면 −1 로 두고 손대지 않는다.</summary>
+        private float _popupGrow = -1f;
+
+        private void StartPopupGrow()
+        {
+            _popupGrow = 0f;
+            ApplyPopupGrow();
+        }
+
+        private void ApplyPopupGrow()
+        {
+            if (_popup == null) return;
+
+            float t = _popupGrow < 0f ? 1f : Mathf.Clamp01(_popupGrow / PopupGrowTime);
+            float s = Mathf.LerpUnclamped(0.88f, 1f, EaseOutBack(t));
+            _popup.localScale = new Vector3(s, s, 1f);
+        }
+
+        /// <summary>끝에서 살짝 넘겼다 돌아오는 곡선. 통통 튀는 느낌을 한 줄로 낸다.</summary>
+        private static float EaseOutBack(float t)
+        {
+            const float k = 1.70158f;
+            float u = t - 1f;
+            return u * u * ((k + 1f) * u + k) + 1f;
+        }
+
+        private void StepPopupGrow()
+        {
+            if (_popupGrow < 0f) return;
+
+            _popupGrow += Time.deltaTime;
+            if (_popupGrow >= PopupGrowTime)
+            {
+                _popupGrow = -1f;
+                if (_popup != null) _popup.localScale = Vector3.one;
+                return;
+            }
+            ApplyPopupGrow();
+        }
+
         private void Update()
+        {
+            StepPopupGrow();
+            StepHatch();
+        }
+
+        private void StepHatch()
         {
             if (_hatchPhase == HatchPhase.None || _hatchPhase == HatchPhase.Result) return;
 
@@ -2690,6 +2792,7 @@ namespace SnailPet.Ui
             ResetHatch();
             _popupTitle.text = SnailPet.Data.Loc.Format(selling ? Keys.AskSell : Keys.AskBuy, itemName);
             _popupBlocker.gameObject.SetActive(true);
+            StartPopupGrow();
             PaintPopup();
         }
 

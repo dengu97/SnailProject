@@ -250,6 +250,11 @@ namespace SnailPet.Ui
                 new RectInt(116, 34, 47, 46),
             };
 
+            /// <summary>
+            /// 「부화시킬 알이 없습니다」. 목업은 부화기 패널에 두었지만, 알을 하나도
+            /// 안 가졌을 때 비는 것은 왼쪽 목록이라 그쪽으로 옮겼다(2026-08-13 결정).
+            /// 좌표는 왼쪽 패널 기준이며, 그리드 안에 넣을 때 <see cref="Max.FoodView"/> 만큼 당긴다.
+            /// </summary>
             public static readonly RectInt Empty = new RectInt(10, 100, PanelW - 20, 20);
             public static readonly RectInt Buy   = new RectInt(137, 189, 25, 22);
         }

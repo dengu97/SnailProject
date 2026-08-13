@@ -834,7 +834,10 @@ namespace SnailPet
             if (_composed == null || _deform == null) return;
 
             _deform.Foot = _bounds.Foot;
-            _deform.Stretch = _stretch;
+
+            // 떼는 연출의 늘어남과 먹는 동안의 뽀잉뽀잉은 같은 축이라 더해서 넘긴다.
+            // 둘이 동시에 걸릴 일은 없다 — 들리는 순간 먹던 것이 취소된다.
+            _deform.Stretch = _stretch + _eatBounceNow;
             _deform.LeanDeg = _lean;
             _deform.HalfWidth = _visibleWidth * 0.5f;
 
@@ -1034,6 +1037,8 @@ namespace SnailPet
             SnailPose pose;
             if (SnailFree)
             {
+                // 들리거나 떨어지는 중에는 먹던 것이 무효다. 내려놓으면 다시 기어가 처음부터 먹는다.
+                CancelEating("들려서");
                 UpdateFreeSnail(footDepth, halfExtent);
 
                 // 들려 있거나 떨어지는 동안은 벽에 붙어 있지 않으므로 똑바로 세운다
@@ -1093,6 +1098,14 @@ namespace SnailPet
         /// </summary>
         private void StepBehaviour(float halfExtent, float deltaTime)
         {
+            // 먹는 중에는 제자리에 선다. 다른 먹이가 코앞에 떨어져도 쳐다보지 않는다.
+            if (_eating != null)
+            {
+                _target = null;
+                StepEating(halfExtent, deltaTime);
+                return;
+            }
+
             bool hungry = _growth.FullPoint < _growth.Current.NeedFullPoint;
             _target = null;
 
@@ -1134,14 +1147,86 @@ namespace SnailPet
             else Say($"      [{_t:0.0}s] 모서리 통과 완료 → {_anchor.Edge} 벽");
         }
 
+        // ── 먹기 ──
+        //
+        // 닿는 순간 없어지지 않고 FoodData.EatTime 만큼 제자리에서 먹는다. 그동안은 다른
+        // 먹이에 눈길도 주지 않고, 다 먹어야 포만도·행복도가 오른다. 중간에 들어 옮기면
+        // 먹던 것은 그대로 남고 다시 기어가서 처음부터 먹는다.
+
+        /// <summary>먹는 중인 먹이. null 이면 안 먹는 중이다.</summary>
+        private FoodItem _eating;
+        private float _ateSeconds;
+
+        /// <summary>먹는 동안의 뽀잉뽀잉. 세로로 눌렸다 늘어나는 폭과 초당 횟수.</summary>
+        private const float EatBounce = 0.16f, EatBounceHz = 3.2f;
+
+        /// <summary>이번 프레임의 뽀잉뽀잉 값. 떼는 연출의 늘어남과 더해져 몸에 걸린다.</summary>
+        private float _eatBounceNow;
+
         private void Eat(FoodItem item)
         {
-            _growth.Feed(item.Data.FullPoint, item.Data.HappyPoint, item.Data.BuffId);
-            _food.Consume(item);
+            _eating = item;
+            _ateSeconds = 0f;
             _state = PetState.Eat;
+
+            Say($"      먹기 시작: {Loc.ById(item.Data.NameId)} ({item.Data.EatTime:0.#}초)");
+        }
+
+        /// <summary>
+        /// 먹는 동안. 제자리에 서서 시간을 채운다.
+        ///
+        /// 먹이가 사라졌거나(다른 경로로 치워짐) 몸에서 멀어졌으면(유저가 먹이를 끌어감)
+        /// 먹던 것을 접는다. 다시 배가 고프면 알아서 기어가 처음부터 먹는다.
+        /// </summary>
+        private void StepEating(float halfExtent, float deltaTime)
+        {
+            if (_eating.Eaten || _eating.Held || !_eating.Landed)
+            {
+                CancelEating(_eating.Held ? "먹이를 들어서" : "먹이가 없어져");
+                return;
+            }
+
+            // 먹이가 옮겨졌으면 쫓아가지 않고 접는다. 다시 배고프면 알아서 찾아간다.
+            float myP = BoxWalk.ToPerimeter(_box, _anchor, halfExtent);
+            float itemP = BoxWalk.BottomXToPerimeter(_box, _eating.ScreenX);
+            if (Mathf.Abs(BoxWalk.ShortestDelta(_box, myP, itemP))
+                > _eating.HalfWidth + halfExtent * 0.5f + EatReach)
+            {
+                CancelEating("먹이가 멀어져");
+                return;
+            }
+
+            _ateSeconds += deltaTime;
+            _eatBounceNow = Mathf.Sin(_ateSeconds * EatBounceHz * Mathf.PI * 2f) * EatBounce;
+
+            float need = Mathf.Max(0f, (float)_eating.Data.EatTime);
+            if (_ateSeconds < need) return;
+
+            var data = _eating.Data;
+            _growth.Feed(data.FullPoint, data.HappyPoint, data.BuffId);
+            _food.Consume(_eating);
+
+            _eating = null;
+            _eatBounceNow = 0f;
+            _state = PetState.Wander;
             _eatFlashUntil = _t + 1.2f;
 
-            Say($"      먹음: {Loc.ById(item.Data.NameId)} (+포만 {item.Data.FullPoint} +행복 {item.Data.HappyPoint}) → {_growth}");
+            Say($"      다 먹음: {Loc.ById(data.NameId)} (+포만 {data.FullPoint} +행복 {data.HappyPoint}) → {_growth}");
+        }
+
+        /// <summary>먹이에서 이만큼 벗어나도 계속 먹는다. 없으면 살짝 흔들릴 때마다 끊긴다.</summary>
+        private const float EatReach = 12f;
+
+        /// <summary>먹던 것을 접는다. 먹이는 그대로 남고 진행은 0 으로 돌아간다.</summary>
+        private void CancelEating(string why)
+        {
+            if (_eating == null) return;
+
+            Say($"      먹다 말았습니다 ({why}): {Loc.ById(_eating.Data.NameId)} {_ateSeconds:0.#}초");
+            _eating = null;
+            _ateSeconds = 0f;
+            _eatBounceNow = 0f;
+            _state = PetState.Wander;
         }
 
         // ── 부화기 ──
@@ -1693,7 +1778,9 @@ namespace SnailPet
             string act = _state switch
             {
                 PetState.Seek => "먹이로 이동 중" + (_target != null ? " (" + Loc.ById(_target.Data.NameId) + ")" : ""),
-                PetState.Eat  => "먹는 중",
+                PetState.Eat  => _eating != null
+                               ? $"먹는 중 ({_ateSeconds:0.0}/{_eating.Data.EatTime:0.#}초, {Loc.ById(_eating.Data.NameId)})"
+                               : "먹는 중",
                 _             => (_growth.FullPoint < _growth.Current.NeedFullPoint ? "배고픔 (먹이 없음)" : "배회 중"),
             };
             if (_t < _eatFlashUntil) act = "냠냠!";

@@ -137,11 +137,12 @@ namespace SnailPet.Data
         public readonly RarityType RarityType;
         public readonly double FullPoint;
         public readonly double HappyPoint;
+        public readonly double EatTime;
         public readonly int BuffId;
         public readonly int InfoId;
         public readonly string ResourceKey;
 
-        public FoodDataRow(int id, FoodType foodType, int nameId, RarityType rarityType, double fullPoint, double happyPoint, int buffId, int infoId, string resourceKey)
+        public FoodDataRow(int id, FoodType foodType, int nameId, RarityType rarityType, double fullPoint, double happyPoint, double eatTime, int buffId, int infoId, string resourceKey)
         {
             Id = id;
             FoodType = foodType;
@@ -149,6 +150,7 @@ namespace SnailPet.Data
             RarityType = rarityType;
             FullPoint = fullPoint;
             HappyPoint = happyPoint;
+            EatTime = eatTime;
             BuffId = buffId;
             InfoId = infoId;
             ResourceKey = resourceKey;
@@ -552,10 +554,10 @@ namespace SnailPet.Data
 
         public static readonly FoodDataRow[] FoodData = new FoodDataRow[]
         {
-            new FoodDataRow(31, FoodType.vegetable, 31, RarityType.Common, 5d, 3d, 0, 124, "food_lettuce"),
-            new FoodDataRow(32, FoodType.vegetable, 32, RarityType.Common, 7d, 5d, 0, 125, "food_tomato"),
-            new FoodDataRow(33, FoodType.vegetable, 33, RarityType.Common, 7d, 5d, 0, 126, "food_zucchini"),
-            new FoodDataRow(34, FoodType.bean, 34, RarityType.Common, 15d, 10d, 35, 127, "food_tofu"),
+            new FoodDataRow(31, FoodType.vegetable, 31, RarityType.Common, 5d, 3d, 2d, 0, 124, "food_lettuce"),
+            new FoodDataRow(32, FoodType.vegetable, 32, RarityType.Common, 7d, 5d, 2.5d, 0, 125, "food_tomato"),
+            new FoodDataRow(33, FoodType.vegetable, 33, RarityType.Common, 7d, 5d, 5d, 0, 126, "food_zucchini"),
+            new FoodDataRow(34, FoodType.bean, 34, RarityType.Common, 15d, 10d, 5d, 35, 127, "food_tofu"),
         };
 
         public static readonly LevelDataRow[] LevelData = new LevelDataRow[]
