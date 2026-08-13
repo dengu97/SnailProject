@@ -7,6 +7,8 @@ using Max = SnailPet.Ui.UiTheme.Max;
 using Fd = SnailPet.Ui.UiTheme.Food;
 using Sh = SnailPet.Ui.UiTheme.Shop;
 using Pop = SnailPet.Ui.UiTheme.Popup;
+using Set = SnailPet.Ui.UiTheme.Setting;
+using Options = SnailPet.Snail.PlayerOptions;
 using ShopRow = SnailPet.Data.ShopDataRow;
 
 namespace SnailPet.Ui
@@ -50,6 +52,21 @@ namespace SnailPet.Ui
 
             public const string Hatched = "[부화문구]";   // "알이 부화했습니다!"
             public const string Confirm = "[확인]";
+
+            // 설정 화면
+            public const string SnailSetting = "[달팽이설정]";
+            public const string Setting      = "[설정]";
+            public const string Korean       = "[한글]";
+            public const string Update       = "[업데이트]";
+            public const string UiScale      = "[UI크기]";      // "UI크기(x{0})"
+            public const string AlwaysMax    = "[UI최대화]";
+            public const string EggSection   = "[알관련]";
+            public const string NoEggs       = "[알생성금지]";
+            public const string BubbleSection = "[말풍선알림]";
+            public const string HungryBubble = "[배고픔알림]";
+            public const string CareBubble   = "[관심알림]";
+            public const string CoinBubble   = "[코인알림]";
+            public const string Quit         = "[종료]";
 
             public const string Wardrobe = "[옷장]";
             public const string Traits   = "[보유특징]";
@@ -184,6 +201,19 @@ namespace SnailPet.Ui
             // 없는 것만 런타임에 짓는다. 나중에 다시 구우면 이 조건이 저절로 거짓이 된다.
             if (_hatchGroup == null) BuildHatchGroup();
 
+            // 설정 화면은 상세보기와 같은 목록 패널에 붙는다. 그 패널은 필드가 아니라
+            // 지을 때의 지역 변수라, 이미 거기 붙어 있는 상세보기를 통해 찾는다.
+            if (_settingsRoot == null && _geneRoot != null)
+                BuildSettingsList((RectTransform)_geneRoot.parent);
+            if (_settingsPanel == null) BuildSettingsPanel();
+
+            // 목록 행도 프리팹에 구워질 때는 썸네일 그림 자리가 없었다. 행마다 하나씩 붙인다.
+            for (int i = 0; i < Count(_rows); i++)
+            {
+                if (_rows[i] == null || _rows[i].Root == null || _rows[i].Face != null) continue;
+                _rows[i].Face = FaceView(_rows[i].Root, Max.RowThumb);
+            }
+
             Rewire();
             EnsureEventSystem();
 
@@ -214,7 +244,20 @@ namespace SnailPet.Ui
         {
             Hook(_renameBtn,   () => Rename?.Invoke());
             Hook(_settingsBtn, () => Settings?.Invoke());
-            Hook(_closeBtn,    () => { SetMaximized(false); Close?.Invoke(); });
+            Hook(_closeBtn,    () =>
+            {
+                // 옷장·상세보기·설정은 달팽이 정보 화면에서 들어간 곳이다. 그래서 X 는 먼저
+                // 그 화면으로 되돌린다 — 들어온 자리로 돌아가는 것이 X 의 뜻에 가깝다.
+                // 그러고 나서 접는 것은 평소와 같다.
+                if (InOverlay) SetTab(0);
+
+                // 「항상 최대화」가 막는 것은 접는 동작 하나다. 그래서 설정에서 되돌아가는 것은
+                // 막지 않고, 접기만 건너뛴다.
+                if (_options.AlwaysMax) return;
+
+                SetMaximized(false);
+                Close?.Invoke();
+            });
             Hook(_maximizeBtn, () => { SetMaximized(true);  Maximize?.Invoke(); });
 
             // 하단 액션 4개. 순서는 BuildActions 의 이름 배열과 같다.
@@ -244,12 +287,17 @@ namespace SnailPet.Ui
                 if (_selectedFood >= 0 && _selectedFood < _foodIds.Length)
                     ToggleFavorite?.Invoke(_foodIds[_selectedFood]);
             });
-            Hook(_foodBuyBtn,  () => GoShop?.Invoke());
+            // 음식 상세의 「구매」는 그 음식이 골라진 채로 상점을 연다. 상점에서 다시 찾게 하지 않는다.
+            Hook(_foodBuyBtn,  () =>
+            {
+                OpenShop(_selectedFood >= 0 && _selectedFood < _foodIds.Length ? _foodIds[_selectedFood] : 0);
+                GoShop?.Invoke();
+            });
             Hook(_foodSellBtn, () =>
             {
                 if (_selectedFood >= 0 && _selectedFood < _foodIds.Length) SellFood?.Invoke(_foodIds[_selectedFood]);
             });
-            Hook(_eggShopBtn,  () => GoShop?.Invoke());
+            Hook(_eggShopBtn,  () => { OpenShop(); GoShop?.Invoke(); });
 
             Hook(_pickBuyBtn, () => { if (_pickId > 0) BuyProduct?.Invoke(_pickId, true); });
             Hook(_shopBuyBtn, () =>
@@ -267,6 +315,16 @@ namespace SnailPet.Ui
 
             // 부화 팝업의 「확인」. X 와 하는 일이 같다 — 닫고 목록으로 돌아간다.
             Hook(_hatchOk,    HidePopup);
+
+            // 설정. 언어는 지금 한글뿐이라 일부러 아무 일도 하지 않는다.
+            Hook(_noEggsBtn,    () => { _options.NoEggs       = !_options.NoEggs;       ChangeOptions(); });
+            Hook(_hungryBtn,    () => { _options.HungryBubble = !_options.HungryBubble; ChangeOptions(); });
+            Hook(_careBtn,      () => { _options.CareBubble   = !_options.CareBubble;   ChangeOptions(); });
+            Hook(_coinBtn,      () => { _options.CoinBubble   = !_options.CoinBubble;   ChangeOptions(); });
+            Hook(_alwaysMaxBtn, () => { _options.AlwaysMax    = !_options.AlwaysMax;    ChangeOptions(); });
+            Hook(_scaleBtn,     () => { _options.ScaleStep    = (_options.ScaleStep + 1) % 3; ChangeOptions(); });
+            Hook(_updateBtn,    () => UpdatePressed?.Invoke());
+            Hook(_quitBtn,      () => QuitPressed?.Invoke());
             Hook(_renameOk, () =>
             {
                 string name = _renameField != null ? _renameField.text : "";
@@ -334,8 +392,10 @@ namespace SnailPet.Ui
             canvas.sortingOrder = CanvasSortOrder;
 
             // 픽셀 단위로 그대로 배치한다. 목업 좌표가 곧 픽셀이라 스케일러를 끼우면 오히려 어긋난다.
+            // UI 크기 설정은 이 스케일러의 scaleFactor 로 건다 (ApplyUiOptions 참고).
             var scaler = gameObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+            _scaler = scaler;
 
             // 9-슬라이스 테두리 두께는 sprite.pixelsPerUnit / referencePixelsPerUnit 로 환산된다.
             // 기본값 100 을 그대로 두면 PPU 1 짜리 도형의 테두리가 100배로 계산돼
@@ -369,6 +429,7 @@ namespace SnailPet.Ui
             BuildShopPanels();
             BuildWardrobePanel();
             BuildGenePanel();
+            BuildSettingsPanel();
             BuildPopup();
 
             // 프리팹에는 목록을 펼친 채로 굽는다. 접힌 채로 구우면 프리팹을 열었을 때
@@ -527,6 +588,7 @@ namespace SnailPet.Ui
             BuildShopCategories(panel);
             BuildWardrobeList(panel);
             BuildGeneList(panel);
+            BuildSettingsList(panel);
             BuildScrollView(panel, "SnailList", Max.RowView, out _rowGridRoot, out _rowContent);
 
             _rows = new ListRow[Max.RowPool];
@@ -810,8 +872,13 @@ namespace SnailPet.Ui
 
         private int[] _eggIds = new int[0];
 
-        /// <summary>알을 부화기에 넣기 · 부화한 달팽이 수령 · 상점으로 가기.</summary>
+        /// <summary>알을 부화기에 넣기 · 부화한 달팽이 수령.</summary>
         public event Action<int> PutEgg, ClaimHatched;
+
+        /// <summary>
+        /// 상점으로 갔다. 화면을 옮기는 것은 UI 가 스스로 하므로(<see cref="OpenShop"/>)
+        /// 이건 「갔다」는 알림이다. 받는 쪽이 다시 탭을 옮기면 골라 둔 상품이 풀린다.
+        /// </summary>
         public event Action GoShop;
 
         /// <summary>
@@ -927,10 +994,33 @@ namespace SnailPet.Ui
         {
             public RectTransform Root;
             public Image Thumb;
+
+            /// <summary>썸네일 칸 위에 얹는 달팽이 모습. 칸은 배경으로 남는다.</summary>
+            public RawImage Face;
+
             public Image RarityBadge, RarityIcon;
             public Text Name, Rarity, Age;
             public Button Swap;
         }
+
+        /// <summary>
+        /// 목록 썸네일에 들어가는 달팽이 모습. 부트스트랩이 찍어 넘긴 렌더 텍스처를 받는다.
+        /// 그림이 없을 때를 대비해 아래 칸 도형은 그대로 두고 그 위에 얹는다.
+        /// </summary>
+        private RawImage FaceView(RectTransform parent, RectInt at)
+        {
+            var rt = NewRect("Face", parent);
+            Place(rt, at);
+
+            var img = rt.gameObject.AddComponent<RawImage>();
+            img.raycastTarget = false;
+            img.enabled = false;      // 텍스처가 들어올 때 켠다
+            return img;
+        }
+
+        /// <summary>목록 썸네일을 찍을 크기. 목업이 정사각형이다.</summary>
+        public static Vector2Int RowThumbSize =>
+            new Vector2Int(Max.RowThumb.width, Max.RowThumb.height);
 
         private ListRow BuildRow(RectTransform parent, RectInt at, int index)
         {
@@ -943,6 +1033,7 @@ namespace SnailPet.Ui
             {
                 Root   = rowRt,
                 Thumb  = Box(rowRt, Max.RowThumb, UiTheme.RowSlot, UiSprites.Shape.Slot2, "Thumb"),
+                Face   = FaceView(rowRt, Max.RowThumb),
                 Name   = Label(rowRt, Max.RowName, "", 11, UiTheme.Ink),
                 Rarity = null,
                 Age    = null,
@@ -964,7 +1055,7 @@ namespace SnailPet.Ui
         }
 
         /// <summary>지금 나와 있는 달팽이는 교체 버튼이 없다 (목업 주석).</summary>
-        public void SetRows((string name, SnailPet.Data.RarityType rarity, int age, bool isActive)[] rows)
+        public void SetRows((string name, SnailPet.Data.RarityType rarity, int age, bool isActive, Texture face)[] rows)
         {
             int count = rows?.Length ?? 0;
             if (count > _rows.Length)
@@ -988,6 +1079,12 @@ namespace SnailPet.Ui
                 ApplyRarity(_rows[i].RarityIcon, _rows[i].RarityBadge, _rows[i].Rarity, r.rarity);
                 _rows[i].Age.text    = SnailPet.Data.Loc.Format(Keys.Age, r.age);
                 _rows[i].Swap.gameObject.SetActive(!r.isActive);
+
+                if (_rows[i].Face != null)
+                {
+                    _rows[i].Face.texture = r.face;
+                    _rows[i].Face.enabled = r.face != null;
+                }
             }
         }
 
@@ -996,15 +1093,18 @@ namespace SnailPet.Ui
         {
             _tab = Mathf.Clamp(index, 0, _tabs.Length - 1);
 
-            // 탭을 누르면 옷장·상세보기에서 빠져나온다. 둘 다 왼쪽 패널을 통째로 쓰기 때문이다.
-            if (_inWardrobe || _inGene)
+            // 탭을 누르면 옷장·상세보기·설정에서 빠져나온다. 셋 다 왼쪽 패널을 통째로 쓰기 때문이다.
+            if (_inWardrobe || _inGene || _inSettings)
             {
                 _inWardrobe = false;
                 _inGene = false;
+                _inSettings = false;
                 if (_wardrobeRoot != null)  _wardrobeRoot.gameObject.SetActive(false);
                 if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
                 if (_geneRoot != null)      _geneRoot.gameObject.SetActive(false);
                 if (_genePanel != null)     _genePanel.gameObject.SetActive(false);
+                if (_settingsRoot != null)  _settingsRoot.gameObject.SetActive(false);
+                if (_settingsPanel != null) _settingsPanel.gameObject.SetActive(false);
             }
 
             // 탭이 왼쪽 목록과 오른쪽 상세를 함께 바꾼다. 둘은 항상 같은 것을 보여 줘야 한다.
@@ -1030,6 +1130,7 @@ namespace SnailPet.Ui
 
             string[] titles = { Keys.SnailList, Keys.FoodList, Keys.EggList, Keys.Shop };
             _listTitle.text = SnailPet.Data.Loc.Text(titles[_tab]);
+            RefreshClose();      // 설정에서 나왔으면 X 가 다시 접는 버튼이 된다
             TabChanged?.Invoke(_tab);
         }
 
@@ -1230,6 +1331,33 @@ namespace SnailPet.Ui
             _listTitle.text = SnailPet.Data.Loc.Text(Keys.CategoryOf(cats[index]));
             ApplyShopStage();
             SelectShopSlot(_shopIds.Length > 0 ? 0 : -1);
+        }
+
+        /// <summary>
+        /// 상점을 연다. <paramref name="itemId"/> 를 파는 곳이 있으면 그 카테고리로 들어가
+        /// 그 상품을 골라 둔다. 음식 상세의 「구매」가 이 길로 들어온다.
+        ///
+        /// 파는 물건이 아니거나(예: 잡은 음식이 상점에 없음) 0 이면 상점 첫 화면까지만 간다.
+        /// </summary>
+        public void OpenShop(int itemId = 0)
+        {
+            SetTab(3);
+            if (itemId == 0) return;
+
+            var cats = SnailPet.Snail.Shop.Categories;
+            for (int c = 0; c < cats.Length; c++)
+            {
+                var products = SnailPet.Snail.Shop.ProductsOf(cats[c]);
+                for (int i = 0; i < products.Length; i++)
+                {
+                    // ShopData 의 Id 가 곧 파는 아이템의 Id 다 (그림도 그것으로 찾는다).
+                    if (products[i].Id != itemId) continue;
+
+                    EnterShopCategory(c);
+                    if (i < _shopIds.Length) SelectShopSlot(i);   // 칸보다 뒤에 있으면 첫 칸에 둔다
+                    return;
+                }
+            }
         }
 
         private void LeaveShopCategory()
@@ -1531,11 +1659,14 @@ namespace SnailPet.Ui
             _inWardrobe = on;
             if (on)
             {
-                // 옷장과 상세보기는 같은 자리를 쓰므로 하나만 떠 있어야 한다.
+                // 옷장·상세보기·설정은 같은 자리를 쓰므로 하나만 떠 있어야 한다.
                 // ApplyGene 을 부르면 안 된다 — 꺼질 때 SetTab 으로 되돌리기 때문이다.
                 _inGene = false;
+                _inSettings = false;
                 if (_geneRoot != null)  _geneRoot.gameObject.SetActive(false);
                 if (_genePanel != null) _genePanel.gameObject.SetActive(false);
+                if (_settingsRoot != null)  _settingsRoot.gameObject.SetActive(false);
+                if (_settingsPanel != null) _settingsPanel.gameObject.SetActive(false);
                 SetMaximized(true);
             }
             ApplyWardrobe();
@@ -1562,8 +1693,9 @@ namespace SnailPet.Ui
                 if (_shopPanel != null)    _shopPanel.gameObject.SetActive(false);
                 if (_shopItemPanel != null)_shopItemPanel.gameObject.SetActive(false);
                 _listTitle.text = SnailPet.Data.Loc.Text(Keys.Wardrobe);
+                RefreshClose();
             }
-            else SetTab(_tab);   // 있던 탭으로 되돌린다
+            else SetTab(_tab);   // 있던 탭으로 되돌린다 (SetTab 안에서 X 잠금도 다시 정해진다)
         }
 
         /// <summary>입은 모습을 그릴 텍스처. 장착이 바뀔 때마다 다시 찍어 넣는다.</summary>
@@ -1832,8 +1964,11 @@ namespace SnailPet.Ui
             if (on)
             {
                 _inWardrobe = false;
+                _inSettings = false;
                 if (_wardrobeRoot != null)  _wardrobeRoot.gameObject.SetActive(false);
                 if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
+                if (_settingsRoot != null)  _settingsRoot.gameObject.SetActive(false);
+                if (_settingsPanel != null) _settingsPanel.gameObject.SetActive(false);
                 SetMaximized(true);
             }
             ApplyGene();
@@ -1863,6 +1998,7 @@ namespace SnailPet.Ui
             if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
 
             _listTitle.text = SnailPet.Data.Loc.Text(Keys.Traits);
+            RefreshClose();
         }
 
         /// <summary>초상. 옷장과 같은 크기라 같은 것을 쓸 수 있다.</summary>
@@ -1941,6 +2077,234 @@ namespace SnailPet.Ui
             SnailPet.Data.PartsType.Feeler, SnailPet.Data.PartsType.Eyes,
         };
 
+        // ── 설정 화면 ──
+        //
+        // 옷장·상세보기와 같은 모드다. 설정 버튼으로 들어가고 탭을 누르면 나온다.
+        // 왼쪽은 이 달팽이에 걸리는 설정, 오른쪽은 게임 전체 설정이다 (UI.pptx 13쪽).
+        //
+        // 체크와 ▾ 는 아트가 없어 글자로 그린다 — 수량 조절의 +/- 와 같은 임시 방편이라,
+        // 아트가 들어오면 Icon 으로 바꾸면 된다.
+
+        // 설정값 자체는 PlayerOptions 가 들고 있다. 세이브 형식이 화면 코드에 매이지 않게
+        // 상태 쪽에 두었고, 여기서는 그리는 일과 바뀌었다고 알리는 일만 한다.
+
+        [SerializeField] private RectTransform _settingsRoot, _settingsPanel;
+        [SerializeField] private Button _noEggsBtn, _hungryBtn, _careBtn, _coinBtn;
+        [SerializeField] private Button _langBtn, _updateBtn, _scaleBtn, _alwaysMaxBtn, _quitBtn;
+        [SerializeField] private Text _noEggsMark, _hungryMark, _careMark, _coinMark, _alwaysMaxMark;
+        [SerializeField] private Text _scaleLabel;
+
+        private bool _inSettings;
+        public bool InSettings => _inSettings;
+
+        private Options _options = Options.Default;
+        public Options CurrentOptions => _options;
+
+        /// <summary>설정이 바뀌었다. 저장과 적용은 받는 쪽이 한다.</summary>
+        public event Action<Options> OptionsChanged;
+
+        /// <summary>「업데이트 및 재시작」. 아직 업데이트 체계가 없어 알리기만 한다.</summary>
+        public event Action UpdatePressed;
+
+        /// <summary>「종료」. 목업대로 묻지 않고 바로 끈다.</summary>
+        public event Action QuitPressed;
+
+        private void BuildSettingsList(RectTransform panel)
+        {
+            _settingsRoot = NewRect("Settings", panel);
+            Place(_settingsRoot, new RectInt(0, 0, UiTheme.PanelW, UiTheme.PanelH));
+            _settingsRoot.gameObject.SetActive(false);
+
+            LocLabel(_settingsRoot, Set.EggTitle, Keys.EggSection, 10, UiTheme.Ink)
+                .alignment = TextAnchor.MiddleLeft;
+            LocLabel(_settingsRoot, Set.BubbleTitle, Keys.BubbleSection, 10, UiTheme.Ink)
+                .alignment = TextAnchor.MiddleLeft;
+
+            _noEggsBtn = ToggleRow(_settingsRoot, Set.LeftX, Set.LeftRows[0], Keys.NoEggs,       out _noEggsMark, "NoEggs");
+            _hungryBtn = ToggleRow(_settingsRoot, Set.LeftX, Set.LeftRows[1], Keys.HungryBubble, out _hungryMark, "Hungry");
+            _careBtn   = ToggleRow(_settingsRoot, Set.LeftX, Set.LeftRows[2], Keys.CareBubble,   out _careMark,   "Care");
+            _coinBtn   = ToggleRow(_settingsRoot, Set.LeftX, Set.LeftRows[3], Keys.CoinBubble,   out _coinMark,   "Coin");
+        }
+
+        private void BuildSettingsPanel()
+        {
+            _settingsPanel = Panel(_detailRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
+            _settingsPanel.gameObject.SetActive(false);
+
+            LocLabel(_settingsPanel, new RectInt(0, 4, UiTheme.PanelW, 21), Keys.Setting, 12, UiTheme.Ink);
+
+            // 언어는 지금 한글뿐이라 눌러도 바뀌지 않는다. 목업의 「나중에 추가」가 이것이다.
+            _langBtn = SettingRow(_settingsPanel, Set.RightX, Set.RightRows[0], Keys.Korean, out _, "Language");
+            Chevron(_settingsPanel, Set.RightX, Set.RightRows[0]);
+
+            _updateBtn = SettingRow(_settingsPanel, Set.RightX, Set.RightRows[1], Keys.Update, out _, "Update");
+
+            // UI 크기는 배수가 글자에 들어가므로 언어 키가 아니라 코드가 채운다.
+            _scaleBtn = SettingRow(_settingsPanel, Set.RightX, Set.RightRows[2], null, out _scaleLabel, "UiScale");
+            Chevron(_settingsPanel, Set.RightX, Set.RightRows[2]);
+
+            _alwaysMaxBtn = ToggleRow(_settingsPanel, Set.RightX, Set.RightRows[3], Keys.AlwaysMax,
+                                      out _alwaysMaxMark, "AlwaysMax");
+
+            _quitBtn = SettingRow(_settingsPanel, Set.RightX, Set.RightRows[4], Keys.Quit, out _, "Quit", centered: true);
+        }
+
+        /// <summary>
+        /// 설정 행 하나. 가로로 긴 홈에 글자를 얹고 행 전체를 누를 수 있게 한다.
+        /// <paramref name="token"/> 이 null 이면 값이 바뀌는 글자라 코드가 채운다.
+        /// </summary>
+        private Button SettingRow(RectTransform parent, int x, int y, string token,
+                                  out Text label, string name, bool centered = false)
+        {
+            var at = new RectInt(x, y, Set.RowW, Set.RowH);
+            var box = Box(parent, at, UiTheme.Slot, UiSprites.Shape.Slot, name);
+            box.raycastTarget = true;
+
+            var lr = centered
+                   ? new RectInt(at.x, at.y + Set.Label.y, at.width, Set.Label.height)
+                   : new RectInt(at.x + Set.Label.x, at.y + Set.Label.y, Set.Label.width, Set.Label.height);
+
+            label = token == null ? Label(parent, lr, "", 10, UiTheme.Ink)
+                                  : LocLabel(parent, lr, token, 10, UiTheme.Ink);
+            label.alignment = centered ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft;
+
+            var btn = box.gameObject.AddComponent<Button>();
+            btn.targetGraphic = box;
+            return btn;
+        }
+
+        /// <summary>켜고 끄는 행. 오른쪽 끝에 네모와 체크를 얹는다.</summary>
+        private Button ToggleRow(RectTransform parent, int x, int y, string token, out Text mark, string name)
+        {
+            var btn = SettingRow(parent, x, y, token, out _, name);
+
+            Box(parent, new RectInt(x + Set.Check.x, y + Set.Check.y, Set.Check.width, Set.Check.height),
+                UiTheme.RowSlot, UiSprites.Shape.Slot2, name + "Box");
+
+            mark = Label(parent, new RectInt(x + Set.Check.x, y + Set.Check.y - 1, Set.Check.width, Set.Check.height),
+                         "✓", 11, UiTheme.Ink);
+            return btn;
+        }
+
+        /// <summary>고르는 행 오른쪽의 ▾.</summary>
+        private void Chevron(RectTransform parent, int x, int y) =>
+            Label(parent, new RectInt(x + Set.Arrow.x, y + Set.Arrow.y, Set.Arrow.width, Set.Arrow.height),
+                  "▾", 10, UiTheme.Ink);
+
+        /// <summary>설정 화면에 들어가거나 나온다.</summary>
+        public void OpenSettings(bool on)
+        {
+            _inSettings = on;
+            if (on)
+            {
+                // 옷장·상세보기와 같은 자리를 쓰므로 하나만 떠 있어야 한다.
+                _inWardrobe = false;
+                _inGene = false;
+                if (_wardrobeRoot != null)  _wardrobeRoot.gameObject.SetActive(false);
+                if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
+                if (_geneRoot != null)      _geneRoot.gameObject.SetActive(false);
+                if (_genePanel != null)     _genePanel.gameObject.SetActive(false);
+                SetMaximized(true);
+            }
+            ApplySettings();
+        }
+
+        private void ApplySettings()
+        {
+            if (_settingsRoot == null) return;
+
+            _settingsRoot.gameObject.SetActive(_inSettings);
+            _settingsPanel.gameObject.SetActive(_inSettings);
+
+            if (!_inSettings) { SetTab(_tab); return; }
+
+            // 설정에 있는 동안에는 목록·그리드·상세가 전부 물러난다
+            if (_rowGridRoot != null)   _rowGridRoot.gameObject.SetActive(false);
+            if (_foodGridRoot != null)  _foodGridRoot.gameObject.SetActive(false);
+            if (_eggGridRoot != null)   _eggGridRoot.gameObject.SetActive(false);
+            if (_shopCatRoot != null)   _shopCatRoot.gameObject.SetActive(false);
+            if (_shopGridRoot != null)  _shopGridRoot.gameObject.SetActive(false);
+            if (_panel != null)         _panel.gameObject.SetActive(false);
+            if (_foodPanel != null)     _foodPanel.gameObject.SetActive(false);
+            if (_eggPanel != null)      _eggPanel.gameObject.SetActive(false);
+            if (_shopPanel != null)     _shopPanel.gameObject.SetActive(false);
+            if (_shopItemPanel != null) _shopItemPanel.gameObject.SetActive(false);
+
+            _listTitle.text = SnailPet.Data.Loc.Text(Keys.SnailSetting);
+            PaintSettings();
+            RefreshClose();
+        }
+
+        /// <summary>지금 값에 맞춰 체크와 글자를 다시 그린다.</summary>
+        private void PaintSettings()
+        {
+            if (_noEggsMark != null)    _noEggsMark.enabled    = _options.NoEggs;
+            if (_hungryMark != null)    _hungryMark.enabled    = _options.HungryBubble;
+            if (_careMark != null)      _careMark.enabled      = _options.CareBubble;
+            if (_coinMark != null)      _coinMark.enabled      = _options.CoinBubble;
+            if (_alwaysMaxMark != null) _alwaysMaxMark.enabled = _options.AlwaysMax;
+
+            if (_scaleLabel != null)
+                _scaleLabel.text = SnailPet.Data.Loc.Format(Keys.UiScale, _options.Scale.ToString("0.#"));
+        }
+
+        /// <summary>
+        /// 세이브에서 읽은 값을 넣는다. 이쪽은 <see cref="OptionsChanged"/> 를 내지 않는다 —
+        /// 넣자마자 되돌아와 저장이 한 번 더 도는 것을 막는다.
+        /// </summary>
+        public void SetOptions(Options options)
+        {
+            _options = options;
+            PaintSettings();
+            ApplyUiOptions();
+        }
+
+        private void ChangeOptions()
+        {
+            PaintSettings();
+            ApplyUiOptions();
+            OptionsChanged?.Invoke(_options);
+        }
+
+        /// <summary>
+        /// UI 가 스스로 거는 값 둘. 나머지는 게임 쪽이 받아서 건다.
+        ///
+        /// 크기는 <b>캔버스 스케일러</b>로 건다. 위젯의 localScale 로 늘리면 이미 구워진 글자를
+        /// 확대하는 셈이라 글자가 뭉개진다 — 동적 폰트는 canvas.scaleFactor 를 보고 그 배율로
+        /// 글자를 다시 구우므로 이쪽이라야 x2 에서도 선명하다. 9-슬라이스 도형도 같이 따라온다.
+        ///
+        /// 「항상 최대화」는 펼치고, 접는 X 를 잠근다. 잠그는 것은 <b>위젯을 접는 X 하나뿐</b>이고
+        /// 상점의 뒤로가기와 팝업의 X 는 그대로 둔다 — 그 둘은 접는 버튼이 아니다.
+        /// </summary>
+        private void ApplyUiOptions()
+        {
+            if (_scaler == null) _scaler = GetComponent<CanvasScaler>();
+            if (_scaler != null) _scaler.scaleFactor = _options.Scale;
+
+            // 예전 방식으로 늘어난 채 살아났을 수 있으니 되돌려 둔다. 둘이 겹치면 배로 커진다.
+            if (_widget != null) _widget.localScale = Vector3.one;
+
+            if (_options.AlwaysMax && !Maximized) SetMaximized(true);
+            RefreshClose();
+        }
+
+        /// <summary>
+        /// 달팽이 정보 화면에서 들어가 좌우 패널을 통째로 쓰는 화면들. X 가 여기서는
+        /// 접는 버튼이 아니라 되돌아가는 버튼이 된다.
+        /// </summary>
+        private bool InOverlay => _inSettings || _inWardrobe || _inGene;
+
+        /// <summary>
+        /// X 를 잠글지 정한다. 「항상 최대화」가 막는 것은 <b>접는 동작</b>이므로,
+        /// X 가 되돌아가는 버튼일 때는 잠그지 않는다.
+        /// </summary>
+        private void RefreshClose()
+        {
+            if (_closeBtn != null) _closeBtn.interactable = !(_options.AlwaysMax && !InOverlay);
+        }
+
+        [SerializeField] private CanvasScaler _scaler;
+
         // ── 구매·판매 팝업 ──
         //
         // 목업에서 구매와 판매는 제목과 가격 부호만 다르므로 하나로 만든다.
@@ -1951,7 +2315,8 @@ namespace SnailPet.Ui
         [SerializeField] private Button _popupMinus, _popupPlus, _popupYes, _popupNo, _popupClose;
 
         private int _popupQty = 1, _popupMax = 1;
-        private double _popupUnit;      // 한 개당 값. 판매면 음수로 들어온다.
+        private double _popupUnit;      // 한 개당 값. 항상 양수이고 부호는 여기서 붙인다.
+        private bool _popupSelling;
         private int _popupItemId;
 
         /// <summary>팝업에서 「네」를 눌렀다. (아이템 Id, 수량).</summary>
@@ -2308,14 +2673,15 @@ namespace SnailPet.Ui
 
         /// <summary>
         /// 팝업을 띄운다.
-        /// <paramref name="unitCost"/> 는 한 개당 값이며 <b>판매면 음수</b>로 넣는다 —
-        /// 목업의 -5,000 이 그것이다.
+        /// <paramref name="unitCost"/> 는 한 개당 값이며 <b>항상 양수</b>로 넣는다 —
+        /// 부호는 여기서 붙인다. 목업에서 마이너스가 붙는 쪽은 코인이 나가는 <b>구매</b>다.
         /// <paramref name="max"/> 는 살 수 있는/팔 수 있는 최대 수량.
         /// </summary>
         public void ShowPopup(bool selling, int itemId, string itemName, double unitCost, int max)
         {
             _popupItemId = itemId;
-            _popupUnit = unitCost;
+            _popupSelling = selling;
+            _popupUnit = System.Math.Abs(unitCost);
             _popupMax = Mathf.Max(1, max);
             _popupQty = 1;
 
@@ -2348,9 +2714,10 @@ namespace SnailPet.Ui
             _popupCount.text = _popupQty.ToString();
 
             // 합계는 반올림이 아니라 버림. 판매값이 2.5 처럼 소수라 두 개를 팔면 5 가 되어야 한다.
-            double total = _popupUnit * _popupQty;
-            long shown = (long)(total < 0 ? -System.Math.Floor(-total) : System.Math.Floor(total));
-            _popupCost.text = shown.ToString("N0");
+            long shown = (long)System.Math.Floor(_popupUnit * _popupQty);
+
+            // 마이너스는 코인이 나가는 쪽, 즉 구매에 붙는다 (목업 3쪽의 -5,000).
+            _popupCost.text = (_popupSelling ? "" : "-") + shown.ToString("N0");
 
             // 더 못 올리거나 못 내리면 눌러도 소용없다는 것을 보인다
             if (_popupMinus != null) _popupMinus.interactable = _popupQty > 1;

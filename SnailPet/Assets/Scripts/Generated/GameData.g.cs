@@ -584,7 +584,7 @@ namespace SnailPet.Data
 
         public static readonly BubbleDataRow[] BubbleData = new BubbleDataRow[]
         {
-            new BubbleDataRow(52, "bubble_coin", 5d),
+            new BubbleDataRow(52, "bubble_coin", 3d),
         };
 
         public static readonly LevelUpAdvantageRow[] LevelUpAdvantage = new LevelUpAdvantageRow[]
@@ -774,6 +774,21 @@ namespace SnailPet.Data
             new LanguageDataRow(144, "아니오"),
             new LanguageDataRow(145, "이름을 변경합니다."),
             new LanguageDataRow(146, "변경"),
+            new LanguageDataRow(149, "확인"),
+            new LanguageDataRow(150, "알이 부화했습니다!"),
+            new LanguageDataRow(151, "달팽이 설정"),
+            new LanguageDataRow(152, "설정"),
+            new LanguageDataRow(153, "Korean(kr)"),
+            new LanguageDataRow(154, "업데이트 및 재시작"),
+            new LanguageDataRow(155, "UI크기(x{0})"),
+            new LanguageDataRow(156, "UI 항상 최대화"),
+            new LanguageDataRow(157, "알 관련"),
+            new LanguageDataRow(158, "알 생성 금지"),
+            new LanguageDataRow(159, "말풍선 알림"),
+            new LanguageDataRow(160, "배고픔 알림"),
+            new LanguageDataRow(161, "관심 알림"),
+            new LanguageDataRow(162, "코인 알림"),
+            new LanguageDataRow(163, "종료"),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -1033,6 +1048,21 @@ namespace SnailPet.Data
             { "[변경]", 146 },
             { "[레어_아이스크림콘껍질]", 147 },
             { "[레어_아이스크림콘껍질정보]", 148 },
+            { "[확인]", 149 },
+            { "[부화문구]", 150 },
+            { "[달팽이설정]", 151 },
+            { "[설정]", 152 },
+            { "[한글]", 153 },
+            { "[업데이트]", 154 },
+            { "[UI크기]", 155 },
+            { "[UI최대화]", 156 },
+            { "[알관련]", 157 },
+            { "[알생성금지]", 158 },
+            { "[말풍선알림]", 159 },
+            { "[배고픔알림]", 160 },
+            { "[관심알림]", 161 },
+            { "[코인알림]", 162 },
+            { "[종료]", 163 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

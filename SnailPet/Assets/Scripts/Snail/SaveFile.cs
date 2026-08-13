@@ -75,6 +75,13 @@ namespace SnailPet.Snail
 
             /// <summary>즐겨찾기한 음식. 나중에 더한 칸이라 옛 세이브에는 없다.</summary>
             public int[] favorites;
+
+            /// <summary>
+            /// 설정 화면의 값. 역시 나중에 더한 칸이라 옛 세이브에는 없다.
+            /// 없으면 JsonUtility 가 전부 false·0 을 넣으므로, 읽는 쪽에서 기본값을 가른다.
+            /// </summary>
+            public PlayerOptions options;
+            public bool hasOptions;
         }
 
         public static void Save(PlayerState player)
@@ -87,6 +94,8 @@ namespace SnailPet.Snail
                 activeId = player.ActiveId,
                 eggs = player.Eggs.ToArray(),
                 favorites = player.Favorites.ToArray(),
+                options = player.Options,
+                hasOptions = true,
                 snails = new SnailDto[player.Snails.Count],
                 incubator = new SlotDto[player.Incubator.Length],
             };
@@ -196,6 +205,10 @@ namespace SnailPet.Snail
 
             if (root.eggs != null) player.Eggs.AddRange(root.eggs);
             if (root.favorites != null) player.Favorites.AddRange(root.favorites);
+
+            // 설정이 없던 시절의 세이브는 전부 꺼진 것처럼 읽힌다. 그러면 알림 셋이
+            // 꺼진 채로 시작해 기본값과 어긋나므로, 적혀 있을 때만 가져온다.
+            player.Options = root.hasOptions ? root.options : PlayerOptions.Default;
             if (root.items != null) foreach (var it in root.items) player.Items.Add(it.id, it.count);
 
             if (root.incubator != null)

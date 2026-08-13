@@ -26,28 +26,15 @@ namespace SnailPet
 
     public sealed class SnailPetRunner : MonoBehaviour
     {
-        /// <summary>
-        /// 안전장치. 클릭 통과 + 항상 위 + 테두리 없는 전체 화면 창은 마우스로 닫을 수 없다.
-        /// 반드시 스스로 종료되게 둘 것.
-        /// </summary>
-        private const float AutoQuitSeconds = 40f;
+        // 종료는 설정 화면의 「종료」가 맡는다. 예전에는 40초 뒤 자동 종료가 유일한 탈출구라
+        // 안전장치로 박아 두었고, 그동안은 시간·속도를 배로 당겨 놓아야 40초 안에 무엇이든
+        // 볼 수 있었다. 이제 데이터가 정한 실제 속도 그대로 돈다.
 
         /// <summary>데모용. 먹이를 자동으로 떨어뜨릴지. 다른 것을 관찰할 때는 꺼 둔다.</summary>
         private const bool DemoFoodEnabled = false;
 
         /// <summary>데모용. 이 간격마다 먹이를 하나 떨어뜨린다.</summary>
         private const float DemoFoodSeconds = 5f;
-
-        /// <summary>레벨업 3600초·포만 감소 120초를 눈으로 보려면 시간을 당겨야 한다. 40초 실행 = 약 80분.</summary>
-        private const float DemoTimeScale = 120f;
-
-        /// <summary>
-        /// 데모용 이동 속도 배수.
-        ///
-        /// 실제 속도(24~252px/s)로는 3840px 짜리 화면에서 모서리까지 가는 데만 100초가 넘어
-        /// 40초 실행 안에 모서리 도는 것을 한 번도 볼 수 없다. 관찰용으로만 당긴다.
-        /// </summary>
-        private const float DemoSpeedScale = 5f;
 
         /// <summary>데모용 시작 위치. 1 에 가까울수록 모서리 바로 앞에서 시작한다.</summary>
         private const float DemoStartT = 0.94f;
@@ -271,7 +258,7 @@ namespace SnailPet
 #endif
             _status = "달팽이·먹이를 끌어 옮길 수 있습니다. 놓으면 아래로 떨어집니다.";
             Say("");
-            Say("→ " + AutoQuitSeconds + "초 뒤 자동 종료.");
+            Say("→ 끄려면 설정 화면의 「종료」를 누르세요. (에디터에서는 ESC)");
             WriteReport();
         }
 
@@ -325,8 +312,7 @@ namespace SnailPet
                 top.Speed * SnailGrowth.PixelsPerSpeedUnit, top.Size * SnailGrowth.PixelsPerSizeUnit));
             Say("      보유 ........... " + _player);
             Say("      세이브 ......... " + SaveFile.Path);
-            Say($"      (데모 배속 {DemoTimeScale}배라 {AutoQuitSeconds:0}초 실행이 " +
-                $"약 {AutoQuitSeconds * DemoTimeScale / 60f:0}분치로 굳습니다. " +
+            Say("      (실제 속도로 돕니다. 부화 30분·레벨업 1시간이 그대로 걸립니다. " +
                 "처음부터 보려면 위 파일을 지우세요)");
         }
 
@@ -438,7 +424,10 @@ namespace SnailPet
             _ui.Gene     += OpenGene;
             _ui.Sell     += SellSnailFromUi;
             _ui.SellFood += SellFromUi;
-            _ui.Settings += () => Say("      [UI] 설정");
+            _ui.Settings += OpenSettings;
+            _ui.OptionsChanged += ApplyOptions;
+            _ui.UpdatePressed  += () => Say("      [UI] 업데이트 및 재시작 (아직 업데이트 체계가 없습니다)");
+            _ui.QuitPressed    += QuitFromUi;
             _ui.Close    += () => Say("      [UI] 최소화");
             _ui.Maximize += () => Say("      [UI] 최대화");
             _ui.TabChanged += i => Say($"      [UI] 탭 {i}");
@@ -458,11 +447,17 @@ namespace SnailPet
 
             _ui.PutEgg       += PutEggInIncubator;
             _ui.ClaimHatched += ClaimHatched;
-            _ui.GoShop       += () => _ui.SetTab(3);
+            // 화면을 옮기는 것은 UI 가 스스로 한다. 여기서 탭을 다시 옮기면
+            // 음식 상세에서 골라 둔 상품이 풀린다.
+            _ui.GoShop       += () => Say("      [UI] 상점으로");
             _ui.BuyProduct     += BuyFromShop;
             _ui.PopupConfirmed += ConfirmPopup;
 
             SnailPortrait.ExcludeFrom(_cam);
+
+            // 세이브에서 읽은 설정을 UI 에 넣는다. 이 호출은 OptionsChanged 를 내지 않으므로
+            // 넣자마자 다시 저장이 도는 일이 없다.
+            _ui.SetOptions(_player.Options);
 
             RefreshEggs();
             RefreshFoods();
@@ -487,13 +482,14 @@ namespace SnailPet
         /// </summary>
         private void RefreshSnail(bool reshoot = true)
         {
-            var rows = new (string, RarityType, int, bool)[_player.Snails.Count];
+            var rows = new (string, RarityType, int, bool, Texture)[_player.Snails.Count];
             for (int i = 0; i < rows.Length; i++)
             {
                 var s = _player.Snails[i];
-                rows[i] = (s.Name, s.Rarity, s.Growth.Level, s.Id == _player.ActiveId);
+                rows[i] = (s.Name, s.Rarity, s.Growth.Level, s.Id == _player.ActiveId, ThumbOf(s));
             }
             _ui.SetRows(rows);
+            PruneThumbs();
 
             // 이름은 아직 지을 방법이 없어 비워 둔다 — UI 가 「이름 없음」으로 채운다.
             var active = _player.Active;
@@ -512,12 +508,63 @@ namespace SnailPet
 
         // ── 옷장 ──
 
-        private SnailPortrait _wardrobeView;
+        // ── 목록 썸네일 ──
+        //
+        // 개체마다 얼굴을 정사각형으로 한 장 찍어 두고 목록 행에 넣는다. 카메라는 찍은 뒤
+        // 꺼지므로 마릿수가 늘어도 매 프레임 비용은 없다. 외형이 바뀌면(악세서리) 그 개체 것만
+        // 버리고 다음 새로고침에 다시 찍는다.
+
+        private readonly System.Collections.Generic.Dictionary<int, SnailPortrait> _thumbs =
+            new System.Collections.Generic.Dictionary<int, SnailPortrait>();
+
+        private Texture ThumbOf(OwnedSnail snail)
+        {
+            if (_thumbs.TryGetValue(snail.Id, out var view) && view.Texture != null) return view.Texture;
+
+            // 입은 모습으로 찍는다. 모자를 썼으면 목록에서도 쓰고 있어야 한다.
+            var dressed = snail.Dressed();
+            var size = SnailUi.RowThumbSize;
+            view = new SnailPortrait(transform, dressed, SnailMetrics.Measure(dressed),
+                                     size.x, size.y, headOnly: true);
+            _thumbs[snail.Id] = view;
+            return view.Texture;
+        }
+
+        /// <summary>외형이 바뀐 개체의 썸네일을 버린다. 다음 새로고침에 다시 찍힌다.</summary>
+        private void DropThumb(int snailId)
+        {
+            if (!_thumbs.TryGetValue(snailId, out var view)) return;
+
+            view.Dispose();
+            _thumbs.Remove(snailId);
+        }
+
+        /// <summary>판 개체의 썸네일을 치운다. 안 치우면 초상 자리와 텍스처가 남는다.</summary>
+        private void PruneThumbs()
+        {
+            _gone.Clear();
+            foreach (var kv in _thumbs)
+            {
+                bool owned = false;
+                foreach (var s in _player.Snails) if (s.Id == kv.Key) { owned = true; break; }
+                if (!owned) _gone.Add(kv.Key);
+            }
+            foreach (int id in _gone) DropThumb(id);
+        }
+
+        private readonly System.Collections.Generic.List<int> _gone = new System.Collections.Generic.List<int>();
+
+        /// <summary>
+        /// 옷장과 상세보기가 함께 쓰는 초상.
+        ///
+        /// 목업에서 두 미리보기 자리가 125x105 로 같고 비추는 것도 같은 개체라, 따로 찍을
+        /// 이유가 없다. 두 화면이 동시에 뜨지도 않는다. (메인 상세의 초상은 141x80 이라
+        /// 비율이 달라 여기 낄 수 없다 — 같은 텍스처를 넣으면 가로로 늘어난다)
+        /// </summary>
+        private SnailPortrait _previewView;
 
 
         // ── 달팽이 상세보기 ──
-
-        private SnailPortrait _geneView;
 
         /// <summary>유전정보 버튼. 이 개체가 가진 파츠를 이름·설명과 함께 펼친다.</summary>
         private void OpenGene()
@@ -532,11 +579,7 @@ namespace SnailPet
             foreach (var p in snail.Appearance.Parts) ids.Add(p.PartsId);
             _ui.SetGene(snail.Name, snail.Rarity, ids.ToArray());
 
-            // 옷장과 같은 크기라 같은 방식으로 한 장 더 찍는다
-            _geneView?.Dispose();
-            var size = SnailUi.GenePreviewSize;
-            _geneView = new SnailPortrait(transform, _appearance, _bounds, size.x, size.y);
-            _ui.SetGenePreview(_geneView.Texture);
+            ReshootPreview();
 
             Say($"      [UI] 상세보기: 파츠 {ids.Count}종");
         }
@@ -556,21 +599,28 @@ namespace SnailPet
             if (snail == null) return;
 
             _ui.SetWardrobe(snail.Name, snail.Rarity, _player.OwnedAccessories(), snail.Equipped.ToArray());
-            ReshootWardrobeView();
+            ReshootPreview();
         }
 
         /// <summary>
-        /// 입은 모습을 다시 찍는다.
+        /// 옷장·상세보기의 미리보기를 다시 찍는다.
+        ///
         /// 화면을 도는 달팽이는 벽 따라 돌아가 있고 변형 중이라 그대로 비출 수 없다 —
-        /// 초상과 같은 방식으로 정지 복제본을 하나 더 만들어 찍는다.
+        /// 정지 복제본을 만들어 찍는다. 악세서리를 갈아입으면 외형이 달라지므로
+        /// 그때마다 버리고 새로 만든다. 초상 카메라는 만들 때 한 장 찍고 꺼지므로,
+        /// 다시 찍는 길은 이렇게 새로 만드는 것뿐이다.
         /// </summary>
-        private void ReshootWardrobeView()
+        private void ReshootPreview()
         {
-            _wardrobeView?.Dispose();
+            _previewView?.Dispose();
 
             var size = SnailUi.WardrobePreviewSize;
-            _wardrobeView = new SnailPortrait(transform, _appearance, _bounds, size.x, size.y);
-            _ui.SetWardrobePreview(_wardrobeView.Texture);
+            if (size != SnailUi.GenePreviewSize)
+                Say("      [경고] 옷장과 상세보기의 미리보기 크기가 달라졌습니다. 하나를 같이 쓰고 있어 한쪽이 늘어납니다");
+
+            _previewView = new SnailPortrait(transform, _appearance, _bounds, size.x, size.y);
+            _ui.SetWardrobePreview(_previewView.Texture);
+            _ui.SetGenePreview(_previewView.Texture);
         }
 
         /// <summary>악세서리를 끼거나 뺐다. 화면의 달팽이도 같이 갈아입는다.</summary>
@@ -581,6 +631,7 @@ namespace SnailPet
 
             // 외형이 바뀌었으므로 통째로 다시 합성한다. 발선·껍질 중심도 다시 잰다.
             ActivateSnail(snail);
+            DropThumb(snail.Id);     // 목록 썸네일도 갈아입은 모습으로 다시 찍는다
             RefreshSnail();
             RefreshWardrobe();
 
@@ -625,7 +676,7 @@ namespace SnailPet
                         ? Loc.Text("[이름없음]") : snail.Name;
 
             // 달팽이는 한 마리씩만 판다. 수량을 올릴 여지가 없다.
-            _ui.ShowPopup(true, snail.Id, name, -price, 1);
+            _ui.ShowPopup(true, snail.Id, name, price, 1);
         }
 
         /// <summary>상점에서 「구매하기」를 눌렀다. 몇 개 살지부터 묻는다.</summary>
@@ -659,7 +710,7 @@ namespace SnailPet
 
             _popupSelling = true;
             _popupSnailId = 0;
-            _ui.ShowPopup(true, shopId, Shop.NameOf(row), -unit, owned);
+            _ui.ShowPopup(true, shopId, Shop.NameOf(row), unit, owned);
         }
 
         /// <summary>팝업에서 「네」를 눌렀다.</summary>
@@ -911,7 +962,7 @@ namespace SnailPet
         }
 
         /// <summary>실제로 걷는 속도. 데모 배수가 걸려 있으므로 이동과 출렁임이 같은 값을 봐야 한다.</summary>
-        private float WalkSpeed => _growth.PixelsPerSecond * DemoSpeedScale;
+        private float WalkSpeed => _growth.PixelsPerSecond;
 
         /// <summary>레벨이 바뀌면 크기를 다시 맞춘다. 속도는 매 프레임 읽으므로 여긴 안 건드린다.</summary>
         private void ApplyGrowth()
@@ -943,7 +994,7 @@ namespace SnailPet
             _t += Time.deltaTime;
             _cam.orthographicSize = Screen.height * 0.5f;
 
-            if (_growth.Tick(Time.deltaTime, DemoTimeScale))
+            if (_growth.Tick(Time.deltaTime))
             {
                 ApplyGrowth();
                 RefreshSnail(reshoot: false);   // 나이(레벨)가 패널과 목록에 같이 나온다
@@ -1021,14 +1072,16 @@ namespace SnailPet
 #endif
             if (!_diagDone && _t > 1f) { LogDiagnostics(); _diagDone = true; }
 
-            if (_t >= AutoQuitSeconds || Input.GetKeyDown(KeyCode.Escape))
-            {
-                // 리포트가 이미 나간 뒤에 저장하면 결과를 남길 수 없다. 먼저 적고 확인한다.
-                SaveFile.Save(_player);
-                Say("[8] 저장 ............. " + _player);
-                WriteReport();
-                Application.Quit();
-            }
+            // 초상은 만들 때 한 장만 찍고 카메라를 끈다. 그래픽 장치가 리셋되면 그 그림을
+            // 잃는데 다시 찍어 줄 사람이 없으므로 여기서 살아 있는지 본다 (평소에는 조건 검사뿐).
+            _portrait?.EnsureDrawn();
+            _previewView?.EnsureDrawn();
+            _hatchView?.EnsureDrawn();
+            foreach (var kv in _thumbs) kv.Value.EnsureDrawn();
+
+            // ESC 는 에디터에서만 듣는다. 빌드된 창은 WS_EX_NOACTIVATE 라 포커스를 갖지 않아
+            // Unity 의 Input 이 죽어 있다. 플레이어에서 끄는 길은 설정 화면의 「종료」다.
+            if (Input.GetKeyDown(KeyCode.Escape)) QuitFromUi();
         }
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
@@ -1115,6 +1168,43 @@ namespace SnailPet
         }
 
         /// <summary>다 된 칸을 눌렀다. 아직이면 아무 일도 없다.</summary>
+        // ── 설정 ──
+
+        /// <summary>설정 버튼. 옷장·상세보기처럼 좌우 패널을 통째로 쓴다.</summary>
+        private void OpenSettings()
+        {
+            _ui.OpenSettings(true);
+            Say("      [UI] 설정");
+        }
+
+        /// <summary>
+        /// 설정이 바뀌었다. 값을 상태에 넣고 지금 걸 수 있는 것만 건다.
+        ///
+        /// 알 생성 금지와 배고픔·관심 알림은 아직 그 기능 자체가 없어 값만 들고 있는다.
+        /// (지금 말풍선은 선물 하나뿐이고, 달팽이끼리 만나 알을 낳는 것도 없다)
+        /// </summary>
+        private void ApplyOptions(PlayerOptions options)
+        {
+            _player.Options = options;
+
+            Say($"      [UI] 설정 바뀜: 알생성금지={options.NoEggs} 배고픔={options.HungryBubble} " +
+                $"관심={options.CareBubble} 코인={options.CoinBubble} " +
+                $"항상최대화={options.AlwaysMax} UI크기=x{options.Scale:0.#}");
+        }
+
+        /// <summary>
+        /// 설정의 「종료」. 자동 종료와 같은 순서를 밟는다 —
+        /// 리포트가 나간 뒤에 저장하면 결과가 리포트에 안 남는다.
+        /// </summary>
+        private void QuitFromUi()
+        {
+            SaveFile.Save(_player);
+            Say("[8] 저장 ............. " + _player);
+            Say("      [UI] 종료");
+            WriteReport();
+            Application.Quit();
+        }
+
         /// <summary>부화 팝업에 비추는 갓 태어난 개체. 받을 때마다 새로 찍는다.</summary>
         private SnailPortrait _hatchView;
 
@@ -1149,7 +1239,7 @@ namespace SnailPet
         /// <summary>부화 시간을 흘린다. 데모 배속을 그대로 쓴다 — 안 그러면 40초 안에 안 깬다.</summary>
         private void TickIncubator(float deltaTime)
         {
-            if (_player.TickIncubator(deltaTime * DemoTimeScale))
+            if (_player.TickIncubator(deltaTime))
                 _ui.SetIncubator(_player.Incubator);
         }
 
@@ -1460,7 +1550,7 @@ namespace SnailPet
         /// </summary>
         private void StepPresent(SnailPose pose, float footDepth, float px)
         {
-            _present.Tick(Time.deltaTime * DemoTimeScale, _growth.Current);
+            _present.Tick(Time.deltaTime, _growth.Current);
 
             var n = BoxWalk.OutwardNormal(_anchor);
             Vector2 foot = pose.RootScreen + n * footDepth;
@@ -1469,7 +1559,9 @@ namespace SnailPet
             float bubbleHalf = _present.HalfHeightWorld * px;
             Vector2 bubbleScreen = foot - n * (bodyDepth + BubbleGapPx + bubbleHalf);
 
-            bool visible = _present.Ready;
+            // 설정에서 코인 알림을 끄면 말풍선만 안 뜬다. 선물 자체는 그대로 쌓이고
+            // 달팽이를 눌러 받는 것도 그대로다 — 끄는 것은 알림이지 보상이 아니다.
+            bool visible = _present.Ready && _player.Options.CoinBubble;
             _present.Place(VirtualToWorld(bubbleScreen.x, bubbleScreen.y), pose.RotationDeg, visible);
 
             if (visible && !_bubbleLogged)
@@ -1558,8 +1650,6 @@ namespace SnailPet
 
         private void OnGUI()
         {
-            float remain = Mathf.Max(0f, AutoQuitSeconds - _t);
-
             bool applied = false;
             string boxName = "-", edgeName = "-";
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
@@ -1615,8 +1705,7 @@ namespace SnailPet
             GUI.Label(new Rect(32, y + 50, 960, 22),
                 act + "   |   벽: " + edgeName + "   먹이 " + (_food != null ? _food.Count : 0) + "개", style);
             GUI.Label(new Rect(32, y + 72, 960, 22),
-                (_present != null ? _present + "   가방: " + _player.Items + "   |   " : "") +
-                "자동 종료까지 " + remain.ToString("0.0") + "초 (ESC)", style);
+                (_present != null ? _present + "   가방: " + _player.Items : ""), style);
         }
 
         private void WriteReport()

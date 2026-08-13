@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13 12:59:04",
+  "generatedAt": "2026-08-13 16:00:52",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -158,7 +158,22 @@
     "[이름변경]": 145,
     "[변경]": 146,
     "[레어_아이스크림콘껍질]": 147,
-    "[레어_아이스크림콘껍질정보]": 148
+    "[레어_아이스크림콘껍질정보]": 148,
+    "[확인]": 149,
+    "[부화문구]": 150,
+    "[달팽이설정]": 151,
+    "[설정]": 152,
+    "[한글]": 153,
+    "[업데이트]": 154,
+    "[UI크기]": 155,
+    "[UI최대화]": 156,
+    "[알관련]": 157,
+    "[알생성금지]": 158,
+    "[말풍선알림]": 159,
+    "[배고픔알림]": 160,
+    "[관심알림]": 161,
+    "[코인알림]": 162,
+    "[종료]": 163
   },
   "tables": {
     "EnumData": [
@@ -289,7 +304,7 @@
       {"Level": 20, "LevelUpTime": 3600, "NeedFullPoint": 105, "NeedHappyPoint": 105, "UseFullPointTime": 300, "UseHappyPointTime": 360, "Speed": 10.5, "Size": 11, "CoinCoolTime": 1200, "ItemId": 36, "ItemCount": 30, "SellAdvantage": 3}
     ],
     "BubbleData": [
-      {"Id": 52, "ResourceKey": "bubble_coin", "ResourceSize": 5}
+      {"Id": 52, "ResourceKey": "bubble_coin", "ResourceSize": 3}
     ],
     "LevelUpAdvantage": [
       {"NeedHappyPointPercent": 0.5, "NeedFullPointPercent": 0.5, "Acceleration": 0.2, "BuffId": null},
@@ -458,7 +473,22 @@
       {"Id": 143, "Kr": "네"},
       {"Id": 144, "Kr": "아니오"},
       {"Id": 145, "Kr": "이름을 변경합니다."},
-      {"Id": 146, "Kr": "변경"}
+      {"Id": 146, "Kr": "변경"},
+      {"Id": 149, "Kr": "확인"},
+      {"Id": 150, "Kr": "알이 부화했습니다!"},
+      {"Id": 151, "Kr": "달팽이 설정"},
+      {"Id": 152, "Kr": "설정"},
+      {"Id": 153, "Kr": "Korean(kr)"},
+      {"Id": 154, "Kr": "업데이트 및 재시작"},
+      {"Id": 155, "Kr": "UI크기(x{0})"},
+      {"Id": 156, "Kr": "UI 항상 최대화"},
+      {"Id": 157, "Kr": "알 관련"},
+      {"Id": 158, "Kr": "알 생성 금지"},
+      {"Id": 159, "Kr": "말풍선 알림"},
+      {"Id": 160, "Kr": "배고픔 알림"},
+      {"Id": 161, "Kr": "관심 알림"},
+      {"Id": 162, "Kr": "코인 알림"},
+      {"Id": 163, "Kr": "종료"}
     ],
     "UnlockData": [
       {"Id": 101, "ConditionType": "SnailLevel", "NeedConditionValue": 2, "CostItem": null, "CostCount": null}

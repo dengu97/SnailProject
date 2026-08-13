@@ -335,6 +335,28 @@ namespace SnailPet.Ui
             public static readonly RectInt HatchRarity = new RectInt(105,  90, 35, 12);
         }
 
+        /// <summary>
+        /// 설정 화면. 옷장·상세보기처럼 좌우 패널을 통째로 쓴다 (UI.pptx 13쪽 실측).
+        /// 왼쪽은 이 달팽이에 걸리는 설정, 오른쪽은 게임 전체 설정이다.
+        /// </summary>
+        public static class Setting
+        {
+            public const int RowW = 155, RowH = 28;
+            public const int LeftX = 10, RightX = 9;
+
+            /// <summary>왼쪽은 구역이 둘이라 행 간격이 일정하지 않다. 그래서 y 를 그대로 적는다.</summary>
+            public static readonly RectInt EggTitle    = new RectInt(7, 29, 98, 19);
+            public static readonly RectInt BubbleTitle = new RectInt(7, 83, 98, 19);
+            public static readonly int[] LeftRows  = { 49, 103, 136, 169 };
+
+            public static readonly int[] RightRows = { 33, 68, 102, 137, 171 };
+
+            // 행 안쪽 (행 왼쪽 위가 원점)
+            public static readonly RectInt Label = new RectInt(  6, 4, 119, 19);
+            public static readonly RectInt Check = new RectInt(133, 8,  13, 13);
+            public static readonly RectInt Arrow = new RectInt(134, 9,   8, 11);
+        }
+
         /// <summary>화면 모서리에서 띄우는 여백.</summary>
         public const int ScreenMargin = 16;
     }

@@ -58,8 +58,18 @@ namespace SnailPet.Ui
         private readonly GameObject _root;
         private readonly Camera _camera;
 
+        /// <summary>
+        /// 얼굴만 담을 때 몸 세로의 얼마를 보여 줄지. 1 이면 통째로 들어간다.
+        /// 목록 썸네일이 정사각형이라 이 값이 곧 잘려 나가는 정도를 정한다.
+        /// </summary>
+        private const float HeadCrop = 0.75f;
+
+        /// <summary>눈을 못 찾았을 때 쓸 세로 위치. 0 = 발바닥, 1 = 머리 끝.</summary>
+        private const float HeadY = 0.72f;
+
+        /// <param name="headOnly">얼굴만 당겨 찍는다 (목록 썸네일용).</param>
         public SnailPortrait(Transform parent, SnailAppearance appearance, SnailBounds bounds,
-                             int widthPx, int heightPx)
+                             int widthPx, int heightPx, bool headOnly = false)
         {
             _slot = TakeSlot();
 
@@ -94,7 +104,38 @@ namespace SnailPet.Ui
             _camera.allowMSAA = false;
             _camera.depth = -10;                 // 본 카메라보다 먼저
 
-            Frame(bounds, widthPx / (float)heightPx);
+            // 매 프레임 다시 찍을 이유가 없다. 복제본은 변형을 안 받아 가만히 있고,
+            // 외형이 바뀌면 부르는 쪽이 이 초상을 버리고 새로 만든다(옷장이 그렇게 한다).
+            // 그래서 카메라를 꺼 두고 필요할 때만 손으로 찍는다.
+            _camera.enabled = false;
+
+            if (headOnly) FrameHead(appearance, bounds);
+            else          Frame(bounds, widthPx / (float)heightPx);
+
+            Redraw();
+        }
+
+        /// <summary>
+        /// 한 장 찍는다. 꺼진 카메라도 이렇게 부르면 그 자리에서 렌더 텍스처에 그린다.
+        /// </summary>
+        public void Redraw()
+        {
+            if (_camera != null) _camera.Render();
+        }
+
+        /// <summary>
+        /// 그림이 아직 살아 있는지 보고, 잃었으면 다시 찍는다.
+        ///
+        /// 렌더 텍스처는 그래픽 장치가 리셋되면(드라이버 갱신·절전 복귀 등) 내용을 잃는다.
+        /// 매 프레임 찍던 시절에는 다음 프레임에 저절로 메워졌지만, 한 번만 찍게 된 뒤로는
+        /// 그대로 비어 버린다. 이 펫은 하루 종일 떠 있으므로 겪을 수 있는 일이다.
+        /// </summary>
+        public void EnsureDrawn()
+        {
+            if (Texture == null || Texture.IsCreated()) return;
+
+            Texture.Create();
+            Redraw();
         }
 
         /// <summary>몸이 화면에 꽉 차되 잘리지 않게 카메라를 맞춘다.</summary>
@@ -110,6 +151,35 @@ namespace SnailPet.Ui
             // 몸의 한가운데를 화면 한가운데에 둔다
             _camera.transform.localPosition =
                 new Vector3((b.Left + b.Right) * 0.5f, (b.Foot + b.Top) * 0.5f, -100f);
+        }
+
+        /// <summary>
+        /// 얼굴만 정사각형으로 당겨 잡는다.
+        ///
+        /// 어디가 얼굴인지는 <b>눈 파츠를 재서</b> 정한다. 눈은 진행 방향 쪽에 붙어 있어
+        /// 몸통 한가운데를 쓰면 얼굴이 한쪽으로 치우친다. 눈이 없는 개체(데이터상 가능)는
+        /// 몸 위쪽을 쓴다.
+        /// </summary>
+        private void FrameHead(SnailAppearance appearance, SnailBounds b)
+        {
+            float cx = (b.Left + b.Right) * 0.5f;
+            float cy = Mathf.Lerp(b.Foot, b.Top, HeadY);
+
+            foreach (var p in appearance.Parts)
+            {
+                if (p.Type != SnailPet.Data.PartsType.Eyes) continue;
+
+                var sprite = SnailComposer.Load(SnailComposer.LinePath(p.Type, p.ResourceKey));
+                if (sprite != null && SnailMetrics.TryMeasure(sprite, out var e))
+                {
+                    cx = (e.Left + e.Right) * 0.5f;
+                    cy = (e.Bottom + e.Top) * 0.5f;
+                }
+                break;
+            }
+
+            _camera.orthographicSize = Mathf.Max(1f, (b.Top - b.Foot) * HeadCrop * 0.5f);
+            _camera.transform.localPosition = new Vector3(cx, cy, -100f);
         }
 
         private static void SetLayerRecursive(GameObject go, int layer)
@@ -129,7 +199,15 @@ namespace SnailPet.Ui
             _usedSlots.Remove(_slot);
             if (_camera != null) _camera.targetTexture = null;
             if (Texture != null) { Texture.Release(); Object.Destroy(Texture); Texture = null; }
-            if (_root != null) Object.Destroy(_root);
+
+            if (_root != null)
+            {
+                // 끄는 것이 먼저다. Destroy 는 프레임 끝에야 실제로 지우므로, 버리자마자 같은
+                // 자리에 새 초상을 만들어 그 자리에서 찍으면 아직 살아 있는 이 복제본이 같이
+                // 찍힌다. 매 프레임 찍던 시절에는 다음 프레임에 저절로 메워져 드러나지 않았다.
+                _root.SetActive(false);
+                Object.Destroy(_root);
+            }
         }
     }
 }

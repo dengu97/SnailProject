@@ -85,10 +85,37 @@ namespace SnailPet.Snail
     /// 반면 알과 달팽이는 같은 종류라도 낱개로 구분해야 해서 목록으로 둔다 —
     /// 알은 어떤 파츠가 나올지 알 수 없으니 개수로 뭉치면 안 된다.
     /// </summary>
+    /// <summary>
+    /// 설정 화면의 값 한 벌.
+    ///
+    /// UI 가 아니라 여기에 두는 것은 세이브 때문이다 — 세이브 층이 UI 를 참조하면
+    /// 저장 형식이 화면 코드에 매인다. UI 는 이 값을 받아 그리고, 바뀌면 알리기만 한다.
+    /// 필드 이름이 곧 세이브 파일의 열쇠라 바꾸면 옛 세이브를 못 읽는다.
+    /// </summary>
+    [System.Serializable]
+    public struct PlayerOptions
+    {
+        public bool NoEggs;                                  // 알 생성 금지
+        public bool HungryBubble, CareBubble, CoinBubble;    // 말풍선 알림 3종
+        public bool AlwaysMax;                               // UI 항상 최대화
+
+        /// <summary>0 = x1, 1 = x1.5, 2 = x2. 목업이 이 셋만 준다.</summary>
+        public int ScaleStep;
+
+        /// <summary>목업의 「보이는게 디폴트 값」 — 알림 셋은 켜짐, 나머지는 꺼짐.</summary>
+        public static PlayerOptions Default =>
+            new PlayerOptions { HungryBubble = true, CareBubble = true, CoinBubble = true };
+
+        public float Scale => ScaleStep == 1 ? 1.5f : ScaleStep == 2 ? 2f : 1f;
+    }
+
     public sealed class PlayerState
     {
         /// <summary>부화 칸 수. UnlockData 로 늘어나면 이 값이 바뀐다.</summary>
         public const int IncubatorSlots = 3;
+
+        /// <summary>설정 화면의 값. 개체가 아니라 유저의 것이라 달팽이를 바꿔도 그대로다.</summary>
+        public PlayerOptions Options = PlayerOptions.Default;
 
         /// <summary>화폐 아이템의 토큰. 말풍선 아트인 `[코인]` 과는 다른 행이다.</summary>
         public const string CoinToken = "[팽이코인]";
