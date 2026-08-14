@@ -248,6 +248,11 @@ namespace SnailPet.Ui
             BringToFront(_shopStats, "FullIcon", "HappyIcon");
 
             AttachPressEffects();
+            PaintButtonLabels();
+
+            // 부화기 타이머도 버튼 글자와 같은 색이다. 프리팹에는 먹색으로 굳어 있다.
+            for (int i = 0; i < Count(_hatchSlots); i++)
+                if (_hatchSlots[i]?.Timer != null) _hatchSlots[i].Timer.color = UiTheme.OnButton;
 
             Rewire();
             EnsureEventSystem();
@@ -275,6 +280,56 @@ namespace SnailPet.Ui
             SetMaximized(false);
             HidePopup();
             SetTab(_tab);
+        }
+
+        /// <summary>
+        /// 버튼 글자를 밝은 색으로 맞춘다. 프리팹에는 예전 먹색으로 굳어 있다.
+        /// (굵게도 해 봤지만 이 글꼴·크기에서는 뭉쳐 보여 되돌렸다. 그래서 굵기를 보통으로
+        ///  분명히 되돌려 둔다 — 프리팹에 굵게 저장돼 있어도 여기서 풀린다.)
+        ///
+        /// 가려내는 기준은 <b>배경이 버튼 아트인가</b>다. 목록 행이나 설정 행도 Button 이지만
+        /// 밝은 칸 도형을 쓰므로, 거기까지 밝은 글자로 바꾸면 배경에 묻혀 안 보인다.
+        ///
+        /// 글자는 버튼의 자식일 수도(상점 구매) 형제일 수도(팝업 버튼) 있어서 둘 다 훑는다.
+        /// </summary>
+        private void PaintButtonLabels()
+        {
+            var buttonArt = UiSprites.Of(UiSprites.Shape.Button);
+            if (buttonArt == null) return;
+
+            foreach (var button in GetComponentsInChildren<Button>(true))
+            {
+                if (!(button.targetGraphic is Image bg) || bg.sprite != buttonArt) continue;
+
+                var rt = (RectTransform)button.transform;
+
+                foreach (var text in button.GetComponentsInChildren<Text>(true)) Paint(text);
+
+                if (rt.parent == null) continue;
+                foreach (Transform sibling in rt.parent)
+                {
+                    if (sibling == rt) continue;
+                    var text = sibling.GetComponent<Text>();
+                    if (text != null && sibling is RectTransform srt && CenterInside(rt, srt)) Paint(text);
+                }
+            }
+
+            void Paint(Text t)
+            {
+                t.color = UiTheme.OnButton;
+                t.fontStyle = FontStyle.Normal;
+            }
+        }
+
+        /// <summary>안쪽 것의 한가운데가 바깥 칸 안에 있는가.</summary>
+        private static bool CenterInside(RectTransform outer, RectTransform inner)
+        {
+            var o = new Vector3[4]; outer.GetWorldCorners(o);
+            var i = new Vector3[4]; inner.GetWorldCorners(i);
+
+            var c = (i[0] + i[2]) * 0.5f;
+            return c.x >= Mathf.Min(o[0].x, o[2].x) && c.x <= Mathf.Max(o[0].x, o[2].x)
+                && c.y >= Mathf.Min(o[0].y, o[2].y) && c.y <= Mathf.Max(o[0].y, o[2].y);
         }
 
         /// <summary>이름으로 찾아 형제들 맨 앞으로 올린다. UGUI 는 형제 순서대로 그린다.</summary>
@@ -882,7 +937,7 @@ namespace SnailPet.Ui
 
             var feed = Box(_foodPanel, Fd.Feed, UiTheme.Slot, UiSprites.Shape.Button, "FeedButton");
             feed.raycastTarget = true;
-            LocLabel(_foodPanel, Fd.Feed, Keys.Feed, 10, UiTheme.Ink);
+            LocLabel(_foodPanel, Fd.Feed, Keys.Feed, 10, UiTheme.OnButton);
             _feedBtn = feed.gameObject.AddComponent<Button>();
             _feedBtn.targetGraphic = feed;
 
@@ -1017,7 +1072,7 @@ namespace SnailPet.Ui
             slot.Egg = Icon(root, new RectInt((at.width - 26) / 2, 8, 26, 26), null, Color.white, "Egg");
             slot.Egg.raycastTarget = false;
 
-            slot.Timer = Label(root, new RectInt(0, at.height - 16, at.width, 14), "", 9, UiTheme.Ink);
+            slot.Timer = Label(root, new RectInt(0, at.height - 16, at.width, 14), "", 9, UiTheme.OnButton);
 
             slot.Button = root.gameObject.AddComponent<Button>();
             slot.Button.targetGraphic = bg;
@@ -1385,9 +1440,9 @@ namespace SnailPet.Ui
 
             // 글자와 가격은 버튼의 자식이다. 살 것이 없을 때 버튼을 끄면 같이 사라져야 한다.
             var buyRt = (RectTransform)buy.transform;
-            LocLabel(buyRt, Sh.BuyLabel, Keys.BuyIt, 10, UiTheme.Ink);
+            LocLabel(buyRt, Sh.BuyLabel, Keys.BuyIt, 10, UiTheme.OnButton);
             Icon(buyRt, Sh.BuyCoin, "icon_coin", Color.white, "BuyCoinIcon").raycastTarget = false;
-            _shopCost = Label(buyRt, Sh.BuyCost, "", 10, UiTheme.Ink);
+            _shopCost = Label(buyRt, Sh.BuyCost, "", 10, UiTheme.OnButton);
             _shopCost.alignment = TextAnchor.MiddleLeft;
 
             _shopBuyBtn = buy.gameObject.AddComponent<Button>();
@@ -2869,7 +2924,7 @@ namespace SnailPet.Ui
         {
             var box = Box(parent, at, UiTheme.Slot, UiSprites.Shape.Button, name);
             box.raycastTarget = true;
-            LocLabel(parent, at, token, 10, UiTheme.Ink);
+            LocLabel(parent, at, token, 10, UiTheme.OnButton);
 
             var btn = box.gameObject.AddComponent<Button>();
             btn.targetGraphic = box;

@@ -29,6 +29,9 @@ namespace SnailPet.Ui
         public static readonly Color Ink         = Hex("1A1A1A");   // 아이콘·본문 글자
         public static readonly Color OnBadge     = Color.white;
 
+        /// <summary>버튼 아트(갈색) 위에 얹는 글자. 부화기 타이머도 같은 색을 쓴다.</summary>
+        public static readonly Color OnButton    = Hex("E3D3BD");
+
         // ── 치수 (목업 좌표) ──
         public const int PanelW = 173, PanelH = 220;
         public const int PanelRadius = 6, PanelBorderPx = 1;
