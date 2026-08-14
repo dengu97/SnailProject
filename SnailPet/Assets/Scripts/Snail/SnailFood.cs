@@ -29,6 +29,15 @@ namespace SnailPet.Snail
         /// <summary>보이는 부분의 크기(px). 달팽이가 얼마나 가까이 와야 먹는지 판정에 쓴다.</summary>
         public float HalfWidth;
 
+        /// <summary>떨어뜨릴 때 정한 배율. 착지 뽀잉은 이 값을 기준으로 눌렀다 편다.</summary>
+        public float BaseScale = 1f;
+
+        /// <summary>지금 세로로 눌린 정도(1 = 평소). 바닥면을 붙여 두려면 자리 잡을 때 곱해야 한다.</summary>
+        public float SquashY = 1f;
+
+        /// <summary>착지 후 지난 시간. 음수면 안 튀는 중이다.</summary>
+        public float BounceAge = -1f;
+
         public override string ToString() => (Data != null ? SnailPet.Data.Loc.ById(Data.NameId) : "?") + (Landed ? " (착지)" : " (낙하 중)");
     }
 
@@ -92,6 +101,7 @@ namespace SnailPet.Snail
                 ScreenY = screenY,
                 HalfWidth = halfWidth,
                 Height = (SnailMetrics.TryMeasure(sprite, out var e2) ? e2.Height * scale : FoodPixels),
+                BaseScale = scale,
             };
             item.Root.SetSiblingIndex(0);
             _items.Add(item);
@@ -106,6 +116,9 @@ namespace SnailPet.Snail
             _bottomOffset.TryGetValue(item, out float v) ? v : 0f;
 
         /// <summary>중력 적용. floorY 는 박스 아래 벽의 화면 y.</summary>
+        /// <summary>착지할 때 눌렸다 펴지는 시간과 세기.</summary>
+        private const float BounceSeconds = 0.32f, BounceAmount = 0.28f;
+
         public void Tick(float deltaSeconds, float floorY)
         {
             foreach (var f in _items)
@@ -121,11 +134,42 @@ namespace SnailPet.Snail
                 }
                 if (f.ScreenY >= floorY)
                 {
+                    // 떨어지던 것이 방금 닿았으면 그 순간부터 뽀잉이 시작된다
+                    if (!f.Landed) f.BounceAge = 0f;
+
                     f.ScreenY = floorY;      // 바닥에 닿으면 멈춘다. 튕기지 않는다.
                     f.VelocityY = 0f;
                     f.Landed = true;
                 }
+
+                StepBounce(f, deltaSeconds);
             }
+        }
+
+        /// <summary>
+        /// 착지 뽀잉. 세로로 눌리면 가로로 퍼지고, 감쇠 진동으로 제자리에 붙는다.
+        ///
+        /// 바닥면이 뜨지 않게 세로 배율을 <see cref="FoodItem.SquashY"/> 로 남긴다 —
+        /// 자리를 잡는 쪽이 바닥까지의 거리를 그만큼 줄여야 한다.
+        /// </summary>
+        private static void StepBounce(FoodItem f, float deltaSeconds)
+        {
+            if (f.BounceAge < 0f || f.Root == null) return;
+
+            f.BounceAge += deltaSeconds;
+
+            float t = f.BounceAge / BounceSeconds;
+            if (t >= 1f)
+            {
+                f.BounceAge = -1f;
+                f.SquashY = 1f;
+                f.Root.localScale = new Vector3(f.BaseScale, f.BaseScale, 1f);
+                return;
+            }
+
+            float k = Mathf.Sin(t * Mathf.PI * 4f) * BounceAmount * Mathf.Exp(-t * 5f);
+            f.SquashY = 1f - k;
+            f.Root.localScale = new Vector3(f.BaseScale * (1f + k), f.BaseScale * f.SquashY, 1f);
         }
 
         /// <summary>착지해서 먹을 수 있는 것 중 둘레 거리가 가장 가까운 먹이.</summary>

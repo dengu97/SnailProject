@@ -1658,7 +1658,8 @@ namespace SnailPet
             foreach (var f in _food.Items)
             {
                 if (f.Root == null) continue;
-                float bottomOffsetPx = _food.BottomOffsetOf(f) * pxPerWorld;   // 음수
+                // 착지 뽀잉으로 눌린 만큼 바닥까지의 거리도 줄어든다. 안 곱하면 눌릴 때 뜬다.
+                float bottomOffsetPx = _food.BottomOffsetOf(f) * f.SquashY * pxPerWorld;   // 음수
                 f.Root.position = VirtualToWorld(f.ScreenX, f.ScreenY + bottomOffsetPx);
             }
         }
