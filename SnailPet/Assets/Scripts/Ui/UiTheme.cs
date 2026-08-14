@@ -231,7 +231,10 @@ namespace SnailPet.Ui
             public static readonly RectInt View = new RectInt(0, 48, PanelW, PanelH - 48);
 
             // ── 오른쪽: 입은 모습 ──
-            public static readonly RectInt Preview = new RectInt(28, 38, 125, 105);
+            // 메인 상세의 초상과 같은 자리·크기를 쓴다. 화면을 오갈 때 달팽이가 제자리에
+            // 있어야 자연스럽다. (실제 배율까지 맞추는 것은 SnailUi 가 살아날 때 한다 —
+            // 메인 초상은 프리팹에서 손으로 줄여 놓았고 그 조정까지 따라가야 하기 때문이다.)
+            public static readonly RectInt Preview = At.Portrait;
 
             /// <summary>지금 낀 것들을 모아 보여 주는 상자.</summary>
             public static readonly RectInt WornBox   = new RectInt(  9, 155, PanelW - 18, 55);
@@ -284,7 +287,8 @@ namespace SnailPet.Ui
             public static readonly RectInt RowRarity = new RectInt(117,  4, 35, 12);
 
             // ── 오른쪽: 초상 + 한 줄짜리 목록 ──
-            public static readonly RectInt Preview = new RectInt(27, 38, 125, 105);
+            // 옷장과 같은 이유로 메인 상세의 초상 자리를 그대로 쓴다.
+            public static readonly RectInt Preview = At.Portrait;
 
             public static readonly RectInt Slim = new RectInt(20, 141, 145, 17);
             public const int SlimStep = 18;

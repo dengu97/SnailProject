@@ -247,6 +247,12 @@ namespace SnailPet.Ui
             BringToFront(_foodPanel, "FullIcon", "HappyIcon");
             BringToFront(_shopStats, "FullIcon", "HappyIcon");
 
+            // 옷장·상세보기의 달팽이는 메인 상세의 초상과 같은 자리에 같은 크기로 나와야 한다.
+            // 좌표뿐 아니라 배율까지 복사하는 이유: 메인 초상은 프리팹에서 손으로 줄여 둔
+            // 상태라(0.7배) 좌표만 맞추면 크기가 어긋난다. 나중에 메인을 다시 조정해도 따라온다.
+            MatchToPortrait(_wardrobePreview);
+            MatchToPortrait(_genePreview);
+
             AttachPressEffects();
             PaintButtonLabels();
 
@@ -319,6 +325,26 @@ namespace SnailPet.Ui
                 t.color = UiTheme.OnButton;
                 t.fontStyle = FontStyle.Normal;
             }
+        }
+
+        /// <summary>
+        /// 메인 상세의 초상과 같은 자리·크기·배율로 맞춘다.
+        ///
+        /// 옷장·상세보기 패널은 메인 상세 패널과 원점·크기가 같으므로 값을 그대로 옮기면 된다.
+        /// </summary>
+        private void MatchToPortrait(RawImage view)
+        {
+            if (view == null || _portrait == null) return;
+
+            var src = (RectTransform)_portrait.transform;
+            var dst = (RectTransform)view.transform;
+
+            dst.anchorMin = src.anchorMin;
+            dst.anchorMax = src.anchorMax;
+            dst.pivot = src.pivot;
+            dst.sizeDelta = src.sizeDelta;
+            dst.anchoredPosition = src.anchoredPosition;
+            dst.localScale = src.localScale;
         }
 
         /// <summary>안쪽 것의 한가운데가 바깥 칸 안에 있는가.</summary>
