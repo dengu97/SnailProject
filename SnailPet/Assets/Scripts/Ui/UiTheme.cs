@@ -171,7 +171,8 @@ namespace SnailPet.Ui
         public static readonly Color TabOff  = Accent;          // 나머지 탭 (설정 버튼과 같은 색)
         public static readonly Color RowSlot = Hex("4472C4");   // 목록 행의 썸네일 자리
         public static readonly Color Selected = Hex("FF0000");  // 선택된 음식 칸의 테두리
-        public static readonly Color Discount = Hex("FF0000");  // 할인가 (목업의 빨간 글자)
+        // 할인가. 목업의 순빨강(FF0000)은 갈색 판 위에서 너무 튀어 글자가 안 읽혔다.
+        public static readonly Color Discount = Hex("AB5352");
 
         /// <summary>
         /// 상점 탭. 두 단계다 — 카테고리를 고르고, 그 안의 상품을 고른다.
@@ -194,12 +195,13 @@ namespace SnailPet.Ui
             public static readonly RectInt PickBuy  = new RectInt(53, 187,     63, 22);
 
             // 「[코인] 5,000 3,500」 한 줄. 원가에는 취소선이 그이고 할인가는 빨갛다.
+            // 원가는 코인 아이콘에서 조금 떼어 놓는다 — 붙여 두면 아이콘에 먹힌 것처럼 보인다.
             public static readonly RectInt PickCoin = new RectInt(36, 152, 20, 20);
-            public static readonly RectInt PickWas  = new RectInt(58, 151, 42, 22);
-            public static readonly RectInt PickNow  = new RectInt(102, 151, 42, 22);
+            public static readonly RectInt PickWas  = new RectInt(64, 151, 42, 22);
+            public static readonly RectInt PickNow  = new RectInt(106, 151, 42, 22);
 
             /// <summary>취소선. 가로 폭은 글자 폭에 맞춰 런타임에 줄인다.</summary>
-            public static readonly RectInt PickStrike = new RectInt(58, 161, 42, 1);
+            public static readonly RectInt PickStrike = new RectInt(64, 161, 42, 1);
 
             /// <summary>할인이 아닐 때는 가격 하나만 가운데에 놓는다.</summary>
             public static readonly RectInt PickOnly = new RectInt(66, 151, 42, 22);

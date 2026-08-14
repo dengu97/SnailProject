@@ -92,7 +92,7 @@ namespace SnailPet.Snail
         /// 오늘의 할인 칸에서 산 것인지. 할인가는 그 칸에서만 적용된다 —
         /// 카테고리 목록에서는 같은 상품이라도 정가다.
         /// </param>
-        public static Result TryBuy(PlayerState player, int shopId, bool discounted = false, int qty = 1)
+        public static Result TryBuy(PlayerState player, int shopId, int qty = 1)
         {
             if (player == null || qty <= 0) return Result.NoSuchProduct;
 
@@ -103,7 +103,7 @@ namespace SnailPet.Snail
 
             // 여러 개를 살 때는 한 번에 값을 치른다. 낱개로 빼면 중간에 모자라
             // 절반만 산 상태로 끝날 수 있다.
-            if (!player.Items.TrySpend(row.CostItem.Value, (long)UnitCost(row, discounted) * qty))
+            if (!player.Items.TrySpend(row.CostItem.Value, (long)UnitCost(row) * qty))
                 return Result.NotEnough;
 
             int each = row.ItemCount > 0 ? row.ItemCount : 1;
@@ -111,9 +111,36 @@ namespace SnailPet.Snail
             return Result.Ok;
         }
 
-        /// <summary>한 개당 값. 할인 칸에서 왔고 실제로 할인 중일 때만 깎아 준다.</summary>
-        public static int UnitCost(ShopDataRow row, bool discounted) =>
-            discounted && IsDiscounted(row) ? row.DiscountCostCount.Value : row.CostCount ?? 0;
+        /// <summary>
+        /// 오늘의 할인으로 뽑힌 상품인가.
+        ///
+        /// 하루 동안 고정이라 한 번 뽑아 두고 날짜가 바뀔 때만 다시 뽑는다.
+        /// 그리드를 그릴 때마다 후보를 다시 모으면 값만 낭비다.
+        /// </summary>
+        public static bool IsTodayPick(ShopDataRow row)
+        {
+            if (row == null) return false;
+
+            var today = DateTime.Now.Date;
+            if (_pickDate != today) { _pickDate = today; _pick = Today(DateTime.Now); }
+
+            return _pick != null && _pick.Id == row.Id;
+        }
+
+        private static ShopDataRow _pick;
+        private static DateTime _pickDate = DateTime.MinValue;
+
+        /// <summary>
+        /// 한 개당 값.
+        ///
+        /// 할인은 <b>상품에 붙는다</b> — 오늘의 할인으로 뽑힌 것이면 어디서 사든 같은 값이다.
+        /// (예전에는 「할인 칸에서 눌렀는가」로 갈랐는데, 같은 물건이 들어가는 문에 따라
+        ///  값이 달라져 이상했다.)
+        /// </summary>
+        public static int UnitCost(ShopDataRow row) =>
+            row == null ? 0
+            : IsTodayPick(row) && IsDiscounted(row) ? row.DiscountCostCount.Value
+            : row.CostCount ?? 0;
 
         /// <summary>한 개당 파는 값. 소수라서(2.5 등) 합계를 낸 뒤에 버림한다.</summary>
         public static double UnitSell(ShopDataRow row) =>

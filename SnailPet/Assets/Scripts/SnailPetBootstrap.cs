@@ -753,7 +753,6 @@ namespace SnailPet
         // PopupConfirmed 로 돌아오므로, 그때 무엇을 하려던 것이었는지 여기 들고 있는다.
 
         private bool _popupSelling;
-        private bool _popupDiscounted;
 
         /// <summary>0 이 아니면 팝업이 물어보고 있는 것이 상품이 아니라 이 달팽이다.</summary>
         private int _popupSnailId;
@@ -786,17 +785,19 @@ namespace SnailPet
             _ui.ShowPopup(true, snail.Id, name, price, 1);
         }
 
-        /// <summary>상점에서 「구매하기」를 눌렀다. 몇 개 살지부터 묻는다.</summary>
-        private void BuyFromShop(int shopId, bool discounted)
+        /// <summary>
+        /// 상점에서 「구매하기」를 눌렀다. 몇 개 살지부터 묻는다.
+        /// 값은 상품이 정한다 — 오늘의 할인 칸에서 눌렀든 카테고리에서 눌렀든 같다.
+        /// </summary>
+        private void BuyFromShop(int shopId)
         {
             var row = Shop.Find(shopId);
             if (row == null) { Say($"      [UI] 구매: 그런 상품이 없습니다 ({shopId})"); return; }
 
-            int unit = Shop.UnitCost(row, discounted);
+            int unit = Shop.UnitCost(row);
             if (unit <= 0) { Say("      [UI] 구매: 가격이 없습니다"); return; }
 
             _popupSelling = false;
-            _popupDiscounted = discounted;
             _popupSnailId = 0;
 
             // 가진 코인으로 살 수 있는 만큼까지만 올릴 수 있다
@@ -827,7 +828,7 @@ namespace SnailPet
 
             var result = _popupSelling
                        ? Shop.TrySell(_player, shopId, qty)
-                       : Shop.TryBuy(_player, shopId, _popupDiscounted, qty);
+                       : Shop.TryBuy(_player, shopId, qty);
 
             if (result != Shop.Result.Ok)
             {

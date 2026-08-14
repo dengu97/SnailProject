@@ -274,6 +274,11 @@ namespace SnailPet.Ui
             FitCountBadges(_wardrobeSlots);
             FitCountBadges(_wornSlots);
 
+            // 오늘의 할인 줄에서 원가와 취소선을 코인 아이콘에서 조금 떼어 놓았다.
+            // 프리팹에는 예전 자리로 굳어 있다. (할인가는 띄울 때마다 다시 놓으므로 그대로 둔다)
+            if (_pickWas != null) Place((RectTransform)_pickWas.transform, Sh.PickWas);
+            if (_pickStrike != null) Place((RectTransform)_pickStrike.transform, Sh.PickStrike);
+
             // 이름칸도 옷장·상세보기와 같은 모양으로 맞춘다. 프리팹에는 예전 자리·크기로 굳어 있다.
             if (_nameText != null)
             {
@@ -598,11 +603,11 @@ namespace SnailPet.Ui
             });
             Hook(_eggShopBtn,  () => { OpenShop(); GoShop?.Invoke(); });
 
-            Hook(_pickBuyBtn, () => { if (_pickId > 0) BuyProduct?.Invoke(_pickId, true); });
+            Hook(_pickBuyBtn, () => { if (_pickId > 0) BuyProduct?.Invoke(_pickId); });
             Hook(_shopBuyBtn, () =>
             {
                 if (_selectedShop >= 0 && _selectedShop < _shopIds.Length)
-                    BuyProduct?.Invoke(_shopIds[_selectedShop], false);
+                    BuyProduct?.Invoke(_shopIds[_selectedShop]);
             });
             Hook(_backBtn, GoBack);
 
@@ -1594,7 +1599,7 @@ namespace SnailPet.Ui
         /// 상품을 사겠다고 눌렀다. ShopData 의 Id 와, 오늘의 할인 칸에서 눌렀는지가 나간다.
         /// 할인가는 그 칸에서만 적용되므로 어디서 눌렀는지를 같이 알려야 한다.
         /// </summary>
-        public event Action<int, bool> BuyProduct;
+        public event Action<int> BuyProduct;
 
         private void BuildShopCategories(RectTransform panel)
         {
@@ -1858,7 +1863,14 @@ namespace SnailPet.Ui
             if (row == null) return;
 
             _shopName.text = SnailPet.Snail.Shop.NameOf(row);
-            _shopCost.text = row.CostCount.HasValue ? row.CostCount.Value.ToString("N0") : "-";
+
+            // 오늘의 할인으로 뽑힌 상품이면 여기서도 할인가다. 파는 값을 한 곳에서 정하므로
+            // 「할인 칸에서 산 것만 싸다」 같은 어긋남이 생기지 않는다.
+            int cost = SnailPet.Snail.Shop.UnitCost(row);
+            bool sale = SnailPet.Snail.Shop.IsTodayPick(row) && SnailPet.Snail.Shop.IsDiscounted(row);
+
+            _shopCost.text = cost > 0 ? cost.ToString("N0") : "-";
+            _shopCost.color = sale ? UiTheme.Discount : UiTheme.OnButton;
             _shopIcon.sprite = ProductSprite(row);
             _shopIcon.enabled = _shopIcon.sprite != null;
 
