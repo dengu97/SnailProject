@@ -209,6 +209,15 @@ namespace SnailPet.Desktop
 
         /// <summary>왼쪽 버튼이 지금 눌려 있는가. 포커스가 없어도 읽힌다.</summary>
         public static bool IsLeftMouseDown() => (Win32.GetAsyncKeyState(Win32.VK_LBUTTON) & 0x8000) != 0;
+
+        /// <summary>
+        /// 그 키가 지금 눌려 있는가. 마우스와 같은 이유로 전역 상태를 읽는다 —
+        /// 이 창은 포커스를 갖지 않아 Unity 의 Input 이 동작하지 않는다.
+        ///
+        /// 전역이라 <b>다른 창을 쓰는 중에도 읽힌다.</b> 그래서 흔히 안 쓰는 키에만 붙일 것.
+        /// </summary>
+        public static bool IsKeyDown(int virtualKey) =>
+            (Win32.GetAsyncKeyState(virtualKey) & 0x8000) != 0;
     }
 }
 #endif

@@ -158,6 +158,15 @@ namespace SnailPet.Snail
             UpdateTierBuffs();
         }
 
+        /// <summary>
+        /// 포만도를 바닥으로 떨어뜨린다. 확인용 치트가 쓴다 —
+        /// 배고파야 먹으러 가고, 그래야 먹는 연출을 볼 수 있다.
+        /// </summary>
+        public void MakeHungry()
+        {
+            FullPoint = 0;
+        }
+
         /// <summary>시간 경과. timeScale 을 올리면 데모에서 몇 시간치를 몇 초로 볼 수 있다.</summary>
         public bool Tick(float deltaSeconds, float timeScale = 1f)
         {

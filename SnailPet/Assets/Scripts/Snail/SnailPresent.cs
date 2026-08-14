@@ -100,6 +100,13 @@ namespace SnailPet.Snail
         }
 
         /// <summary>레벨이 바뀌면 주기도 바뀐다. 남은 시간은 이어서 센다.</summary>
+        /// <summary>기다리지 않고 바로 받을 수 있게 한다. 확인용 치트가 쓴다.</summary>
+        public void MakeReady()
+        {
+            Remaining = 0;
+            Ready = true;
+        }
+
         public void Tick(double deltaSeconds, LevelDataRow level)
         {
             if (Ready) return;

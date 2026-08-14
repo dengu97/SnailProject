@@ -262,6 +262,7 @@ namespace SnailPet
             _status = "달팽이·먹이를 끌어 옮길 수 있습니다. 놓으면 아래로 떨어집니다.";
             Say("");
             Say("→ 끄려면 설정 화면의 「종료」를 누르세요. (에디터에서는 ESC)");
+            Say("→ 확인용 치트: F9 = 선물 바로 준비 · F10 = 포만도 0 (배고프게)");
             WriteReport();
         }
 
@@ -1240,6 +1241,8 @@ namespace SnailPet
             _hatchView?.EnsureDrawn();
             foreach (var kv in _thumbs) kv.Value.EnsureDrawn();
 
+            StepCheats();
+
             // ESC 는 에디터에서만 듣는다. 빌드된 창은 WS_EX_NOACTIVATE 라 포커스를 갖지 않아
             // Unity 의 Input 이 죽어 있다. 플레이어에서 끄는 길은 설정 화면의 「종료」다.
             if (Input.GetKeyDown(KeyCode.Escape)) QuitFromUi();
@@ -1426,6 +1429,41 @@ namespace SnailPet
             float pixels = Mathf.Max(CrumbMinPixels, (_bounds.Top - _bounds.Foot) * _scale * CrumbFraction);
             _crumbs.Spawn(from, pixels, CrumbSpeed * UnityEngine.Random.Range(0.7f, 1.3f),
                           UnityEngine.Random.Range(CrumbLifeMin, CrumbLifeMax));
+        }
+
+        // ── 확인용 치트 ──
+        //
+        // 실제 속도로 돌리기로 하면서 연출 하나 보려고 30분씩 기다리게 됐다. 그래서 확인용
+        // 열쇠를 둔다. 창이 포커스를 갖지 않아 Unity 의 Input 이 안 되므로 마우스와 같이
+        // 전역 키 상태를 읽는다 — 다른 창을 쓰는 중에도 눌리니 흔치 않은 키를 골랐다.
+
+        private const int VK_F9 = 0x78, VK_F10 = 0x79;
+
+        private bool _f9Was, _f10Was;
+
+        private void StepCheats()
+        {
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            bool f9 = TransparentWindow.IsKeyDown(VK_F9);
+            bool f10 = TransparentWindow.IsKeyDown(VK_F10);
+
+            // 누르는 순간에만 한 번 듣는다
+            if (f9 && !_f9Was)
+            {
+                _present?.MakeReady();
+                Say($"      [치트] 선물 준비 완료 (F9)");
+            }
+
+            if (f10 && !_f10Was)
+            {
+                _growth?.MakeHungry();
+                RefreshGauges();
+                Say($"      [치트] 포만도 0 (F10) → {_growth}");
+            }
+
+            _f9Was = f9;
+            _f10Was = f10;
+#endif
         }
 
         /// <summary>부스러기와 코인을 화면 좌표에서 월드로 옮긴다. 먹이와 같은 방식이다.</summary>
@@ -1877,7 +1915,10 @@ namespace SnailPet
 
             float bodyDepth = (_bounds.Top - _bounds.Foot) * _scale * px;   // 발에서 등까지
             float bubbleHalf = _present.HalfHeightWorld * px;
-            Vector2 bubbleScreen = foot - n * (bodyDepth + BubbleGapPx + bubbleHalf);
+            // 머리 위 간격은 몸 크기에 비례한다. 예전에는 18px 고정이었는데, 달팽이를
+            // 줄인 뒤로는 몸 높이의 절반이 넘는 틈이 되어 말풍선이 멀찍이 떠 보였다.
+            float bubbleGap = Mathf.Max(BubbleGapMinPx, bodyDepth * BubbleGapFraction);
+            Vector2 bubbleScreen = foot - n * (bodyDepth + bubbleGap + bubbleHalf);
 
             // 방금 받은 선물이 있으면 그 자리에서 코인이 떠오른다.
             if (_coinPopPending)
@@ -1900,7 +1941,7 @@ namespace SnailPet
             {
                 _bubbleLogged = true;
                 Say($"      [{_t:0.0}s] 말풍선 표시: 발 화면({foot.x:0},{foot.y:0}) → 말풍선 화면({bubbleScreen.x:0},{bubbleScreen.y:0})");
-                Say($"                    몸깊이 {bodyDepth:0} + 간격 {BubbleGapPx:0} + 반높이 {bubbleHalf:0} = {bodyDepth + BubbleGapPx + bubbleHalf:0}px 안쪽");
+                Say($"                    몸깊이 {bodyDepth:0} + 간격 {bubbleGap:0} + 반높이 {bubbleHalf:0} = {bodyDepth + bubbleGap + bubbleHalf:0}px 안쪽");
                 Say($"                    {_present.Describe()}");
             }
 
@@ -1918,7 +1959,11 @@ namespace SnailPet
                 !(_cursorOnSnail || onFood || _cursorOnUi || _ui.PopupOpen || _drag != DragTarget.None));
         }
 
-        private const float BubbleGapPx = SnailPresent.BubbleGap;
+        /// <summary>
+        /// 머리 위로 띄우는 간격. 몸 높이에 대한 비율이라 레벨이 올라 커져도 같은 느낌이다.
+        /// (예전 고정값 <see cref="SnailPresent.BubbleGap"/> 18px 은 달팽이가 컸을 때의 값이다.)
+        /// </summary>
+        private const float BubbleGapFraction = 0.12f, BubbleGapMinPx = 3f;
         private bool _bubbleLogged;
 
         /// <summary>
