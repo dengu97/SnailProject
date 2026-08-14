@@ -410,17 +410,22 @@ namespace SnailPet
 
             _ui.Rename   += () =>
             {
-                var snail = _player.Active;
+                var snail = Viewing;
                 if (snail != null) _ui.ShowRename(snail.Name);
             };
             _ui.Renamed  += name =>
             {
-                var snail = _player.Active;
+                var snail = Viewing;
                 if (snail == null) return;
 
                 // 공백만 넣으면 이름을 지운 것으로 본다. UI 가 「이름 없음」으로 채운다.
                 snail.Name = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
                 RefreshSnail(reshoot: false);
+
+                // 보고 있는 개체를 고쳤으면 오른쪽 이름도 바꿔 준다 —
+                // RefreshSnail 은 보고 있는 동안 오른쪽을 건드리지 않는다.
+                if (_viewingId != 0) _ui.SetSnail(snail.Name, snail.Rarity, snail.Growth.Level);
+
                 Say($"      [UI] 이름 변경: {snail.Name ?? "(없음)"}");
             };
             _ui.Detail   += () => Say("      [UI] 상세정보");
@@ -436,8 +441,13 @@ namespace SnailPet
             _ui.QuitPressed    += QuitFromUi;
             _ui.Close    += () => Say("      [UI] 최소화");
             _ui.Maximize += () => Say("      [UI] 최대화");
-            _ui.TabChanged += i => Say($"      [UI] 탭 {i}");
-            _ui.SwapTo     += SwapSnail;
+            _ui.TabChanged += i =>
+            {
+                ShowActiveSnail();      // 탭을 옮기면 오른쪽이 화면의 달팽이로 돌아온다
+                Say($"      [UI] 탭 {i}");
+            };
+            _ui.SnailPicked += PickSnail;
+            _ui.SwapTo      += SwapSnail;
 
             // 「먹이기」는 즉시 먹이지 않는다. 화면에 떨어뜨리고 달팽이가 기어가서 먹는다.
             _ui.FeedFood += DropFoodFromUi;
@@ -497,10 +507,15 @@ namespace SnailPet
             _ui.SetRows(rows);
             PruneThumbs();
 
+            _ui.SetCoin(_player.Coins);
+
+            // 다른 달팽이 정보를 보고 있는 동안에는 오른쪽을 건드리지 않는다.
+            // 목록은 위에서 이미 새로 그렸으므로 마릿수가 바뀌어도 따라온다.
+            if (_viewingId != 0) return;
+
             // 이름은 아직 지을 방법이 없어 비워 둔다 — UI 가 「이름 없음」으로 채운다.
             var active = _player.Active;
             _ui.SetSnail(active?.Name, _rarity, _growth.Level);
-            _ui.SetCoin(_player.Coins);
 
             if (!reshoot) return;
 
@@ -510,6 +525,76 @@ namespace SnailPet
             var size = SnailUi.PortraitSize;
             _portrait = new SnailPortrait(transform, _appearance, _bounds, size.x, size.y);
             _ui.SetPortrait(_portrait.Texture);
+        }
+
+        // ── 목록에서 고른 달팽이 보기 ──
+        //
+        // 줄을 누르면 오른쪽에 그 달팽이의 정보가 뜬다. 화면을 도는 달팽이는 그대로다.
+        // 바꾸는 것은 교체 버튼뿐이고, 탭을 옮겼다 오면 화면의 달팽이로 돌아간다.
+
+        /// <summary>지금 정보를 보고 있는 달팽이. 0 이면 화면에 나와 있는 그 달팽이다.</summary>
+        private int _viewingId;
+
+        /// <summary>
+        /// 오른쪽 상세 패널이 지금 보여 주고 있는 달팽이.
+        ///
+        /// 옷장·유전정보·판매·이름 변경은 전부 <b>보고 있는 것</b>을 다뤄야 한다.
+        /// 화면에 나와 있는 개체를 다루면 눈에 보이는 정보와 손대는 대상이 어긋난다.
+        /// </summary>
+        private OwnedSnail Viewing
+        {
+            get
+            {
+                if (_viewingId == 0) return _player.Active;
+
+                foreach (var s in _player.Snails)
+                    if (s.Id == _viewingId) return s;
+
+                // 목록에서 사라졌으면(팔렸거나 세이브가 바뀌었으면) 화면의 달팽이로 돌아간다
+                _viewingId = 0;
+                return _player.Active;
+            }
+        }
+
+        /// <summary>고른 달팽이를 찍어 둔 초상. 화면의 달팽이 초상과 섞이면 안 되므로 따로 든다.</summary>
+        private SnailPortrait _viewPortrait;
+
+        private void PickSnail(int index)
+        {
+            if (index < 0 || index >= _player.Snails.Count) return;
+
+            var snail = _player.Snails[index];
+
+            // 화면에 나와 있는 그 달팽이를 고른 것이면 원래대로 돌아가는 것과 같다
+            if (snail.Id == _player.ActiveId) { ShowActiveSnail(); return; }
+
+            _viewingId = snail.Id;
+
+            _ui.SetSnail(snail.Name, snail.Rarity, snail.Growth.Level);
+            _ui.SetGauges((float)snail.Growth.FullPercent, (float)snail.Growth.HappyPercent);
+
+            // 입은 모습으로 찍는다. 목록 썸네일과 같은 기준이다.
+            var dressed = snail.Dressed();
+            _viewPortrait?.Dispose();
+            var size = SnailUi.PortraitSize;
+            _viewPortrait = new SnailPortrait(transform, dressed, SnailMetrics.Measure(dressed), size.x, size.y);
+            _ui.SetPortrait(_viewPortrait.Texture);
+
+            Say($"      [UI] 목록에서 고름: {snail.Name ?? "(이름 없음)"} (화면의 달팽이는 그대로)");
+        }
+
+        /// <summary>오른쪽을 화면에 나와 있는 달팽이로 되돌린다.</summary>
+        private void ShowActiveSnail()
+        {
+            if (_viewingId == 0) return;
+
+            _viewingId = 0;
+            _viewPortrait?.Dispose();
+            _viewPortrait = null;
+
+            RefreshSnail(reshoot: false);
+            _ui.SetGauges((float)_growth.FullPercent, (float)_growth.HappyPercent);
+            if (_portrait != null) _ui.SetPortrait(_portrait.Texture);
         }
 
         // ── 옷장 ──
@@ -575,7 +660,7 @@ namespace SnailPet
         /// <summary>유전정보 버튼. 이 개체가 가진 파츠를 이름·설명과 함께 펼친다.</summary>
         private void OpenGene()
         {
-            var snail = _player.Active;
+            var snail = Viewing;
             if (snail == null) return;
 
             _ui.OpenGene(true);
@@ -601,7 +686,7 @@ namespace SnailPet
         /// <summary>옷장의 목록·장착 표시·미리보기를 지금 상태로 맞춘다.</summary>
         private void RefreshWardrobe()
         {
-            var snail = _player.Active;
+            var snail = Viewing;
             if (snail == null) return;
 
             _ui.SetWardrobe(snail.Name, snail.Rarity, _player.OwnedAccessories(), snail.Equipped.ToArray());
@@ -620,11 +705,16 @@ namespace SnailPet
         {
             _previewView?.Dispose();
 
+            // 보고 있는 달팽이를 찍는다. 화면의 달팽이와 다를 수 있다.
+            var snail = Viewing;
+            var dressed = snail != null ? snail.Dressed() : _appearance;
+            var bounds = snail != null ? SnailMetrics.Measure(dressed) : _bounds;
+
             var size = SnailUi.WardrobePreviewSize;
             if (size != SnailUi.GenePreviewSize)
                 Say("      [경고] 옷장과 상세보기의 미리보기 크기가 달라졌습니다. 하나를 같이 쓰고 있어 한쪽이 늘어납니다");
 
-            _previewView = new SnailPortrait(transform, _appearance, _bounds, size.x, size.y);
+            _previewView = new SnailPortrait(transform, dressed, bounds, size.x, size.y);
             _ui.SetWardrobePreview(_previewView.Texture);
             _ui.SetGenePreview(_previewView.Texture);
         }
@@ -632,13 +722,24 @@ namespace SnailPet
         /// <summary>악세서리를 끼거나 뺐다. 화면의 달팽이도 같이 갈아입는다.</summary>
         private void EquipAccessory(int accessoryId)
         {
-            var snail = _player.Active;
+            var snail = Viewing;
             if (snail == null || !snail.ToggleEquip(accessoryId)) return;
 
-            // 외형이 바뀌었으므로 통째로 다시 합성한다. 발선·껍질 중심도 다시 잰다.
-            ActivateSnail(snail);
             DropThumb(snail.Id);     // 목록 썸네일도 갈아입은 모습으로 다시 찍는다
-            RefreshSnail();
+
+            if (snail.Id == _player.ActiveId)
+            {
+                // 화면에 나와 있는 개체면 외형이 바뀌었으므로 통째로 다시 합성한다.
+                // 발선·껍질 중심도 다시 잰다.
+                ActivateSnail(snail);
+                RefreshSnail();
+            }
+            else
+            {
+                // 목록에만 있는 개체다. 화면의 달팽이를 갈아입히면 안 된다.
+                RefreshSnail(reshoot: false);
+            }
+
             RefreshWardrobe();
 
             string name = GameData.AccessoriesDataById.TryGetValue(accessoryId, out var row)
@@ -663,7 +764,7 @@ namespace SnailPet
         /// </summary>
         private void SellSnailFromUi()
         {
-            var snail = _player.Active;
+            var snail = Viewing;
             if (snail == null) return;
 
             if (_player.Snails.Count <= 1)
@@ -761,6 +862,16 @@ namespace SnailPet
             // 판 개체가 화면에 있었으면 외형이 통째로 바뀌므로 다시 합성한다
             if (wasActive) ActivateSnail(_player.Active);
 
+            // 팔린 개체를 보고 있었으면 볼 것이 없어졌다. 화면의 달팽이로 돌아간다.
+            if (_viewingId == soldId)
+            {
+                _viewingId = 0;
+                _viewPortrait?.Dispose();
+                _viewPortrait = null;
+                _ui.ResetPick();
+                _shownFull = _shownHappy = -1f;
+            }
+
             RefreshSnail();
             RefreshFoods();
             _ui.SetCoin(_player.Coins);
@@ -773,8 +884,15 @@ namespace SnailPet
         {
             if (!_player.SetActiveByIndex(listIndex)) return;
 
+            // 교체하면 보고 있던 것이 곧 화면의 달팽이가 된다
+            _viewingId = 0;
+            _viewPortrait?.Dispose();
+            _viewPortrait = null;
+            _ui.ResetPick();
+
             ActivateSnail(_player.Snails[listIndex]);
             RefreshSnail();
+            _shownFull = _shownHappy = -1f;      // 게이지를 새 개체 값으로 다시 그리게 한다
             Say($"      [UI] {listIndex}번 달팽이로 교체 → {_appearance}");
         }
 
@@ -1128,6 +1246,10 @@ namespace SnailPet
         /// </summary>
         private void RefreshGauges()
         {
+            // 다른 달팽이 정보를 보고 있으면 그쪽 값이 떠 있다. 화면의 달팽이 값으로 덮으면
+            // 고른 달팽이의 게이지가 매 프레임 지워진다.
+            if (_viewingId != 0) return;
+
             float full  = (float)_growth.FullPercent;
             float happy = (float)_growth.HappyPercent;
 

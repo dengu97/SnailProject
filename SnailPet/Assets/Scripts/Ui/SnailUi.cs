@@ -223,6 +223,20 @@ namespace SnailPet.Ui
 
                 if (_rows[i].Face == null) _rows[i].Face = FaceView(_rows[i].Root, Max.RowThumb);
                 if (_rows[i].Name != null) _rows[i].Name.alignment = TextAnchor.MiddleLeft;
+
+                // 선택 테두리도 프리팹에는 없다. 줄 위에 얹혀야 하므로 맨 뒤에 붙이고,
+                // 교체 버튼은 그보다 더 위로 올린다.
+                if (_rows[i].Frame == null) _rows[i].Frame = RowFrame(_rows[i].Root);
+                _rows[i].Frame.transform.SetAsLastSibling();
+                if (_rows[i].Swap != null) _rows[i].Swap.transform.SetAsLastSibling();
+
+                // 줄을 누르는 버튼도 프리팹에는 없다. 배경이 이미 있으니 그걸 표적으로 쓴다.
+                if (_rows[i].Button == null)
+                {
+                    _rows[i].Button = _rows[i].Root.gameObject.GetComponent<Button>()
+                                   ?? _rows[i].Root.gameObject.AddComponent<Button>();
+                    _rows[i].Button.targetGraphic = _rows[i].Root.GetComponent<Image>();
+                }
             }
 
             // 상세보기 파츠 줄의 글자 자리는 프리팹에 예전 값으로 구워져 있다. 지금 값으로 다시 놓는다.
@@ -247,12 +261,25 @@ namespace SnailPet.Ui
             BringToFront(_foodPanel, "FullIcon", "HappyIcon");
             BringToFront(_shopStats, "FullIcon", "HappyIcon");
 
+            // 하단 액션 첫 칸은 도감으로 바뀌었다. 프리팹에는 예전 돋보기가 구워져 있다.
+            if (Count(_actionBtns) > 0) SetGlyph(_actionBtns[0], "icon_book");
+
+            // 상점 뒤로가기도 아트가 들어왔다. 프리팹에는 버튼 도형 + 「←」 글자로 굳어 있다.
+            FitBackButton();
+
             // 칸의 수량 배지는 프리팹에 없다. 칸마다 붙이고 글자도 그 위로 옮긴다.
             FitCountBadges(_foodSlots);
             FitCountBadges(_eggSlots);
             FitCountBadges(_shopSlots);
             FitCountBadges(_wardrobeSlots);
             FitCountBadges(_wornSlots);
+
+            // 이름칸도 옷장·상세보기와 같은 모양으로 맞춘다. 프리팹에는 예전 자리·크기로 굳어 있다.
+            if (_nameText != null)
+            {
+                Place((RectTransform)_nameText.transform, At.NameField);
+                _nameText.fontSize = 12;
+            }
 
             // 옷장·상세보기의 달팽이는 메인 상세의 초상과 같은 자리에 같은 크기로 나와야 한다.
             // 좌표뿐 아니라 배율까지 복사하는 이유: 메인 초상은 프리팹에서 손으로 줄여 둔
@@ -276,6 +303,10 @@ namespace SnailPet.Ui
             // (프리팹의 순서를 고치려면 다시 구워야 하므로 살아날 때마다 여기서 올린다.)
             if (_closeBtn != null)    _closeBtn.transform.SetAsLastSibling();
             if (_maximizeBtn != null) _maximizeBtn.transform.SetAsLastSibling();
+
+            // 뒤로가기도 마찬가지다. 상점 패널보다 먼저 지어져 있어 옷장·상세보기 패널이
+            // 그 위를 덮었고, 그래서 눌리지 않았다.
+            if (_shopBack != null) _shopBack.SetAsLastSibling();
 
             // 좌우 패널을 통째로 쓰는 화면들은 프리팹에 <b>켜진 채로</b> 저장돼 있을 수 있다.
             // (편집하려고 켜 보고 그대로 저장하면 그렇게 된다. 실제로 유전정보가 그 상태였고,
@@ -331,6 +362,58 @@ namespace SnailPet.Ui
             {
                 t.color = UiTheme.OnButton;
                 t.fontStyle = FontStyle.Normal;
+            }
+        }
+
+        /// <summary>아이콘 버튼의 그림을 갈아 끼운다. 그림은 「Glyph」라는 자식이다.</summary>
+        private static void SetGlyph(Button button, string key)
+        {
+            var glyph = button != null ? button.transform.Find("Glyph") : null;
+            var image = glyph != null ? glyph.GetComponent<Image>() : null;
+            if (image == null) return;
+
+            var sprite = Resources.Load<Sprite>("Ui/Icon/" + key);
+            if (sprite == null)
+            {
+                Debug.LogWarning("[SnailPet] 버튼 아이콘을 찾지 못했습니다: Ui/Icon/" + key);
+                return;
+            }
+
+            image.sprite = sprite;
+            image.color = Color.white;
+            image.enabled = true;
+        }
+
+        /// <summary>
+        /// 상점 뒤로가기를 아트로 바꾼다.
+        ///
+        /// 프리팹에는 아트가 없던 시절의 모습(버튼 도형 + 「←」 글자)이 구워져 있다.
+        /// 도형 자리에 그림을 넣고, 그 위에 겹쳐 있던 화살표 글자를 끈다.
+        /// </summary>
+        private void FitBackButton()
+        {
+            if (_shopBack == null) return;
+
+            var image = _shopBack.GetComponent<Image>();
+            var sprite = Resources.Load<Sprite>("Ui/Icon/btn_back");
+            if (image == null || sprite == null) return;
+
+            // 이미 그림이면(코드로 지은 경우) 손댈 것이 없다
+            if (image.sprite == sprite) return;
+
+            image.sprite = sprite;
+            image.type = Image.Type.Simple;
+            image.preserveAspect = true;
+            image.color = Color.white;
+
+            if (_shopBack.parent == null) return;
+            foreach (Transform sibling in _shopBack.parent)
+            {
+                if (sibling == _shopBack) continue;
+
+                var text = sibling.GetComponent<Text>();
+                if (text != null && sibling is RectTransform srt && CenterInside(_shopBack, srt))
+                    text.enabled = false;
             }
         }
 
@@ -456,7 +539,11 @@ namespace SnailPet.Ui
             {
                 // X 는 어디서 눌러도 달팽이 화면으로 돌아간 다음 접는다. 음식·알·상점 탭이나
                 // 옷장·설정에 있던 그대로 접으면, 다시 펼쳤을 때 엉뚱한 화면이 열려 어색하다.
+                //
+                // 되돌아가는 것이 아니라 나가는 것이므로 골라 둔 달팽이도 푼다.
+                // (뒤로가기는 반대로 고른 것을 그대로 두고 보던 화면으로 돌아간다)
                 SetTab(0);
+                ResetPick();
 
                 // 「항상 최대화」가 막는 것은 접는 동작 하나다. 그래서 설정에서 되돌아가는 것은
                 // 막지 않고, 접기만 건너뛴다.
@@ -476,7 +563,12 @@ namespace SnailPet.Ui
             for (int i = 0; i < Count(_actionBtns) && i < actions.Length; i++) Hook(_actionBtns[i], actions[i]);
 
             for (int i = 0; i < Count(_tabBtns); i++) { int k = i; Hook(_tabBtns[i], () => SetTab(k)); }
-            for (int i = 0; i < Count(_rows); i++)    { int k = i; Hook(_rows[i]?.Swap, () => SwapTo?.Invoke(k)); }
+            for (int i = 0; i < Count(_rows); i++)
+            {
+                int k = i;
+                Hook(_rows[i]?.Swap, () => SwapTo?.Invoke(k));
+                Hook(_rows[i]?.Button, () => PickRow(k));      // 줄을 누르면 정보만 본다
+            }
 
             for (int i = 0; i < Count(_foodSlots); i++) { int k = i; Hook(_foodSlots[i]?.Button, () => SelectFood(k)); }
             for (int i = 0; i < Count(_eggSlots); i++)  { int k = i; Hook(_eggSlots[i]?.Button,  () => SelectEgg(k)); }
@@ -512,7 +604,7 @@ namespace SnailPet.Ui
                 if (_selectedShop >= 0 && _selectedShop < _shopIds.Length)
                     BuyProduct?.Invoke(_shopIds[_selectedShop], false);
             });
-            Hook(_backBtn, LeaveShopCategory);
+            Hook(_backBtn, GoBack);
 
             // 팝업
             Hook(_popupMinus, () => StepPopup(-1));
@@ -655,9 +747,9 @@ namespace SnailPet.Ui
             Box(_panel, At.NameField, UiTheme.Slot, UiSprites.Shape.Name, "NameField");
             _renameBtn = IconButton(_panel, At.RenameBtn, "icon_rename", "Rename");
 
-            var name = At.NameField;
-            _nameText = Label(_panel, new RectInt(name.x + 22, name.y, name.width - 26, name.height),
-                              "달팽이 이름", 13, UiTheme.Ink);
+            // 이름칸은 옷장·상세보기와 같은 모양으로 둔다. 예전에는 이름 수정 버튼을 피해
+            // 오른쪽으로 밀고 글자도 한 단계 컸는데, 화면을 오갈 때 이름이 움직여 보였다.
+            _nameText = Label(_panel, At.NameField, "달팽이 이름", 12, UiTheme.Ink);
 
             // 등급은 EnumData.IconResourceKey 의 아이콘으로 보여 준다.
             // 키가 비어 있거나 파일이 없으면 알약에 enum 이름을 띄운다 — 빠진 것이 눈에 띄게.
@@ -729,7 +821,8 @@ namespace SnailPet.Ui
         /// <summary>하단 액션 4개. 상세정보 · 옷장 · 유전정보 · 판매.</summary>
         private void BuildActions()
         {
-            var keys  = new[] { "icon_detail", "icon_wardrobe", "icon_gene", "icon_sell" };
+            // 첫 칸은 도감 자리다. 예전 돋보기(icon_detail)는 하는 일이 없어 그림만 갈았다.
+            var keys  = new[] { "icon_book", "icon_wardrobe", "icon_gene", "icon_sell" };
             var names = new[] { "Detail", "Wardrobe", "Gene", "Sell" };
 
             _actionBtns = new Button[keys.Length];
@@ -1232,6 +1325,12 @@ namespace SnailPet.Ui
             /// <summary>썸네일 칸 위에 얹는 달팽이 모습. 칸은 배경으로 남는다.</summary>
             public RawImage Face;
 
+            /// <summary>고른 줄에 덧그리는 테두리(slotline2).</summary>
+            public Image Frame;
+
+            /// <summary>줄 전체를 누르는 버튼. 오른쪽에 그 달팽이 정보를 띄운다.</summary>
+            public Button Button;
+
             public Image RarityBadge, RarityIcon;
             public Text Name, Rarity, Age;
             public Button Swap;
@@ -1241,6 +1340,24 @@ namespace SnailPet.Ui
         /// 목록 썸네일에 들어가는 달팽이 모습. 부트스트랩이 찍어 넘긴 렌더 텍스처를 받는다.
         /// 그림이 없을 때를 대비해 아래 칸 도형은 그대로 두고 그 위에 얹는다.
         /// </summary>
+        /// <summary>
+        /// 지금 나와 있는 달팽이 줄에 덧그리는 테두리. 줄 위에 같은 크기로 겹친다.
+        /// 칸(slotline)과 줄(slotline2)은 모양이 달라 아트를 따로 쓴다.
+        /// </summary>
+        private Image RowFrame(RectTransform parent)
+        {
+            var frame = NewRect("Frame", parent).gameObject.AddComponent<Image>();
+            Fill((RectTransform)frame.transform);
+
+            frame.sprite = UiSprites.Of(UiSprites.Shape.RowSelection);
+            frame.type = Image.Type.Sliced;
+            frame.gameObject.AddComponent<UiShapeRef>().Shape = UiSprites.Shape.RowSelection;
+            frame.color = UiSprites.IsArt(UiSprites.Shape.RowSelection) ? Color.white : UiTheme.Selected;
+            frame.raycastTarget = false;
+            frame.enabled = false;
+            return frame;
+        }
+
         private RawImage FaceView(RectTransform parent, RectInt at)
         {
             var rt = NewRect("Face", parent);
@@ -1255,6 +1372,44 @@ namespace SnailPet.Ui
         /// <summary>목록 썸네일을 찍을 크기. 목업이 정사각형이다.</summary>
         public static Vector2Int RowThumbSize =>
             new Vector2Int(Max.RowThumb.width, Max.RowThumb.height);
+
+        // ── 목록에서 고르기 ──
+        //
+        // 줄을 누르면 오른쪽에 그 달팽이의 정보가 뜬다. 화면을 도는 달팽이는 그대로다 —
+        // 바꾸는 것은 교체 버튼만 한다. 고른 줄에는 테두리가 얹힌다.
+        //
+        // 다른 탭에 갔다 오면 화면의 달팽이로 돌아간다. 어느 달팽이를 보고 있었는지까지
+        // 기억하면, 탭을 옮겼다 왔을 때 화면과 정보가 다른 채로 남아 헷갈린다.
+
+        private int _selectedRow = -1, _activeRow = -1;
+
+        /// <summary>목록에서 달팽이를 골랐다. 몇 번째 줄인지를 준다.</summary>
+        public event Action<int> SnailPicked;
+
+        private void PickRow(int index)
+        {
+            if (index < 0 || index >= Count(_rows)) return;
+
+            _selectedRow = index;
+            PaintRowFrames();
+            SnailPicked?.Invoke(index);
+        }
+
+        /// <summary>화면에 나와 있는 달팽이 줄로 되돌린다. 탭을 옮길 때 부른다.</summary>
+        public void ResetPick()
+        {
+            _selectedRow = -1;
+            PaintRowFrames();
+        }
+
+        /// <summary>고른 줄에만 테두리를 켠다. 고른 것이 없으면 화면의 달팽이 줄이다.</summary>
+        private void PaintRowFrames()
+        {
+            int on = _selectedRow >= 0 ? _selectedRow : _activeRow;
+
+            for (int i = 0; i < Count(_rows); i++)
+                if (_rows[i]?.Frame != null) _rows[i].Frame.enabled = i == on;
+        }
 
         private ListRow BuildRow(RectTransform parent, RectInt at, int index)
         {
@@ -1289,6 +1444,17 @@ namespace SnailPet.Ui
 
             int captured = index;
             row.Swap = IconButton(rowRt, Max.RowSwap, "icon_swap", "Swap");
+
+            // 줄 자체도 누를 수 있다. 누르면 오른쪽에 그 달팽이 정보가 뜬다 —
+            // 화면의 달팽이를 바꾸는 것은 교체 버튼만 한다.
+            // 교체 버튼은 자식이라 더 위에 있어 그쪽을 누르면 줄이 안 눌린다.
+            row.Button = rowRt.gameObject.AddComponent<Button>();
+            row.Button.targetGraphic = bg;
+
+            // 테두리는 줄 위에 얹히므로 늦게 그린다. 다만 교체 버튼은 그보다 더 위여야 한다 —
+            // 테두리가 버튼을 가로지르면 눌러도 되는 것처럼 안 보인다.
+            row.Frame = RowFrame(rowRt);
+            row.Swap.transform.SetAsLastSibling();
             return row;
         }
 
@@ -1323,13 +1489,25 @@ namespace SnailPet.Ui
                     _rows[i].Face.texture = r.face;
                     _rows[i].Face.enabled = r.face != null;
                 }
+
+                // 지금 나와 있는 달팽이가 몇 번째 줄인지 기억해 둔다. 고른 것이 없거나
+                // 목록이 줄어 사라졌으면 이 줄로 돌아간다.
+                if (r.isActive) _activeRow = i;
             }
+
+            if (_selectedRow >= count) _selectedRow = -1;
+            PaintRowFrames();
         }
 
         /// <summary>탭 선택. 지금은 색만 바뀌고 내용은 그대로다.</summary>
         public void SetTab(int index)
         {
+            int was = _tab;
             _tab = Mathf.Clamp(index, 0, _tabs.Length - 1);
+
+            // 옷장·상세보기에서 뒤로가기로 나오면 같은 탭으로 돌아온다. 그때는 「카테고리를
+            // 옮긴 것」이 아니므로 고른 달팽이를 풀지 않는다 — 보던 정보 그대로 돌아가야 한다.
+            bool moved = _tab != was;
 
             // 탭을 누르면 옷장·상세보기·설정에서 빠져나온다. 셋 다 왼쪽 패널을 통째로 쓰기 때문이다.
             if (_inWardrobe || _inGene || _inSettings)
@@ -1369,6 +1547,12 @@ namespace SnailPet.Ui
             string[] titles = { Keys.SnailList, Keys.FoodList, Keys.EggList, Keys.Shop };
             _listTitle.text = SnailPet.Data.Loc.Text(titles[_tab]);
             RefreshClose();      // 설정에서 나왔으면 X 가 다시 접는 버튼이 된다
+
+            if (!moved) return;
+
+            // 탭을 옮기면 골라 둔 달팽이가 풀린다. 돌아왔을 때 화면의 달팽이와 오른쪽 정보가
+            // 다르면 어느 쪽이 지금 나와 있는 것인지 헷갈린다.
+            ResetPick();
             TabChanged?.Invoke(_tab);
         }
 
@@ -1533,12 +1717,9 @@ namespace SnailPet.Ui
 
             // 뒤로 가기. 목업에서 닫기 X 자리에 화살표가 들어온다.
             // btn_back 아트가 아직 없어 글자로 그린다 — 스프라이트 없는 Image 는 색 사각형이 된다.
-            var back = Box(_detailRoot, Above(Sh.Back), UiTheme.PanelBorder, UiSprites.Shape.Button, "Back");
-            back.raycastTarget = true;
-            Label(_detailRoot, Above(Sh.Back), "←", 16, Color.white);
-            _backBtn = back.gameObject.AddComponent<Button>();
-            _backBtn.targetGraphic = back;
-            _shopBack = (RectTransform)back.transform;
+            // 아트가 들어오기 전에는 버튼 도형에 「←」 글자를 얹어 두었다. 이제 그림이 있다.
+            _backBtn = IconButton(_detailRoot, Above(Sh.Back), "btn_back", "Back", tint: Color.white);
+            _shopBack = (RectTransform)_backBtn.transform;
             _shopBack.gameObject.SetActive(false);
         }
 
@@ -1619,9 +1800,33 @@ namespace SnailPet.Ui
             if (_shopPanel != null)     _shopPanel.gameObject.SetActive(shop && !inCategory);
             if (_shopItemPanel != null) _shopItemPanel.gameObject.SetActive(inCategory);
 
-            // 뒤로가 나올 때는 닫기가 그 자리를 비켜 준다
-            if (_shopBack != null)  _shopBack.gameObject.SetActive(inCategory);
-            if (_closeBtn != null)  _closeBtn.gameObject.SetActive(!inCategory);
+            RefreshBackButton();
+        }
+
+        /// <summary>
+        /// 뒤로가기와 X 중 무엇이 보일지 정한다. 둘은 같은 자리를 쓰므로 하나만 나온다.
+        ///
+        /// 뒤로갈 곳이 있는 화면은 셋이다 — 상점 상품 단계, 옷장, 상세보기.
+        /// 셋 다 「들어온 자리」가 분명해서 X 로 나가는 것보다 되돌아가는 편이 맞다.
+        /// </summary>
+        private void RefreshBackButton()
+        {
+            bool back = (_tab == 3 && _shopCat >= 0) || _inWardrobe || _inGene;
+
+            if (_shopBack != null) _shopBack.gameObject.SetActive(back);
+            if (_closeBtn != null) _closeBtn.gameObject.SetActive(!back);
+        }
+
+        /// <summary>
+        /// 뒤로가기. 지금 어느 화면에 있느냐에 따라 돌아갈 곳이 다르다.
+        /// 옷장·상세보기에서는 고른 달팽이를 그대로 둔 채 정보 화면으로 돌아간다.
+        /// </summary>
+        private void GoBack()
+        {
+            if (_inWardrobe) { OpenWardrobe(false); return; }
+            if (_inGene)     { OpenGene(false); return; }
+
+            LeaveShopCategory();
         }
 
         private void SelectShopSlot(int index)
@@ -1932,6 +2137,7 @@ namespace SnailPet.Ui
                 if (_shopItemPanel != null)_shopItemPanel.gameObject.SetActive(false);
                 _listTitle.text = SnailPet.Data.Loc.Text(Keys.Wardrobe);
                 RefreshClose();
+                RefreshBackButton();
             }
             else SetTab(_tab);   // 있던 탭으로 되돌린다 (SetTab 안에서 X 잠금도 다시 정해진다)
         }
@@ -2237,6 +2443,7 @@ namespace SnailPet.Ui
 
             _listTitle.text = SnailPet.Data.Loc.Text(Keys.Traits);
             RefreshClose();
+            RefreshBackButton();
         }
 
         /// <summary>초상. 옷장과 같은 크기라 같은 것을 쓸 수 있다.</summary>
