@@ -132,6 +132,12 @@ namespace SnailPet.Ui
             /// <summary>칸 오른쪽 아래에 붙는 수량.</summary>
             public static readonly RectInt FoodCount = new RectInt(14, 20, 20, 12);
 
+            /// <summary>
+            /// 수량이 앉는 동그란 배지. 칸(32x32) 오른쪽 아래 모서리에 살짝 걸친다.
+            /// 글자만 얹으면 아이콘 그림과 선택 테두리에 묻혀 안 보인다.
+            /// </summary>
+            public static readonly RectInt FoodCountBadge = new RectInt(19, 19, 15, 15);
+
             // 아래는 행 왼쪽 위가 원점
             public static readonly RectInt RowThumb  = new RectInt(  5,  4, 32, 32);
             public static readonly RectInt RowName   = new RectInt( 42,  3, 92, 16);

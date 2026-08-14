@@ -247,6 +247,13 @@ namespace SnailPet.Ui
             BringToFront(_foodPanel, "FullIcon", "HappyIcon");
             BringToFront(_shopStats, "FullIcon", "HappyIcon");
 
+            // 칸의 수량 배지는 프리팹에 없다. 칸마다 붙이고 글자도 그 위로 옮긴다.
+            FitCountBadges(_foodSlots);
+            FitCountBadges(_eggSlots);
+            FitCountBadges(_shopSlots);
+            FitCountBadges(_wardrobeSlots);
+            FitCountBadges(_wornSlots);
+
             // 옷장·상세보기의 달팽이는 메인 상세의 초상과 같은 자리에 같은 크기로 나와야 한다.
             // 좌표뿐 아니라 배율까지 복사하는 이유: 메인 초상은 프리팹에서 손으로 줄여 둔
             // 상태라(0.7배) 좌표만 맞추면 크기가 어긋난다. 나중에 메인을 다시 조정해도 따라온다.
@@ -324,6 +331,36 @@ namespace SnailPet.Ui
             {
                 t.color = UiTheme.OnButton;
                 t.fontStyle = FontStyle.Normal;
+            }
+        }
+
+        /// <summary>
+        /// 프리팹에 구워진 칸에 수량 배지를 붙이고, 글자를 그 위에 흰색으로 다시 놓는다.
+        ///
+        /// 배지와 글자는 <b>선택 테두리보다 뒤</b>에 있어야 위에 그려진다. 고른 칸에서
+        /// 수량이 테두리에 묻히던 것이 이 문제였다.
+        /// </summary>
+        private void FitCountBadges(GridSlot[] slots)
+        {
+            for (int i = 0; i < Count(slots); i++)
+            {
+                var slot = slots[i];
+                if (slot?.Root == null || slot.Count == null) continue;
+
+                if (slot.CountBg == null)
+                {
+                    slot.CountBg = Icon(slot.Root, Max.FoodCountBadge, "icon_circle", Color.white, "CountBg");
+                    slot.CountBg.raycastTarget = false;
+                }
+
+                slot.CountBg.transform.SetAsLastSibling();
+
+                Place((RectTransform)slot.Count.transform, Max.FoodCountBadge);
+                slot.Count.alignment = TextAnchor.MiddleCenter;
+                slot.Count.color = UiTheme.OnBadge;
+                slot.Count.transform.SetAsLastSibling();
+
+                SetSlotCount(slot, slot.Count.text);
             }
         }
 
@@ -780,6 +817,10 @@ namespace SnailPet.Ui
         {
             public RectTransform Root;
             public Image Icon, Frame;
+
+            /// <summary>수량이 앉는 동그란 배지. 글자만으로는 그림·테두리에 묻힌다.</summary>
+            public Image CountBg;
+
             public Text Count;
             public Button Button;
         }
@@ -884,6 +925,19 @@ namespace SnailPet.Ui
                 Mathf.Max(Max.FoodView.height, Max.FoodSlot.y + rows * Max.FoodStepY));
         }
 
+        /// <summary>
+        /// 칸의 수량을 적는다. 빈 문자열이면 배지도 같이 감춘다 —
+        /// 알처럼 수량이 없는 칸에 빈 동그라미만 남으면 안 된다.
+        /// </summary>
+        private static void SetSlotCount(GridSlot slot, string text)
+        {
+            if (slot == null || slot.Count == null) return;
+
+            slot.Count.text = text;
+            if (slot.CountBg != null) slot.CountBg.enabled = !string.IsNullOrEmpty(text)
+                                                          && slot.CountBg.sprite != null;
+        }
+
         private GridSlot BuildGridSlot(RectTransform content, int index)
         {
             var s = Max.FoodSlot;
@@ -909,8 +963,11 @@ namespace SnailPet.Ui
             slot.Frame.raycastTarget = false;
             slot.Frame.enabled = false;
 
-            slot.Count = Label(root, Max.FoodCount, "", 9, UiTheme.Ink);
-            slot.Count.alignment = TextAnchor.LowerRight;
+            // 수량은 테두리보다 뒤에 지어야 위에 온다. 고른 칸에서 가려지지 않게 하려는 것이다.
+            slot.CountBg = Icon(root, Max.FoodCountBadge, "icon_circle", Color.white, "CountBg");
+            slot.CountBg.raycastTarget = false;
+
+            slot.Count = Label(root, Max.FoodCountBadge, "", 9, UiTheme.OnBadge);
 
             slot.Button = root.gameObject.AddComponent<Button>();
             slot.Button.targetGraphic = bg;
@@ -987,7 +1044,7 @@ namespace SnailPet.Ui
 
                 _foodSlots[i].Icon.sprite = FoodSprite(row);
                 _foodSlots[i].Icon.enabled = _foodSlots[i].Icon.sprite != null;
-                _foodSlots[i].Count.text = foods[i].count > 1 ? foods[i].count.ToString() : "";
+                SetSlotCount(_foodSlots[i], foods[i].count > 1 ? foods[i].count.ToString() : "");
             }
 
             // 내용 높이를 줄 수에 맞춘다. 이게 스크롤 범위를 정한다.
@@ -1119,7 +1176,7 @@ namespace SnailPet.Ui
                 var row = SnailPet.Data.GameData.EggDataById.TryGetValue(_eggIds[i], out var e) ? e : null;
                 _eggSlots[i].Icon.sprite = EggSprite(row);
                 _eggSlots[i].Icon.enabled = _eggSlots[i].Icon.sprite != null;
-                _eggSlots[i].Count.text = "";      // 낱개라 수량이 없다
+                SetSlotCount(_eggSlots[i], "");      // 낱개라 수량이 없다
                 _eggSlots[i].Frame.enabled = false;
             }
 
@@ -1504,7 +1561,7 @@ namespace SnailPet.Ui
                 _shopIds[i] = products[i].Id;
                 _shopSlots[i].Icon.sprite = ProductSprite(products[i]);
                 _shopSlots[i].Icon.enabled = _shopSlots[i].Icon.sprite != null;
-                _shopSlots[i].Count.text = products[i].ItemCount > 1 ? products[i].ItemCount.ToString() : "";
+                SetSlotCount(_shopSlots[i], products[i].ItemCount > 1 ? products[i].ItemCount.ToString() : "");
                 _shopSlots[i].Frame.enabled = false;
             }
             FitContent(_shopGridContent, _shopIds.Length);
@@ -1924,7 +1981,7 @@ namespace SnailPet.Ui
                 // 낀 것은 빨간 테두리와 「장착중」으로 표시한다 (목업)
                 bool worn = equipped != null && Array.IndexOf(equipped, id) >= 0;
                 _wardrobeSlots[i].Frame.enabled = worn;
-                _wardrobeSlots[i].Count.text = worn ? SnailPet.Data.Loc.Text(Keys.Worn) : "";
+                SetSlotCount(_wardrobeSlots[i], worn ? SnailPet.Data.Loc.Text(Keys.Worn) : "");
                 _wardrobeSlots[i].Count.alignment = TextAnchor.MiddleCenter;
             }
             FitContent(_wardrobeContent, _wardrobeIds.Length);
@@ -1941,7 +1998,7 @@ namespace SnailPet.Ui
 
                 _wornSlots[i].Icon.sprite = id == 0 ? null : AccessorySprite(id);
                 _wornSlots[i].Icon.enabled = _wornSlots[i].Icon.sprite != null;
-                _wornSlots[i].Count.text = "";
+                SetSlotCount(_wornSlots[i], "");
             }
             _wornIds = WornIds(equipped);
         }
@@ -2744,9 +2801,23 @@ namespace SnailPet.Ui
             _hatchOk = TextButton(_hatchGroup, Pop.HatchOk, Keys.Confirm, "Ok");
 
             // 빛은 판을 통째로 덮어 알에서 달팽이로 갈아 끼우는 순간을 가린다.
-            // 여기서는 스프라이트 없는 Image 가 맞다 — 색으로 꽉 찬 사각형이 원하는 그림이다.
+            //
+            // 흰 사각형을 그대로 얹으면 판의 둥근 모서리 밖으로 삐져나온다. 그렇다고 판 아트를
+            // 흰색으로 물들일 수도 없다 — Image.color 는 곱하기라 흰색을 곱하면 아트 그대로다.
+            // 그래서 판 아트를 <b>마스크</b>로 쓰고 그 안에 흰 판을 깐다. 잘리는 모양이 아트의
+            // 알파를 그대로 따르므로 판이 어떻게 생겼든 맞는다.
             _hatchLight = Fill(NewRect("Light", _hatchGroup));
-            _hatchLightFill = _hatchLight.gameObject.AddComponent<Image>();
+
+            var shape = _hatchLight.gameObject.AddComponent<Image>();
+            shape.sprite = UiSprites.Of(UiSprites.Shape.Panel);
+            shape.type = Image.Type.Sliced;
+            shape.raycastTarget = false;
+
+            var mask = _hatchLight.gameObject.AddComponent<Mask>();
+            mask.showMaskGraphic = false;      // 모양만 쓰고 아트 자체는 안 보인다
+
+            var glow = Fill(NewRect("Glow", _hatchLight));
+            _hatchLightFill = glow.gameObject.AddComponent<Image>();
             _hatchLightFill.color = new Color(1f, 1f, 1f, 0f);
             _hatchLightFill.raycastTarget = false;
         }
@@ -2790,6 +2861,7 @@ namespace SnailPet.Ui
             _hatchPhase = HatchPhase.Wobble;
             _hatchTime = 0f;
             ShowHatchResult(false);
+            ShowHatchButtons(false);
         }
 
         /// <summary>연출 중과 결과에서 보이는 것이 갈린다. 빛이 덮고 있는 사이에 바꾼다.</summary>
@@ -2801,10 +2873,28 @@ namespace SnailPet.Ui
             _hatchRarityBadge.enabled = done && _hatchRarityIcon.sprite == null;
             _hatchRarityIcon.enabled = done && _hatchRarityIcon.sprite != null;
             _hatchRarityText.enabled = done && _hatchRarityIcon.sprite == null;
+        }
 
-            // 연출이 끝나기 전에는 확인도 X 도 안 눌린다 (목업의 「연출동안은 확인 못누름」).
-            if (_hatchOk != null) _hatchOk.interactable = done;
-            if (_popupClose != null) _popupClose.interactable = done;
+        /// <summary>
+        /// 확인·X 를 보이거나 감춘다.
+        ///
+        /// 연출 중에는 어차피 못 누르므로 아예 없는 편이 낫다 — 흐릿하게 놓여 있으면
+        /// 눌러도 안 되는 버튼을 보여 주는 셈이다. 연출이 끝나면 그때 나타난다.
+        /// 못 누르게 하는 것도 같이 걸어 둔다. 보이는 것과 눌리는 것이 어긋나면 안 된다.
+        /// </summary>
+        private void ShowHatchButtons(bool on)
+        {
+            if (_hatchOk != null)
+            {
+                _hatchOk.gameObject.SetActive(on);
+                _hatchOk.interactable = on;
+            }
+
+            if (_popupClose != null)
+            {
+                _popupClose.gameObject.SetActive(on);
+                _popupClose.interactable = on;
+            }
         }
 
         // ── 팝업 등장 연출 ──
@@ -2890,6 +2980,7 @@ namespace SnailPet.Ui
             {
                 SetLight(0f);
                 _hatchPhase = HatchPhase.Result;
+                ShowHatchButtons(true);      // 빛이 다 걷힌 뒤에 나타난다
             }
         }
 
@@ -2914,8 +3005,8 @@ namespace SnailPet.Ui
 
         /// <summary>
         /// 팝업을 닫을 때 부화 연출의 흔적을 지운다.
-        /// 특히 닫기 버튼은 연출 중에 꺼 두므로, 안 돌려놓으면 다음에 뜨는
-        /// 구매·이름 변경 팝업의 X 가 눌리지 않는다.
+        /// 특히 닫기 버튼은 연출 중에 <b>숨겨</b> 두므로, 안 돌려놓으면 다음에 뜨는
+        /// 구매·이름 변경 팝업에 X 가 아예 없다.
         /// </summary>
         private void ResetHatch()
         {
@@ -2924,7 +3015,12 @@ namespace SnailPet.Ui
 
             if (_hatchGroup != null) _hatchGroup.gameObject.SetActive(false);
             if (_hatchLightFill != null) SetLight(0f);
-            if (_popupClose != null) _popupClose.interactable = true;
+
+            if (_popupClose != null)
+            {
+                _popupClose.gameObject.SetActive(true);
+                _popupClose.interactable = true;
+            }
 
             if (_hatchEgg != null)
             {
