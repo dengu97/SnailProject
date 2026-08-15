@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using SnailPet.Data;
@@ -428,7 +429,10 @@ namespace SnailPet
 
                 Say($"      [UI] 이름 변경: {snail.Name ?? "(없음)"}");
             };
-            _ui.Detail   += () => Say("      [UI] 상세정보");
+            _ui.Detail      += OpenGuide;
+            _ui.GuidePicked += PickGuide;
+            _ui.GuideDoneConfirmed += TakeGuideReward;
+            _ui.RewardClosed += () => { RefreshGuides(); ShowNextGuideDone(); };
             _ui.Wardrobe += OpenWardrobe;
             _ui.ToggleEquip += EquipAccessory;
             _ui.FilterChanged += RefreshWardrobe;
@@ -470,6 +474,9 @@ namespace SnailPet
             _ui.PopupConfirmed += ConfirmPopup;
 
             SnailPortrait.ExcludeFrom(_cam);
+
+            // 이미 가지고 있던 개체도 도감을 채운다. 세이브를 읽은 직후 한 번 훑는다.
+            ScanGuides();
 
             // 세이브에서 읽은 설정을 UI 에 넣는다. 이 호출은 OptionsChanged 를 내지 않으므로
             // 넣자마자 다시 저장이 도는 일이 없다.
@@ -525,6 +532,200 @@ namespace SnailPet
             var size = SnailUi.PortraitSize;
             _portrait = new SnailPortrait(transform, _appearance, _bounds, size.x, size.y);
             _ui.SetPortrait(_portrait.Texture);
+        }
+
+        // ── 달팽이 도감 ──
+        //
+        // 채우는 것은 「가지게 되는 순간」이다. 부화한 뒤와 불러온 직후에 훑어서
+        // 조건에 맞는 개체가 있으면 그때의 모습을 도감에 적는다.
+
+        /// <summary>도감 상세에 비추는 그림. 고른 칸이 바뀔 때마다 다시 찍는다.</summary>
+        private SnailPortrait _guideView;
+
+        private void OpenGuide()
+        {
+            _ui.OpenGuide(true);
+            RefreshGuides();
+            PickGuide(0);
+
+            Say($"      [UI] 도감 — {_player.Guides.Count}/{GameData.SnailGuide.Length} 칸");
+        }
+
+        /// <summary>도감 목록을 지금 상태로 그린다.</summary>
+        private void RefreshGuides()
+        {
+            var rows = new (string, RarityType, bool)[GameData.SnailGuide.Length];
+            for (int i = 0; i < rows.Length; i++)
+            {
+                var row = GameData.SnailGuide[i];
+                rows[i] = (Loc.ById(row.NameId), row.RarityType, _player.FindGuide(row.Id) != null);
+            }
+            _ui.SetGuides(rows);
+        }
+
+        /// <summary>도감 칸을 골랐다. 채웠으면 그때의 모습을, 아니면 실루엣을 보여 준다.</summary>
+        private void PickGuide(int index)
+        {
+            if (index < 0 || index >= GameData.SnailGuide.Length) return;
+
+            var row = GameData.SnailGuide[index];
+            var entry = _player.FindGuide(row.Id);
+
+            _guideView?.Dispose();
+            _guideView = null;
+
+            Texture look = null;
+            if (entry != null && entry.Look.Count > 0)
+            {
+                // 채운 순간의 파츠로 다시 세운다. 그 개체를 팔았어도 그림은 남는다.
+                var appearance = new SnailAppearance();
+                appearance.Parts.AddRange(entry.Look);
+
+                var size = SnailUi.GuideImageSize;
+                _guideView = new SnailPortrait(transform, appearance, SnailMetrics.Measure(appearance),
+                                               size.x, size.y);
+                look = _guideView.Texture;
+            }
+
+            _ui.SetGuideDetail(Loc.ById(row.NameId), Loc.ById(row.InfoId), row.RarityType, look);
+            _ui.SetGuideRewards(RewardIcons(row));
+            _ui.SetGuideParts(GuideParts(row));
+        }
+
+        /// <summary>도감 보상을 (그림, 개수)로. 아이템 종류마다 아트가 있는 폴더가 다르다.</summary>
+        private static (Sprite, int)[] RewardIcons(SnailGuideRow row)
+        {
+            var list = GuideBook.RewardsOf(row);
+            var icons = new (Sprite, int)[list.Count];
+            for (int i = 0; i < icons.Length; i++)
+                icons[i] = (ItemSprite(list[i].itemId), list[i].count);
+
+            return icons;
+        }
+
+        /// <summary>
+        /// 아이템 그림. 음식·알·악세서리는 각자 폴더에 있고, 화폐 같은 것은 UI 아이콘을 쓴다.
+        /// </summary>
+        private static Sprite ItemSprite(int itemId)
+        {
+            if (GameData.FoodDataById.TryGetValue(itemId, out var food) && !string.IsNullOrEmpty(food.ResourceKey))
+                return SnailComposer.Load(SnailComposer.ResourceRoot + "/Food/" + food.ResourceKey);
+
+            if (GameData.EggDataById.TryGetValue(itemId, out var egg) && !string.IsNullOrEmpty(egg.ResourceKey))
+                return SnailComposer.Load(SnailComposer.ResourceRoot + "/Egg/" + egg.ResourceKey);
+
+            if (GameData.AccessoriesDataById.TryGetValue(itemId, out var acc) && !string.IsNullOrEmpty(acc.ResourceKey))
+                return SnailComposer.Load(SnailComposer.ResourceRoot + "/Accessories/" + acc.ResourceKey);
+
+            // 화폐. 아이템 표에는 그림이 없어 UI 아이콘을 빌려 쓴다.
+            if (GameData.TokenById.TryGetValue(itemId, out string token) && token == PlayerState.CoinToken)
+                return Resources.Load<Sprite>("Ui/Icon/icon_coin");
+
+            return null;
+        }
+
+        /// <summary>
+        /// 도감이 요구하는 파츠를 (그림, 등급, 이름)으로.
+        /// 채웠든 안 채웠든 그 칸의 정의는 같으므로 요구 조건을 그대로 보여 준다.
+        /// </summary>
+        private static (PartsType, RarityType, string)[] GuideParts(SnailGuideRow row)
+        {
+            var ids = new List<int>();
+            if (row.PartsId01 > 0) ids.Add(row.PartsId01);
+            if (row.PartsId02.HasValue && row.PartsId02.Value > 0) ids.Add(row.PartsId02.Value);
+            if (row.PartsId03.HasValue && row.PartsId03.Value > 0) ids.Add(row.PartsId03.Value);
+            if (row.PartsId04.HasValue && row.PartsId04.Value > 0) ids.Add(row.PartsId04.Value);
+
+            var parts = new (PartsType, RarityType, string)[ids.Count];
+            for (int i = 0; i < ids.Count; i++)
+            {
+                if (!GameData.PartsDataById.TryGetValue(ids[i], out var p))
+                {
+                    parts[i] = (PartsType.Body, RarityType.Common, "?");
+                    continue;
+                }
+
+                parts[i] = (p.PartsType, p.RarityType, Loc.ById(p.NameId));
+            }
+            return parts;
+        }
+
+        /// <summary>
+        /// 새로 채워진 도감이 있는지 본다. 부화·불러오기 뒤에 부른다.
+        /// 채워졌으면 그 사실만 알리고, 보상은 완성 팝업에서 받는다.
+        /// </summary>
+        private void ScanGuides()
+        {
+            var filled = GuideBook.Scan(_player);
+            if (filled.Count == 0) return;
+
+            foreach (var row in filled)
+            {
+                Say($"      [도감] 새로 채움: {Loc.ById(row.NameId)}");
+                _guideQueue.Enqueue(row.Id);
+            }
+
+            if (_ui != null && _ui.InGuide) RefreshGuides();
+            ShowNextGuideDone();
+        }
+
+        /// <summary>채운 것을 하나씩 알린다. 여러 칸이 한꺼번에 채워질 수 있어 줄을 세운다.</summary>
+        private readonly Queue<int> _guideQueue = new Queue<int>();
+
+        private SnailPortrait _doneView;
+
+        private void ShowNextGuideDone()
+        {
+            // 다른 팝업이 떠 있으면 기다린다. 덮어쓰면 하던 것이 사라진다.
+            if (_guideQueue.Count == 0 || _ui == null || _ui.PopupOpen) return;
+
+            int guideId = _guideQueue.Peek();
+            if (!GameData.SnailGuideById.TryGetValue(guideId, out var row)) { _guideQueue.Dequeue(); return; }
+
+            var entry = _player.FindGuide(guideId);
+            if (entry == null) { _guideQueue.Dequeue(); return; }
+
+            _doneView?.Dispose();
+            _doneView = null;
+
+            Texture look = null;
+            if (entry.Look.Count > 0)
+            {
+                var appearance = new SnailAppearance();
+                appearance.Parts.AddRange(entry.Look);
+
+                var size = SnailUi.HatchSnailSize;
+                _doneView = new SnailPortrait(transform, appearance, SnailMetrics.Measure(appearance),
+                                              size.x, size.y);
+                look = _doneView.Texture;
+            }
+
+            _ui.ShowGuideDone(Loc.ById(row.NameId), row.RarityType, look, RewardIcons(row));
+        }
+
+        /// <summary>완성 팝업에서 확인을 눌렀다. 여기서 보상을 준다.</summary>
+        private void TakeGuideReward()
+        {
+            if (_guideQueue.Count == 0) { _ui.HidePopup(); return; }
+
+            int guideId = _guideQueue.Dequeue();
+            if (!GameData.SnailGuideById.TryGetValue(guideId, out var row)) return;
+
+            var entry = _player.FindGuide(guideId);
+            var rewards = GuideBook.RewardsOf(row);
+
+            // 한 번 받은 것은 다시 안 준다. 세이브에 남으므로 다시 켜도 마찬가지다.
+            if (entry != null && !entry.RewardTaken)
+            {
+                foreach (var (itemId, count) in rewards) _player.Items.Add(itemId, count);
+                entry.RewardTaken = true;
+
+                Say($"      [도감] 보상 수령: {Loc.ById(row.NameId)} → 가방: {_player.Items}");
+            }
+
+            RefreshFoods();
+            _ui.SetCoin(_player.Coins);
+            _ui.ShowRewards(RewardIcons(row));
         }
 
         // ── 목록에서 고른 달팽이 보기 ──
@@ -1560,9 +1761,37 @@ namespace SnailPet
         // 열쇠를 둔다. 창이 포커스를 갖지 않아 Unity 의 Input 이 안 되므로 마우스와 같이
         // 전역 키 상태를 읽는다 — 다른 창을 쓰는 중에도 눌리니 흔치 않은 키를 골랐다.
 
-        private const int VK_F9 = 0x78, VK_F10 = 0x79;
+        private const int VK_F9 = 0x78, VK_F10 = 0x79, VK_F11 = 0x7A;
 
-        private bool _f9Was, _f10Was;
+        private bool _f9Was, _f10Was, _f11Was;
+
+        /// <summary>
+        /// 확인용. 아직 안 채운 첫 도감 칸을 지금 화면의 달팽이 모습으로 채운다.
+        /// 조건 판정을 건너뛰는 것이므로 확인이 끝나면 F11 과 함께 지울 것.
+        /// </summary>
+        private void FillGuideCheat()
+        {
+            foreach (var row in GameData.SnailGuide)
+            {
+                if (row == null || _player.FindGuide(row.Id) != null) continue;
+
+                var snail = _player.Active;
+                if (snail == null) return;
+
+                var entry = new GuideEntry { GuideId = row.Id };
+                entry.Look.AddRange(snail.Appearance.Parts);
+                _player.Guides.Add(entry);
+
+                Say($"      [치트] 도감 채움 (F11): {Loc.ById(row.NameId)}");
+
+                _guideQueue.Enqueue(row.Id);
+                if (_ui.InGuide) RefreshGuides();
+                ShowNextGuideDone();
+                return;
+            }
+
+            Say("      [치트] 채울 도감 칸이 없습니다 (F11)");
+        }
 
         private void StepCheats()
         {
@@ -1584,8 +1813,14 @@ namespace SnailPet
                 Say($"      [치트] 포만도 0 (F10) → {_growth}");
             }
 
+            // 도감은 조건에 맞는 개체가 부화해야 채워져 확인이 오래 걸린다.
+            // 첫 빈 칸을 지금 달팽이 모습으로 채워 완성 팝업까지 보게 한다.
+            bool f11 = TransparentWindow.IsKeyDown(VK_F11);
+            if (f11 && !_f11Was) FillGuideCheat();
+
             _f9Was = f9;
             _f10Was = f10;
+            _f11Was = f11;
 #endif
         }
 
@@ -1692,6 +1927,7 @@ namespace SnailPet
             var born = _player.AddSnail(SnailHatchery.Hatch(egg.Id, new System.Random()), egg.RarityType);
             RefreshEggs();
             RefreshSnail(reshoot: false);   // 화면에 나와 있는 개체는 그대로다
+            ScanGuides();                  // 새로 얻은 개체가 도감을 채웠을 수 있다
 
             // 갓 태어난 개체를 한 장 찍어 팝업에 넘긴다. 경계는 그 개체로 다시 재야 한다 —
             // 껍질이 다르면 실루엣도 달라 화면에 나와 있는 개체의 값으로는 어긋난다.

@@ -117,6 +117,16 @@ namespace SnailPet.Snail
         /// <summary>설정 화면의 값. 개체가 아니라 유저의 것이라 달팽이를 바꿔도 그대로다.</summary>
         public PlayerOptions Options = PlayerOptions.Default;
 
+        /// <summary>채운 도감. 개체를 팔아도 남으므로 달팽이 목록과 따로 든다.</summary>
+        public readonly List<GuideEntry> Guides = new List<GuideEntry>();
+
+        public GuideEntry FindGuide(int guideId)
+        {
+            foreach (var g in Guides)
+                if (g.GuideId == guideId) return g;
+            return null;
+        }
+
         /// <summary>화폐 아이템의 토큰. 말풍선 아트인 `[코인]` 과는 다른 행이다.</summary>
         public const string CoinToken = "[팽이코인]";
 

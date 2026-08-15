@@ -53,6 +53,10 @@ namespace SnailPet.Ui
             public const string Hatched = "[부화문구]";   // "알이 부화했습니다!"
             public const string Confirm = "[확인]";
 
+            // 도감 완성·보상 수령 팝업
+            public const string GuideDone = "[도감완성]";
+            public const string RewardGot = "[보상수령]";
+
             // 설정 화면
             public const string SnailSetting = "[달팽이설정]";
             public const string Setting      = "[설정]";
@@ -69,6 +73,9 @@ namespace SnailPet.Ui
             public const string Quit         = "[종료]";
 
             public const string Wardrobe = "[옷장]";
+
+            /// <summary>도감 목록의 제목. 시트에 넣기 전에는 화면에 토큰이 그대로 나온다.</summary>
+            public const string Guide = "[달팽이도감]";
             public const string Traits   = "[보유특징]";
             public const string Worn     = "[장착중]";
 
@@ -201,11 +208,19 @@ namespace SnailPet.Ui
             // 없는 것만 런타임에 짓는다. 나중에 다시 구우면 이 조건이 저절로 거짓이 된다.
             if (_hatchGroup == null) BuildHatchGroup();
 
+            // 도감 완성·보상 묶음도 팝업 판의 자식이라 프리팹에는 없다.
+            if (_doneGroup == null) BuildGuideDoneGroup();
+            if (_rewardGroup == null) BuildRewardGroup();
+
             // 설정 화면은 상세보기와 같은 목록 패널에 붙는다. 그 패널은 필드가 아니라
             // 지을 때의 지역 변수라, 이미 거기 붙어 있는 상세보기를 통해 찾는다.
             if (_settingsRoot == null && _geneRoot != null)
                 BuildSettingsList((RectTransform)_geneRoot.parent);
             if (_settingsPanel == null) BuildSettingsPanel();
+
+            // 도감도 프리팹에 없다. 상세보기와 같은 목록 패널에 붙인다.
+            if (_guideRoot == null && _geneRoot != null) BuildGuideList((RectTransform)_geneRoot.parent);
+            if (_guidePanel == null) BuildGuidePanel();
 
             // 「부화시킬 알이 없습니다」는 프리팹에 부화기 패널에 구워져 있다. 비는 쪽은
             // 왼쪽 목록이므로 그리로 옮긴다. 다시 구우면 처음부터 그 자리에 지어진다.
@@ -291,6 +306,7 @@ namespace SnailPet.Ui
             // 상태라(0.7배) 좌표만 맞추면 크기가 어긋난다. 나중에 메인을 다시 조정해도 따라온다.
             MatchToPortrait(_wardrobePreview);
             MatchToPortrait(_genePreview);
+            MatchToPortrait(_guideImage);   // 실루엣은 목업 크기를 그대로 둔다
 
             AttachPressEffects();
             PaintButtonLabels();
@@ -317,13 +333,15 @@ namespace SnailPet.Ui
             // (편집하려고 켜 보고 그대로 저장하면 그렇게 된다. 실제로 유전정보가 그 상태였고,
             //  목록 행 사이 틈으로 그 줄들이 비쳐 보였다.)
             // 시작은 언제나 달팽이 목록이므로 여기서 확실히 내린다.
-            _inGene = _inWardrobe = _inSettings = false;
+            _inGene = _inWardrobe = _inSettings = _inGuide = false;
             if (_geneRoot != null)      _geneRoot.gameObject.SetActive(false);
             if (_genePanel != null)     _genePanel.gameObject.SetActive(false);
             if (_wardrobeRoot != null)  _wardrobeRoot.gameObject.SetActive(false);
             if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
             if (_settingsRoot != null)  _settingsRoot.gameObject.SetActive(false);
             if (_settingsPanel != null) _settingsPanel.gameObject.SetActive(false);
+            if (_guideRoot != null)     _guideRoot.gameObject.SetActive(false);
+            if (_guidePanel != null)    _guidePanel.gameObject.SetActive(false);
 
             // 프리팹에는 편집용으로 펼친 채 구워져 있다. 실행은 접힌 상태로 시작한다.
             SetMaximized(false);
@@ -457,7 +475,7 @@ namespace SnailPet.Ui
         ///
         /// 옷장·상세보기 패널은 메인 상세 패널과 원점·크기가 같으므로 값을 그대로 옮기면 된다.
         /// </summary>
-        private void MatchToPortrait(RawImage view)
+        private void MatchToPortrait(Graphic view)
         {
             if (view == null || _portrait == null) return;
 
@@ -575,6 +593,9 @@ namespace SnailPet.Ui
                 Hook(_rows[i]?.Button, () => PickRow(k));      // 줄을 누르면 정보만 본다
             }
 
+            for (int i = 0; i < Count(_guideRows); i++) { int k = i; Hook(_guideRows[i]?.Button, () => PickGuide(k)); }
+            Hook(_guideToggle, ToggleGuideDetail);
+
             for (int i = 0; i < Count(_foodSlots); i++) { int k = i; Hook(_foodSlots[i]?.Button, () => SelectFood(k)); }
             for (int i = 0; i < Count(_eggSlots); i++)  { int k = i; Hook(_eggSlots[i]?.Button,  () => SelectEgg(k)); }
             for (int i = 0; i < Count(_shopSlots); i++) { int k = i; Hook(_shopSlots[i]?.Button, () => SelectShopSlot(k)); }
@@ -619,6 +640,10 @@ namespace SnailPet.Ui
 
             // 부화 팝업의 「확인」. X 와 하는 일이 같다 — 닫고 목록으로 돌아간다.
             Hook(_hatchOk,    HidePopup);
+
+            // 도감 완성 → 확인 → 보상 수령 → 확인. 보상은 받는 쪽이 준다.
+            Hook(_doneOk,   () => GuideDoneConfirmed?.Invoke());
+            Hook(_rewardOk, () => { HidePopup(); RewardClosed?.Invoke(); });
 
             // 설정. 언어는 지금 한글뿐이라 일부러 아무 일도 하지 않는다.
             Hook(_noEggsBtn,    () => { _options.NoEggs       = !_options.NoEggs;       ChangeOptions(); });
@@ -733,6 +758,7 @@ namespace SnailPet.Ui
             BuildShopPanels();
             BuildWardrobePanel();
             BuildGenePanel();
+            BuildGuidePanel();
             BuildSettingsPanel();
             BuildPopup();
 
@@ -893,6 +919,7 @@ namespace SnailPet.Ui
             BuildShopCategories(panel);
             BuildWardrobeList(panel);
             BuildGeneList(panel);
+            BuildGuideList(panel);
             BuildSettingsList(panel);
             BuildScrollView(panel, "SnailList", Max.RowView, out _rowGridRoot, out _rowContent);
 
@@ -1515,17 +1542,20 @@ namespace SnailPet.Ui
             bool moved = _tab != was;
 
             // 탭을 누르면 옷장·상세보기·설정에서 빠져나온다. 셋 다 왼쪽 패널을 통째로 쓰기 때문이다.
-            if (_inWardrobe || _inGene || _inSettings)
+            if (_inWardrobe || _inGene || _inSettings || _inGuide)
             {
                 _inWardrobe = false;
                 _inGene = false;
                 _inSettings = false;
+                _inGuide = false;
                 if (_wardrobeRoot != null)  _wardrobeRoot.gameObject.SetActive(false);
                 if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
                 if (_geneRoot != null)      _geneRoot.gameObject.SetActive(false);
                 if (_genePanel != null)     _genePanel.gameObject.SetActive(false);
                 if (_settingsRoot != null)  _settingsRoot.gameObject.SetActive(false);
                 if (_settingsPanel != null) _settingsPanel.gameObject.SetActive(false);
+                if (_guideRoot != null)     _guideRoot.gameObject.SetActive(false);
+                if (_guidePanel != null)    _guidePanel.gameObject.SetActive(false);
             }
 
             // 탭이 왼쪽 목록과 오른쪽 상세를 함께 바꾼다. 둘은 항상 같은 것을 보여 줘야 한다.
@@ -1816,7 +1846,7 @@ namespace SnailPet.Ui
         /// </summary>
         private void RefreshBackButton()
         {
-            bool back = (_tab == 3 && _shopCat >= 0) || _inWardrobe || _inGene;
+            bool back = (_tab == 3 && _shopCat >= 0) || _inWardrobe || _inGene || _inGuide;
 
             if (_shopBack != null) _shopBack.gameObject.SetActive(back);
             if (_closeBtn != null) _closeBtn.gameObject.SetActive(!back);
@@ -1830,6 +1860,7 @@ namespace SnailPet.Ui
         {
             if (_inWardrobe) { OpenWardrobe(false); return; }
             if (_inGene)     { OpenGene(false); return; }
+            if (_inGuide)    { OpenGuide(false); return; }
 
             LeaveShopCategory();
         }
@@ -2122,6 +2153,9 @@ namespace SnailPet.Ui
                 if (_genePanel != null) _genePanel.gameObject.SetActive(false);
                 if (_settingsRoot != null)  _settingsRoot.gameObject.SetActive(false);
                 if (_settingsPanel != null) _settingsPanel.gameObject.SetActive(false);
+                _inGuide = false;
+                if (_guideRoot != null)  _guideRoot.gameObject.SetActive(false);
+                if (_guidePanel != null) _guidePanel.gameObject.SetActive(false);
                 SetMaximized(true);
             }
             ApplyWardrobe();
@@ -2421,10 +2455,13 @@ namespace SnailPet.Ui
             {
                 _inWardrobe = false;
                 _inSettings = false;
+                _inGuide = false;
                 if (_wardrobeRoot != null)  _wardrobeRoot.gameObject.SetActive(false);
                 if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
                 if (_settingsRoot != null)  _settingsRoot.gameObject.SetActive(false);
                 if (_settingsPanel != null) _settingsPanel.gameObject.SetActive(false);
+                if (_guideRoot != null)     _guideRoot.gameObject.SetActive(false);
+                if (_guidePanel != null)    _guidePanel.gameObject.SetActive(false);
                 SetMaximized(true);
             }
             ApplyGene();
@@ -2533,6 +2570,350 @@ namespace SnailPet.Ui
             SnailPet.Data.PartsType.Shell,  SnailPet.Data.PartsType.Body,
             SnailPet.Data.PartsType.Feeler, SnailPet.Data.PartsType.Eyes,
         };
+
+        // ── 달팽이 도감 ──
+        //
+        // 옷장·상세보기와 같은 모드다. 하단 액션의 도감 버튼으로 들어가고 뒤로가기로 나온다.
+        // 채운 칸은 그때의 모습을 비추고, 안 채운 칸은 공용 실루엣(snail_shape)이 나온다.
+
+        [Serializable]
+        public sealed class GuideRow
+        {
+            public RectTransform Root;
+            public Text Name;
+            public Image RarityBadge, RarityIcon, Done;
+            public Text Rarity;
+            public Button Button;
+        }
+
+        [SerializeField] private RectTransform _guideRoot, _guidePanel, _guideBasic, _guideDetail;
+        [SerializeField] private GuideRow[] _guideRows, _guideParts;
+        [SerializeField] private GridSlot[] _guideRewards;
+        [SerializeField] private Button _guideToggle;
+
+        /// <summary>파츠 목록을 보고 있는가. 전환 버튼이 오간다.</summary>
+        private bool _guideParted;
+        [SerializeField] private Text _guideTitle, _guideInfo, _guideRarityText;
+        [SerializeField] private Image _guideRarityBadge, _guideRarityIcon, _guideShape;
+        [SerializeField] private RawImage _guideImage;
+
+        private bool _inGuide;
+        public bool InGuide => _inGuide;
+
+        private int _guidePick;
+
+        /// <summary>도감 칸을 골랐다. 몇 번째 줄인지를 준다.</summary>
+        public event Action<int> GuidePicked;
+
+        private void BuildGuideList(RectTransform panel)
+        {
+            _guideRoot = NewRect("Guide", panel);
+            Place(_guideRoot, new RectInt(0, 0, UiTheme.PanelW, UiTheme.PanelH));
+            _guideRoot.gameObject.SetActive(false);
+
+            _guideRows = new GuideRow[UiTheme.Guide.RowPool];
+            for (int i = 0; i < _guideRows.Length; i++)
+            {
+                var g = UiTheme.Guide.Row;
+                var at = new RectInt(g.x, g.y + i * UiTheme.Guide.RowStep, g.width, g.height);
+
+                var root = NewRect("Guide" + i, _guideRoot);
+                Place(root, at);
+
+                var bg = Backdrop(root.gameObject, UiSprites.Shape.Slot, UiTheme.Slot);
+
+                var row = new GuideRow { Root = root };
+                row.Name = Label(root, UiTheme.Guide.RowName, "", 10, UiTheme.Ink);
+                row.Name.alignment = TextAnchor.MiddleLeft;
+
+                row.RarityBadge = Box(root, UiTheme.Guide.RowRarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
+                row.Rarity = Label(root, UiTheme.Guide.RowRarity, "", 8, UiTheme.OnBadge);
+                Shrink(row.Rarity);
+                row.RarityIcon = Icon(root, UiTheme.Guide.RowRarity, null, Color.white, "RarityIcon");
+                row.RarityIcon.raycastTarget = false;
+                BakeRarity(row.RarityIcon, row.RarityBadge, row.Rarity);
+
+                // 채운 칸에 찍는 도장. 아트가 아직 없어 칸 도형으로 자리만 잡아 둔다 —
+                // Ui/Icon 에 icon_complete 를 넣으면 그림으로 바뀐다.
+                row.Done = Icon(root, UiTheme.Guide.RowDone, "icon_complete", Color.white, "Done");
+                row.Done.raycastTarget = false;
+                if (row.Done.sprite == null)
+                {
+                    row.Done.sprite = UiSprites.Of(UiSprites.Shape.Badge);
+                    row.Done.color = UiTheme.Selected;
+                    row.Done.enabled = true;
+                }
+
+                row.Button = root.gameObject.AddComponent<Button>();
+                row.Button.targetGraphic = bg;
+
+                root.gameObject.SetActive(false);
+                _guideRows[i] = row;
+            }
+        }
+
+        private void BuildGuidePanel()
+        {
+            _guidePanel = Panel(_detailRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
+            _guidePanel.gameObject.SetActive(false);
+
+            Box(_guidePanel, UiTheme.Guide.Title, UiTheme.Slot, UiSprites.Shape.Name, "TitleBox");
+            _guideTitle = Label(_guidePanel, UiTheme.Guide.Title, "", 11, UiTheme.Ink);
+
+            // 안 채운 칸에 나오는 공용 실루엣. 채웠으면 그 위에 그 달팽이를 비춘다.
+            _guideShape = Icon(_guidePanel, UiTheme.Guide.Image, "snail_shape", Color.white, "Shape");
+            _guideShape.raycastTarget = false;
+
+            // 채운 달팽이는 메인 상세의 초상과 같은 자리·크기다. 실루엣만 목업 크기를 쓴다.
+            var view = NewRect("Snail", _guidePanel);
+            Place(view, At.Portrait);
+            _guideImage = view.gameObject.AddComponent<RawImage>();
+            _guideImage.raycastTarget = false;
+            _guideImage.enabled = false;
+
+            // 설명과 보상은 한 묶음, 파츠 목록은 다른 묶음. 같은 자리를 나눠 쓰고 전환 버튼으로 바꾼다.
+            _guideBasic = Fill(NewRect("Basic", _guidePanel));
+            _guideDetail = Fill(NewRect("Detail", _guidePanel));
+
+            _guideInfo = Label(_guideBasic, UiTheme.Guide.Info, "", 8, UiTheme.Ink);
+            _guideInfo.horizontalOverflow = HorizontalWrapMode.Wrap;
+
+            _guideRewards = new GridSlot[UiTheme.Guide.RewardCount];
+            for (int i = 0; i < _guideRewards.Length; i++)
+            {
+                var r = UiTheme.Guide.Reward;
+                var at = new RectInt(r.x + i * UiTheme.Guide.RewardStep, r.y, r.width, r.height);
+
+                var root = NewRect("Reward" + i, _guideBasic);
+                Place(root, at);
+                Backdrop(root.gameObject, UiSprites.Shape.Slot2, UiTheme.RowSlot);
+
+                var slot = new GridSlot { Root = root };
+                slot.Icon = Icon(root, new RectInt(2, 2, at.width - 4, at.height - 4), null, Color.white, "Icon");
+                slot.Icon.raycastTarget = false;
+
+                slot.CountBg = Icon(root, Max.FoodCountBadge, "icon_circle", Color.white, "CountBg");
+                slot.CountBg.raycastTarget = false;
+                slot.Count = Label(root, Max.FoodCountBadge, "", 9, UiTheme.OnBadge);
+
+                root.gameObject.SetActive(false);
+                _guideRewards[i] = slot;
+            }
+
+            _guideParts = new GuideRow[UiTheme.Guide.PartCount];
+            for (int i = 0; i < _guideParts.Length; i++)
+            {
+                int dy = i * UiTheme.Guide.PartStep;
+                var row = new GuideRow();
+
+                Box(_guideDetail, Offset(UiTheme.Guide.PartRow, dy), UiTheme.Slot, UiSprites.Shape.Slot, "PartBar" + i);
+
+                row.Done = Icon(_guideDetail, Offset(UiTheme.Guide.PartIcon, dy), null, Color.white, "PartIcon" + i);
+                row.Done.raycastTarget = false;
+
+                var rarityAt = Offset(UiTheme.Guide.PartRarity, dy);
+                row.RarityBadge = Box(_guideDetail, rarityAt, UiTheme.BadgeDark, UiSprites.Shape.Badge, "PartRarity" + i);
+                row.Rarity = Label(_guideDetail, rarityAt, "", 7, UiTheme.OnBadge);
+                Shrink(row.Rarity);
+                row.RarityIcon = Icon(_guideDetail, rarityAt, null, Color.white, "PartRarityIcon" + i);
+                row.RarityIcon.raycastTarget = false;
+                BakeRarity(row.RarityIcon, row.RarityBadge, row.Rarity);
+
+                row.Name = Label(_guideDetail, Offset(UiTheme.Guide.PartName, dy), "", 8, UiTheme.Ink);
+                row.Name.alignment = TextAnchor.MiddleLeft;
+
+                _guideParts[i] = row;
+            }
+
+            // 전환 버튼. 기본에서는 돋보기, 파츠 목록에서는 도감 그림이 된다.
+            _guideToggle = IconButton(_guidePanel, UiTheme.Guide.Toggle, "icon_detail", "GuideToggle");
+
+            _guideRarityBadge = Box(_guidePanel, UiTheme.Guide.Rarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
+            _guideRarityText  = Label(_guidePanel, UiTheme.Guide.Rarity, "", 9, UiTheme.OnBadge);
+            Shrink(_guideRarityText);
+            _guideRarityIcon = Icon(_guidePanel, UiTheme.Guide.Rarity, null, Color.white, "RarityIcon");
+            _guideRarityIcon.raycastTarget = false;
+            BakeRarity(_guideRarityIcon, _guideRarityBadge, _guideRarityText);
+        }
+
+        /// <summary>도감에 들어가거나 나온다.</summary>
+        public void OpenGuide(bool on)
+        {
+            _inGuide = on;
+            if (on)
+            {
+                _inWardrobe = false;
+                _inGene = false;
+                _inSettings = false;
+                if (_wardrobeRoot != null)  _wardrobeRoot.gameObject.SetActive(false);
+                if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
+                if (_geneRoot != null)      _geneRoot.gameObject.SetActive(false);
+                if (_genePanel != null)     _genePanel.gameObject.SetActive(false);
+                if (_settingsRoot != null)  _settingsRoot.gameObject.SetActive(false);
+                if (_settingsPanel != null) _settingsPanel.gameObject.SetActive(false);
+                SetMaximized(true);
+            }
+            ApplyGuide();
+        }
+
+        private void ApplyGuide()
+        {
+            if (_guideRoot == null) return;
+
+            _guideRoot.gameObject.SetActive(_inGuide);
+            _guidePanel.gameObject.SetActive(_inGuide);
+
+            if (!_inGuide) { SetTab(_tab); return; }
+
+            if (_rowGridRoot != null)   _rowGridRoot.gameObject.SetActive(false);
+            if (_foodGridRoot != null)  _foodGridRoot.gameObject.SetActive(false);
+            if (_eggGridRoot != null)   _eggGridRoot.gameObject.SetActive(false);
+            if (_shopCatRoot != null)   _shopCatRoot.gameObject.SetActive(false);
+            if (_shopGridRoot != null)  _shopGridRoot.gameObject.SetActive(false);
+            if (_panel != null)         _panel.gameObject.SetActive(false);
+            if (_foodPanel != null)     _foodPanel.gameObject.SetActive(false);
+            if (_eggPanel != null)      _eggPanel.gameObject.SetActive(false);
+            if (_shopPanel != null)     _shopPanel.gameObject.SetActive(false);
+            if (_shopItemPanel != null) _shopItemPanel.gameObject.SetActive(false);
+
+            _listTitle.text = SnailPet.Data.Loc.Text(Keys.Guide);
+            RefreshClose();
+            RefreshBackButton();
+            ApplyGuideDetail();
+        }
+
+        /// <summary>
+        /// 도감 목록을 채운다. 줄마다 (이름, 등급, 채웠는지).
+        /// 번호는 목업대로 「1. 이름」 꼴로 앞에 붙인다.
+        /// </summary>
+        public void SetGuides((string name, SnailPet.Data.RarityType rarity, bool done)[] rows)
+        {
+            int count = rows?.Length ?? 0;
+
+            for (int i = 0; i < Count(_guideRows); i++)
+            {
+                bool has = i < count;
+                _guideRows[i].Root.gameObject.SetActive(has);
+                if (!has) continue;
+
+                var r = rows[i];
+                // 이름에 번호가 이미 들어 있다(「1. 아이스크림 달팽이」). 앞에 또 붙이지 않는다.
+                _guideRows[i].Name.text = r.name;
+                ApplyRarity(_guideRows[i].RarityIcon, _guideRows[i].RarityBadge, _guideRows[i].Rarity, r.rarity);
+                if (_guideRows[i].Done != null) _guideRows[i].Done.enabled = r.done;
+            }
+
+            if (_guidePick >= count) _guidePick = 0;
+        }
+
+        /// <summary>
+        /// 고른 칸의 상세를 채운다. <paramref name="look"/> 이 null 이면 아직 안 채운 칸이라
+        /// 공용 실루엣이 나온다.
+        /// </summary>
+        public void SetGuideDetail(string name, string info, SnailPet.Data.RarityType rarity, Texture look)
+        {
+            _guideTitle.text = name;
+            _guideInfo.text = info;
+            ApplyRarity(_guideRarityIcon, _guideRarityBadge, _guideRarityText, rarity);
+
+            _guideImage.texture = look;
+            _guideImage.enabled = look != null;
+            if (_guideShape != null) _guideShape.enabled = look == null && _guideShape.sprite != null;
+        }
+
+        /// <summary>같은 모양을 y 만 내려 다시 쓴다. 줄이 여러 개인 곳에서.</summary>
+        private static RectInt Offset(RectInt at, int dy) =>
+            new RectInt(at.x, at.y + dy, at.width, at.height);
+
+        /// <summary>
+        /// 고른 칸의 파츠 목록. (그림, 등급, 이름) 순이며 비어 있는 칸은 감춘다.
+        /// 도감이 요구하는 파츠를 적는다 — 채웠든 안 채웠든 그 칸의 정의는 같다.
+        /// </summary>
+        public void SetGuideParts((SnailPet.Data.PartsType type, SnailPet.Data.RarityType rarity, string name)[] parts)
+        {
+            int count = parts?.Length ?? 0;
+
+            for (int i = 0; i < Count(_guideParts); i++)
+            {
+                var row = _guideParts[i];
+                bool has = i < count;
+
+                if (row.Name != null) row.Name.text = has ? parts[i].name : "";
+
+                // 부위 아이콘은 상세보기(유전정보)와 같은 길을 쓴다 — EnumData 의 아이콘 키다.
+                ApplyPartIcon(row.Done, has ? parts[i].type : (SnailPet.Data.PartsType?)null);
+
+                if (has) ApplyRarity(row.RarityIcon, row.RarityBadge, row.Rarity, parts[i].rarity);
+                else
+                {
+                    if (row.RarityIcon != null)  row.RarityIcon.enabled = false;
+                    if (row.RarityBadge != null) row.RarityBadge.enabled = false;
+                    if (row.Rarity != null)      row.Rarity.text = "";
+                }
+            }
+        }
+
+        /// <summary>고른 칸의 보상. 비어 있는 칸은 감추고, 남은 것을 가운데로 모은다.</summary>
+        public void SetGuideRewards((Sprite icon, int count)[] rewards)
+        {
+            FillRewardSlots(_guideRewards, rewards, UiTheme.PanelW, UiTheme.Guide.Reward.y);
+        }
+
+        /// <summary>
+        /// 보상 칸을 채우고 개수에 맞춰 가운데로 모은다.
+        ///
+        /// 한 개만 주는 칸이 왼쪽에 치우쳐 있으면 빈자리가 커 보인다. 목업도 개수마다
+        /// 가운데에 모여 있다.
+        /// </summary>
+        private void FillRewardSlots(GridSlot[] slots, (Sprite icon, int count)[] rewards, int areaWidth, int y)
+        {
+            int count = Mathf.Min(rewards?.Length ?? 0, Count(slots));
+
+            var one = UiTheme.Guide.Reward;
+            int step = UiTheme.Guide.RewardStep;
+            int total = count > 0 ? (count - 1) * step + one.width : 0;
+            int left = (areaWidth - total) / 2;
+
+            for (int i = 0; i < Count(slots); i++)
+            {
+                bool has = i < count;
+                slots[i].Root.gameObject.SetActive(has);
+                if (!has) continue;
+
+                Place(slots[i].Root, new RectInt(left + i * step, y, one.width, one.height));
+
+                slots[i].Icon.sprite = rewards[i].icon;
+                slots[i].Icon.enabled = rewards[i].icon != null;
+                SetSlotCount(slots[i], rewards[i].count > 1 ? rewards[i].count.ToString() : "");
+            }
+        }
+
+        /// <summary>설명·보상과 파츠 목록을 오간다. 버튼 그림도 같이 바뀐다.</summary>
+        private void ToggleGuideDetail()
+        {
+            _guideParted = !_guideParted;
+            ApplyGuideDetail();
+        }
+
+        private void ApplyGuideDetail()
+        {
+            if (_guideBasic != null)  _guideBasic.gameObject.SetActive(!_guideParted);
+            if (_guideDetail != null) _guideDetail.gameObject.SetActive(_guideParted);
+
+            // 지금 무엇을 보고 있는지가 아니라 「누르면 어디로 가는지」를 그린다
+            SetGlyph(_guideToggle, _guideParted ? "icon_book" : "icon_detail");
+        }
+
+        /// <summary>도감 그림을 찍을 크기.</summary>
+        public static Vector2Int GuideImageSize => PortraitSize;
+
+        private void PickGuide(int index)
+        {
+            if (index < 0 || index >= Count(_guideRows)) return;
+
+            _guidePick = index;
+            GuidePicked?.Invoke(index);
+        }
 
         // ── 설정 화면 ──
         //
@@ -2657,10 +3038,13 @@ namespace SnailPet.Ui
                 // 옷장·상세보기와 같은 자리를 쓰므로 하나만 떠 있어야 한다.
                 _inWardrobe = false;
                 _inGene = false;
+                _inGuide = false;
                 if (_wardrobeRoot != null)  _wardrobeRoot.gameObject.SetActive(false);
                 if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
                 if (_geneRoot != null)      _geneRoot.gameObject.SetActive(false);
                 if (_genePanel != null)     _genePanel.gameObject.SetActive(false);
+                if (_guideRoot != null)     _guideRoot.gameObject.SetActive(false);
+                if (_guidePanel != null)    _guidePanel.gameObject.SetActive(false);
                 SetMaximized(true);
             }
             ApplySettings();
@@ -2749,7 +3133,7 @@ namespace SnailPet.Ui
         /// 달팽이 정보 화면에서 들어가 좌우 패널을 통째로 쓰는 화면들. X 가 여기서는
         /// 접는 버튼이 아니라 되돌아가는 버튼이 된다.
         /// </summary>
-        private bool InOverlay => _inSettings || _inWardrobe || _inGene;
+        private bool InOverlay => _inSettings || _inWardrobe || _inGene || _inGuide;
 
         /// <summary>
         /// X 를 잠글지 정한다. 「항상 최대화」가 막는 것은 <b>접는 동작</b>뿐이고,
@@ -2886,6 +3270,8 @@ namespace SnailPet.Ui
 
             BuildRenameGroup();
             BuildHatchGroup();
+            BuildGuideDoneGroup();
+            BuildRewardGroup();
         }
 
         /// <summary>부모를 가득 채우게 편다.</summary>
@@ -3039,6 +3425,120 @@ namespace SnailPet.Ui
             _hatchLightFill = glow.gameObject.AddComponent<Image>();
             _hatchLightFill.color = new Color(1f, 1f, 1f, 0f);
             _hatchLightFill.raycastTarget = false;
+        }
+
+        // ── 도감 완성·보상 팝업 ──
+        //
+        // 도감이 채워지면 완성 팝업이 뜨고, 확인을 누르면 보상을 주면서 수령 팝업으로 넘어간다.
+        // 둘 다 구매·부화 팝업과 같은 판을 쓰고 가운데만 갈아 끼운다. 완성 쪽만 판이 조금 크다.
+
+        [SerializeField] private RectTransform _doneGroup, _rewardGroup;
+        [SerializeField] private RawImage _doneImage;
+        [SerializeField] private Image _doneRarityBadge, _doneRarityIcon;
+        [SerializeField] private Text _doneRarityText, _doneName;
+        [SerializeField] private Button _doneOk, _rewardOk;
+        [SerializeField] private GridSlot[] _rewardSlots;
+
+        /// <summary>완성 팝업에서 「확인」을 눌렀다. 보상은 받는 쪽이 준다.</summary>
+        public event Action GuideDoneConfirmed;
+
+        /// <summary>보상 수령 팝업을 닫았다.</summary>
+        public event Action RewardClosed;
+
+        private void BuildGuideDoneGroup()
+        {
+            _doneGroup = Fill(NewRect("GuideDoneGroup", _popup));
+            _doneGroup.gameObject.SetActive(false);
+
+            LocLabel(_doneGroup, Pop.HatchTitle, Keys.GuideDone, 12, UiTheme.Ink);
+
+            var view = NewRect("Snail", _doneGroup);
+            Place(view, Pop.HatchSnail);
+            _doneImage = view.gameObject.AddComponent<RawImage>();
+            _doneImage.raycastTarget = false;
+
+            _doneRarityBadge = Box(_doneGroup, Pop.HatchRarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "RarityBadge");
+            _doneRarityText  = Label(_doneGroup, Pop.HatchRarity, "", 8, UiTheme.OnBadge);
+            Shrink(_doneRarityText);
+            _doneRarityIcon = Icon(_doneGroup, Pop.HatchRarity, null, Color.white, "RarityIcon");
+            _doneRarityIcon.raycastTarget = false;
+            BakeRarity(_doneRarityIcon, _doneRarityBadge, _doneRarityText);
+
+            Box(_doneGroup, Pop.DoneName, UiTheme.Slot, UiSprites.Shape.Name, "NameBox");
+            _doneName = Label(_doneGroup, Pop.DoneName, "", 11, UiTheme.Ink);
+
+            _doneOk = TextButton(_doneGroup, Pop.DoneOk, Keys.Confirm, "DoneOk");
+        }
+
+        private void BuildRewardGroup()
+        {
+            _rewardGroup = Fill(NewRect("RewardGroup", _popup));
+            _rewardGroup.gameObject.SetActive(false);
+
+            LocLabel(_rewardGroup, Pop.HatchTitle, Keys.RewardGot, 12, UiTheme.Ink);
+
+            _rewardSlots = new GridSlot[UiTheme.Guide.RewardCount];
+            for (int i = 0; i < _rewardSlots.Length; i++)
+            {
+                var root = NewRect("Reward" + i, _rewardGroup);
+                Place(root, Pop.RewardSlot);
+                Backdrop(root.gameObject, UiSprites.Shape.Slot2, UiTheme.RowSlot);
+
+                var slot = new GridSlot { Root = root };
+                slot.Icon = Icon(root, new RectInt(2, 2, Pop.RewardSlot.width - 4, Pop.RewardSlot.height - 4),
+                                 null, Color.white, "Icon");
+                slot.Icon.raycastTarget = false;
+
+                slot.CountBg = Icon(root, Max.FoodCountBadge, "icon_circle", Color.white, "CountBg");
+                slot.CountBg.raycastTarget = false;
+                slot.Count = Label(root, Max.FoodCountBadge, "", 9, UiTheme.OnBadge);
+
+                root.gameObject.SetActive(false);
+                _rewardSlots[i] = slot;
+            }
+
+            _rewardOk = TextButton(_rewardGroup, Pop.HatchOk, Keys.Confirm, "RewardOk");
+        }
+
+        /// <summary>도감을 채웠다고 알린다. 확인을 누르면 <see cref="GuideDoneConfirmed"/> 가 나간다.</summary>
+        public void ShowGuideDone(string name, SnailPet.Data.RarityType rarity, Texture look,
+                                  (Sprite icon, int count)[] rewards)
+        {
+            HidePopupGroups();
+            _doneGroup.gameObject.SetActive(true);
+
+            // 이 팝업만 판이 조금 크다. 가운데 피벗이라 크기만 바꾸면 그대로 가운데에 남는다.
+            _popup.sizeDelta = new Vector2(Pop.W, Pop.GuideDoneH);
+
+            _doneName.text = name;
+            _doneImage.texture = look;
+            _doneImage.enabled = look != null;
+            ApplyRarity(_doneRarityIcon, _doneRarityBadge, _doneRarityText, rarity);
+
+            OpenBlocker();
+        }
+
+        /// <summary>받은 보상을 보여 준다.</summary>
+        public void ShowRewards((Sprite icon, int count)[] rewards)
+        {
+            HidePopupGroups();
+            _rewardGroup.gameObject.SetActive(true);
+            _popup.sizeDelta = new Vector2(Pop.W, Pop.H);
+
+            FillRewardSlots(_rewardSlots, rewards, Pop.W, Pop.RewardSlot.y);
+            OpenBlocker();
+        }
+
+        /// <summary>팝업 묶음은 한 번에 하나만 보인다. 판 크기도 기본으로 되돌린다.</summary>
+        private void HidePopupGroups()
+        {
+            if (_buyGroup != null)    _buyGroup.gameObject.SetActive(false);
+            if (_renameGroup != null) _renameGroup.gameObject.SetActive(false);
+            if (_doneGroup != null)   _doneGroup.gameObject.SetActive(false);
+            if (_rewardGroup != null) _rewardGroup.gameObject.SetActive(false);
+            ResetHatch();
+
+            if (_popup != null) _popup.sizeDelta = new Vector2(Pop.W, Pop.H);
         }
 
         private enum HatchPhase { None, Wobble, Flash, Result }

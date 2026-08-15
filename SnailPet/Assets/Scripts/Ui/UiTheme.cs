@@ -339,6 +339,17 @@ namespace SnailPet.Ui
             public static readonly RectInt RenameField = new RectInt(42,  62, 161, 20);
             public static readonly RectInt RenameOk    = new RectInt(91, 112,  63, 22);
 
+            // ── 도감 완성 ── 판이 조금 더 크다 (목업 16쪽). 알 부화와 자리를 겹쳐 쓰되
+            // 이름 뱃지가 하나 더 붙고 확인 버튼이 그만큼 내려간다.
+            public const int GuideDoneH = 170;
+
+            public static readonly RectInt DoneName = new RectInt(57, 107, 131, 22);
+            public static readonly RectInt DoneOk   = new RectInt(92, 137,  63, 22);
+
+            // ── 보상 수령 ── 받은 것들을 가운데로 모아 보여 준다 (목업 17쪽).
+            public static readonly RectInt RewardSlot = new RectInt(0, 53, 32, 32);
+            public const int RewardStep = 37;
+
             // ── 알 부화 ── 역시 같은 판이다. 목업(UI.pptx 12쪽)을 실측해 그대로 옮겼다.
             // 그 슬라이드는 왼쪽이 연출 중, 오른쪽이 결과이며 판·닫기·버튼 자리가 서로 같다.
             public static readonly RectInt HatchTitle  = new RectInt(  0,  13, W, 21);
@@ -354,6 +365,60 @@ namespace SnailPet.Ui
             /// </summary>
             public static readonly RectInt HatchSnail  = new RectInt( 93,  36, 60, 51);
             public static readonly RectInt HatchRarity = new RectInt(105,  90, 35, 12);
+        }
+
+        /// <summary>
+        /// 달팽이 도감. 옷장·상세보기처럼 좌우 패널을 통째로 쓴다 (UI.pptx 14쪽 실측).
+        /// 왼쪽은 도감 목록, 오른쪽은 고른 칸의 상세다.
+        /// </summary>
+        public static class Guide
+        {
+            // ── 왼쪽: 목록 ──
+            public static readonly RectInt Row = new RectInt(11, 29, 151, 32);
+            public const int RowStep = 40;
+
+            /// <summary>미리 만들어 두는 줄 수. 이보다 많은 도감은 안 보인다.</summary>
+            public const int RowPool = 24;
+
+            // 아래는 줄 왼쪽 위가 원점
+            public static readonly RectInt RowName   = new RectInt(  4, 6, 100, 19);
+            public static readonly RectInt RowRarity = new RectInt(110, 9,  37, 14);
+
+            /// <summary>채운 줄에 찍는 도장. 아트가 들어오면 icon_complete 로 바뀐다.</summary>
+            public static readonly RectInt RowDone   = new RectInt( 92, 8,  16, 16);
+
+            // ── 오른쪽: 고른 칸 ──
+            public static readonly RectInt Title  = new RectInt(21, 11, 131, 22);
+
+            /// <summary>등급은 이름 바로 밑에 가운데로.</summary>
+            public static readonly RectInt Rarity = new RectInt(69, 35, 35, 12);
+
+            /// <summary>
+            /// 안 채운 칸의 실루엣 자리. 목업 크기 그대로다.
+            ///
+            /// 채운 칸의 달팽이는 이 자리가 아니라 <see cref="At.Portrait"/> 를 따른다 —
+            /// 화면마다 달팽이 크기가 달라 보이면 안 되기 때문이다. 실루엣은 「무엇이
+            /// 들어올 자리인가」를 보여 주는 그림이라 크게 두는 편이 낫다.
+            /// </summary>
+            public static readonly RectInt Image  = new RectInt(28, 28, 125, 105);
+
+            /// <summary>실루엣 오른쪽의 전환 버튼. 설명↔파츠 목록을 오간다.</summary>
+            public static readonly RectInt Toggle = new RectInt(130, 113, 23, 23);
+
+            // ── 아래쪽: 설명과 보상 (기본 상태) ──
+            public static readonly RectInt Info = new RectInt(16, 144, 144, 27);
+
+            public static readonly RectInt Reward = new RectInt(31, 176, 32, 32);
+            public const int RewardStep = 37, RewardCount = 3;
+
+            // ── 아래쪽: 파츠 목록 (상세 상태) ──
+            // 설명·보상과 같은 자리를 나눠 쓴다. 전환 버튼으로 갈아 끼운다.
+            public static readonly RectInt PartRow    = new RectInt(28, 142, 123, 14);
+            public const int PartStep = 18, PartCount = 4;
+
+            public static readonly RectInt PartIcon   = new RectInt(18, 140, 16, 16);
+            public static readonly RectInt PartRarity = new RectInt(35, 143, 30, 11);
+            public static readonly RectInt PartName   = new RectInt(63, 141, 98, 17);
         }
 
         /// <summary>

@@ -368,6 +368,7 @@ namespace SnailPet.Data
         public readonly int Id;
         public readonly int NameId;
         public readonly int InfoId;
+        public readonly RarityType RarityType;
         public readonly int PartsId01;
         public readonly string ColorId01;
         public readonly int? PartsId02;
@@ -376,12 +377,19 @@ namespace SnailPet.Data
         public readonly string ColorId03;
         public readonly int? PartsId04;
         public readonly string ColorId04;
+        public readonly int? RewardId01;
+        public readonly int? RewardCount01;
+        public readonly int? RewardId02;
+        public readonly int? RewardCount02;
+        public readonly int? RewardId03;
+        public readonly int? RewardCount03;
 
-        public SnailGuideRow(int id, int nameId, int infoId, int partsId01, string colorId01, int? partsId02, string colorId02, int? partsId03, string colorId03, int? partsId04, string colorId04)
+        public SnailGuideRow(int id, int nameId, int infoId, RarityType rarityType, int partsId01, string colorId01, int? partsId02, string colorId02, int? partsId03, string colorId03, int? partsId04, string colorId04, int? rewardId01, int? rewardCount01, int? rewardId02, int? rewardCount02, int? rewardId03, int? rewardCount03)
         {
             Id = id;
             NameId = nameId;
             InfoId = infoId;
+            RarityType = rarityType;
             PartsId01 = partsId01;
             ColorId01 = colorId01;
             PartsId02 = partsId02;
@@ -390,6 +398,12 @@ namespace SnailPet.Data
             ColorId03 = colorId03;
             PartsId04 = partsId04;
             ColorId04 = colorId04;
+            RewardId01 = rewardId01;
+            RewardCount01 = rewardCount01;
+            RewardId02 = rewardId02;
+            RewardCount02 = rewardCount02;
+            RewardId03 = rewardId03;
+            RewardCount03 = rewardCount03;
         }
     }
 
@@ -540,6 +554,7 @@ namespace SnailPet.Data
             new PartsDataRow(53, 53, 2, RarityType.Common, PartsType.Body, "commonbody03", true, new string[] { "commonbody03_c01" }, 10, 76, 36, 5d),
             new PartsDataRow(108, 108, 2, RarityType.Common, PartsType.Body, "commonbody03", true, new string[] { "commonbody03_c02" }, 10, 109, 36, 5d),
             new PartsDataRow(122, 122, 2, RarityType.Rare, PartsType.Body, "rarebody01", true, new string[] { "rarebody01_c01" }, 7, 123, 36, 10d),
+            new PartsDataRow(164, 164, 2, RarityType.Common, PartsType.Body, "commonbody04", true, new string[] { "commonbody04_c01" }, 10, 165, 36, 5d),
             new PartsDataRow(22, 22, 2, RarityType.Common, PartsType.Eyes, "commoneyes01", false, System.Array.Empty<string>(), 10, 77, 36, 5d),
             new PartsDataRow(23, 23, 2, RarityType.Common, PartsType.Eyes, "commoneyes02", false, System.Array.Empty<string>(), 10, 78, 36, 5d),
             new PartsDataRow(24, 24, 2, RarityType.Common, PartsType.Eyes, "commoneyes03", false, System.Array.Empty<string>(), 10, 79, 36, 5d),
@@ -562,31 +577,31 @@ namespace SnailPet.Data
 
         public static readonly LevelDataRow[] LevelData = new LevelDataRow[]
         {
-            new LevelDataRow(1, 0d, 10d, 10d, 120d, 240d, 1d, 4d, 1800d, 36, 10, 1d),
-            new LevelDataRow(2, 3600d, 15d, 15d, 120d, 240d, 1.5d, 4d, 1800d, 36, 11, 1.1d),
-            new LevelDataRow(3, 3600d, 20d, 20d, 120d, 240d, 2d, 5d, 1800d, 36, 12, 1.2d),
-            new LevelDataRow(4, 3600d, 25d, 25d, 180d, 240d, 2.5d, 5d, 1800d, 36, 13, 1.3d),
-            new LevelDataRow(5, 3600d, 30d, 30d, 180d, 240d, 3d, 6d, 1800d, 36, 14, 1.4d),
-            new LevelDataRow(6, 3600d, 35d, 35d, 180d, 300d, 3.5d, 6d, 1800d, 36, 15, 1.5d),
-            new LevelDataRow(7, 3600d, 40d, 40d, 180d, 300d, 4d, 6d, 1800d, 36, 16, 1.6d),
-            new LevelDataRow(8, 3600d, 45d, 45d, 180d, 300d, 4.5d, 7d, 1800d, 36, 17, 1.7d),
-            new LevelDataRow(9, 3600d, 50d, 50d, 180d, 300d, 5d, 7d, 1800d, 36, 18, 1.8d),
-            new LevelDataRow(10, 3600d, 55d, 55d, 240d, 300d, 5.5d, 7d, 1800d, 36, 19, 1.9d),
-            new LevelDataRow(11, 3600d, 60d, 60d, 240d, 300d, 6d, 8d, 1800d, 36, 20, 2d),
-            new LevelDataRow(12, 3600d, 65d, 65d, 240d, 360d, 6.5d, 8d, 1800d, 36, 21, 2.1d),
-            new LevelDataRow(13, 3600d, 70d, 70d, 240d, 360d, 7d, 8d, 1800d, 36, 22, 2.2d),
-            new LevelDataRow(14, 3600d, 75d, 75d, 240d, 360d, 7.5d, 9d, 1800d, 36, 23, 2.3d),
-            new LevelDataRow(15, 3600d, 80d, 80d, 300d, 360d, 8d, 9d, 1200d, 36, 24, 2.4d),
-            new LevelDataRow(16, 3600d, 85d, 85d, 300d, 360d, 8.5d, 9d, 1200d, 36, 25, 2.5d),
-            new LevelDataRow(17, 3600d, 90d, 90d, 300d, 360d, 9d, 10d, 1200d, 36, 26, 2.6d),
-            new LevelDataRow(18, 3600d, 95d, 95d, 300d, 360d, 9.5d, 10d, 1200d, 36, 27, 2.7d),
-            new LevelDataRow(19, 3600d, 100d, 100d, 300d, 360d, 10d, 10d, 1200d, 36, 28, 2.8d),
-            new LevelDataRow(20, 3600d, 105d, 105d, 300d, 360d, 10.5d, 11d, 1200d, 36, 30, 3d),
+            new LevelDataRow(1, 0d, 10d, 10d, 60d, 60d, 1d, 4d, 120d, 36, 10, 1d),
+            new LevelDataRow(2, 3600d, 15d, 15d, 60d, 60d, 1.5d, 4d, 120d, 36, 12, 1.1d),
+            new LevelDataRow(3, 3600d, 20d, 20d, 60d, 60d, 2d, 5d, 120d, 36, 15, 1.2d),
+            new LevelDataRow(4, 3600d, 25d, 25d, 60d, 60d, 2.5d, 5d, 120d, 36, 17, 1.3d),
+            new LevelDataRow(5, 3600d, 30d, 30d, 80d, 80d, 3d, 6d, 120d, 36, 20, 1.4d),
+            new LevelDataRow(6, 3600d, 35d, 35d, 80d, 80d, 3.5d, 6d, 120d, 36, 22, 1.5d),
+            new LevelDataRow(7, 3600d, 40d, 40d, 80d, 80d, 4d, 6d, 120d, 36, 25, 1.6d),
+            new LevelDataRow(8, 3600d, 45d, 45d, 80d, 80d, 4.5d, 7d, 120d, 36, 30, 1.7d),
+            new LevelDataRow(9, 3600d, 50d, 50d, 100d, 100d, 5d, 7d, 120d, 36, 35, 1.8d),
+            new LevelDataRow(10, 3600d, 55d, 55d, 100d, 100d, 5.5d, 7d, 120d, 36, 40, 1.9d),
+            new LevelDataRow(11, 3600d, 60d, 60d, 100d, 100d, 6d, 8d, 120d, 36, 45, 2d),
+            new LevelDataRow(12, 3600d, 65d, 65d, 100d, 100d, 6.5d, 8d, 120d, 36, 50, 2.1d),
+            new LevelDataRow(13, 3600d, 70d, 70d, 120d, 120d, 7d, 8d, 120d, 36, 55, 2.2d),
+            new LevelDataRow(14, 3600d, 75d, 75d, 120d, 120d, 7.5d, 9d, 120d, 36, 60, 2.3d),
+            new LevelDataRow(15, 3600d, 80d, 80d, 120d, 120d, 8d, 9d, 120d, 36, 65, 2.4d),
+            new LevelDataRow(16, 3600d, 85d, 85d, 120d, 120d, 8.5d, 9d, 120d, 36, 70, 2.5d),
+            new LevelDataRow(17, 3600d, 90d, 90d, 120d, 120d, 9d, 10d, 120d, 36, 75, 2.6d),
+            new LevelDataRow(18, 3600d, 95d, 95d, 120d, 120d, 9.5d, 10d, 120d, 36, 80, 2.7d),
+            new LevelDataRow(19, 3600d, 100d, 100d, 120d, 120d, 10d, 10d, 120d, 36, 85, 2.8d),
+            new LevelDataRow(20, 3600d, 105d, 105d, 120d, 120d, 10.5d, 11d, 120d, 36, 90, 3d),
         };
 
         public static readonly BubbleDataRow[] BubbleData = new BubbleDataRow[]
         {
-            new BubbleDataRow(52, "bubble_coin", 3d),
+            new BubbleDataRow(52, "bubble_coin", 2d),
         };
 
         public static readonly LevelUpAdvantageRow[] LevelUpAdvantage = new LevelUpAdvantageRow[]
@@ -661,7 +676,7 @@ namespace SnailPet.Data
 
         public static readonly SnailGuideRow[] SnailGuide = new SnailGuideRow[]
         {
-            new SnailGuideRow(50, 50, 94, 1, "commonshell01_c08", null, null, null, null, null, null),
+            new SnailGuideRow(166, 166, 167, RarityType.Common, 147, null, 122, null, null, null, null, null, 31, 1, null, null, null, null),
         };
 
         public static readonly LanguageDataRow[] LanguageData = new LanguageDataRow[]
@@ -671,23 +686,27 @@ namespace SnailPet.Data
             new LanguageDataRow(32, "토마토"),
             new LanguageDataRow(33, "애호박"),
             new LanguageDataRow(34, "두부"),
+            new LanguageDataRow(124, "달팽이들의 기본중의 기본 식사."),
+            new LanguageDataRow(125, "씨앗쪽은 빼고 주는게 좋습니다."),
+            new LanguageDataRow(126, "이걸 싫어하는 달팽이가 있을까요?"),
+            new LanguageDataRow(127, "안심하세요! 염분을 뺀 순수한 두부입니다."),
             new LanguageDataRow(35, "30분간 허기가 떨어지지 않습니다."),
-            new LanguageDataRow(88, "팽이코인. 많은 것을 할 수 있다."),
+            new LanguageDataRow(88, "팽이코인. 많은 것을 할 수 있습니다."),
             new LanguageDataRow(36, "팽이코인"),
-            new LanguageDataRow(89, "일반 알이다. 온기가 느껴진다."),
-            new LanguageDataRow(90, "레어 알이다. 온기가 느껴진다."),
+            new LanguageDataRow(89, "일반 알. 온기가 느껴집니다."),
+            new LanguageDataRow(90, "레어 알. 온기가 느껴집니다."),
             new LanguageDataRow(37, "일반 알"),
             new LanguageDataRow(38, "레어 알"),
-            new LanguageDataRow(91, "근엄해지고 싶었다."),
-            new LanguageDataRow(92, "생일인 모양이다."),
-            new LanguageDataRow(93, "공부를 하려는 걸까?"),
-            new LanguageDataRow(39, "모자1"),
-            new LanguageDataRow(40, "모자2"),
-            new LanguageDataRow(41, "가방1"),
+            new LanguageDataRow(91, "근엄해지고 싶었습니다."),
+            new LanguageDataRow(92, "생일인 모양이네요."),
+            new LanguageDataRow(93, "어딘가로 출근하는 모습입니다."),
+            new LanguageDataRow(39, "중절모"),
+            new LanguageDataRow(40, "생일꼬깔"),
+            new LanguageDataRow(41, "회사원 가방"),
             new LanguageDataRow(57, "연두색의 껍질."),
             new LanguageDataRow(58, "갈색의 껍질."),
-            new LanguageDataRow(59, "초록색의 껍질."),
-            new LanguageDataRow(60, "보라색의 껍질."),
+            new LanguageDataRow(59, "빨간색의 껍질."),
+            new LanguageDataRow(60, "네잎클로버를 담은 껍질.\n오늘은 행운이 가득하기를!"),
             new LanguageDataRow(61, "파란색의 껍질."),
             new LanguageDataRow(62, "누군가를 열렬히 좋아하다가 생긴 무늬 껍질."),
             new LanguageDataRow(63, "상추가 너무 좋아서 껍질에 새기기로 했다."),
@@ -723,23 +742,25 @@ namespace SnailPet.Data
             new LanguageDataRow(7, "껍질06"),
             new LanguageDataRow(8, "껍질07"),
             new LanguageDataRow(9, "명주달팽이껍질"),
+            new LanguageDataRow(148, "바삭거리지만 어딘가 눅눅한 집."),
             new LanguageDataRow(10, "긴껍질01"),
             new LanguageDataRow(11, "긴껍질02"),
             new LanguageDataRow(12, "긴껍질03"),
             new LanguageDataRow(13, "긴껍질04"),
             new LanguageDataRow(14, "긴껍질05"),
             new LanguageDataRow(15, "긴껍질06"),
-            new LanguageDataRow(16, "레어_당근껍질"),
+            new LanguageDataRow(16, "당근껍질"),
             new LanguageDataRow(18, "일반달팽이_몸01"),
             new LanguageDataRow(19, "일반달팽이_몸02"),
             new LanguageDataRow(20, "일반달팽이_몸03"),
             new LanguageDataRow(21, "일반달팽이_뚱뚱몸01"),
             new LanguageDataRow(53, "일반달팽이_손몸01"),
+            new LanguageDataRow(165, "내성적인 달팽이는 종이를 얼굴에 붙이기로 했다."),
             new LanguageDataRow(22, "일반달팽이_눈01"),
             new LanguageDataRow(23, "일반달팽이_눈02"),
             new LanguageDataRow(24, "일반달팽이_눈03"),
             new LanguageDataRow(25, "일반달팽이_눈04"),
-            new LanguageDataRow(26, "버섯더듬이"),
+            new LanguageDataRow(26, "버섯 더듬이"),
             new LanguageDataRow(27, "뱅글더듬이"),
             new LanguageDataRow(28, "만두더듬이"),
             new LanguageDataRow(29, "일반더듬이01"),
@@ -747,6 +768,8 @@ namespace SnailPet.Data
             new LanguageDataRow(54, "고양이더듬이01"),
             new LanguageDataRow(55, "고양이더듬이02"),
             new LanguageDataRow(50, "일반 달팽이"),
+            new LanguageDataRow(138, "빵빵한 더듬이"),
+            new LanguageDataRow(139, "어딘가 부어오른 더듬이."),
             new LanguageDataRow(94, "아주 전형적인 달팽이."),
             new LanguageDataRow(95, "이름 없음"),
             new LanguageDataRow(96, "달팽이 목록"),
@@ -791,6 +814,8 @@ namespace SnailPet.Data
             new LanguageDataRow(161, "관심 알림"),
             new LanguageDataRow(162, "코인 알림"),
             new LanguageDataRow(163, "종료"),
+            new LanguageDataRow(166, "1. 아이스크림 달팽이"),
+            new LanguageDataRow(167, "누군가 달팽이 위로 아이스크림을 쏟았어요!\n하지만 달팽이는 생각보다 나쁘지 않았나 봅니다."),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -1065,6 +1090,10 @@ namespace SnailPet.Data
             { "[관심알림]", 161 },
             { "[코인알림]", 162 },
             { "[종료]", 163 },
+            { "[일반달팽이_종이몸01]", 164 },
+            { "[일반달팽이_종이몸01정보]", 165 },
+            { "[도감_아이스크림달팽이]", 166 },
+            { "[도감_아이스크림달팽이정보]", 167 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

@@ -32,6 +32,18 @@ namespace SnailPet.Snail
             public string color;
         }
 
+        /// <summary>
+        /// 채운 도감 한 칸. 채운 순간의 모습을 파츠로 적어 둔다 —
+        /// 그 달팽이를 팔아도 도감 그림은 그대로여야 한다.
+        /// </summary>
+        [Serializable]
+        private sealed class GuideDto
+        {
+            public int guide;
+            public bool reward;
+            public PartDto[] look;
+        }
+
         [Serializable]
         private sealed class SnailDto
         {
@@ -82,6 +94,54 @@ namespace SnailPet.Snail
             /// </summary>
             public PlayerOptions options;
             public bool hasOptions;
+
+            /// <summary>채운 도감. 없으면 아직 아무것도 안 채운 것이다.</summary>
+            public GuideDto[] guides;
+        }
+
+        private static GuideDto[] ToGuideDtos(PlayerState player)
+        {
+            var list = new GuideDto[player.Guides.Count];
+            for (int i = 0; i < list.Length; i++)
+            {
+                var g = player.Guides[i];
+                var look = new PartDto[g.Look.Count];
+                for (int j = 0; j < look.Length; j++)
+                    look[j] = new PartDto { parts = g.Look[j].PartsId, color = g.Look[j].ColorKey };
+
+                list[i] = new GuideDto { guide = g.GuideId, reward = g.RewardTaken, look = look };
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// 도감을 되살린다. 파츠는 달팽이와 같은 방식으로 Id 에서 아트 정보를 다시 찾는다 —
+        /// 데이터에서 빠진 파츠는 그 부위만 빼고 되살린다(그림이 한 겹 비는 것이 낫다).
+        /// </summary>
+        private static void RestoreGuides(PlayerState player, GuideDto[] guides)
+        {
+            if (guides == null) return;
+
+            foreach (var g in guides)
+            {
+                if (g == null || !GameData.SnailGuideById.ContainsKey(g.guide)) continue;
+
+                var entry = new GuideEntry { GuideId = g.guide, RewardTaken = g.reward };
+                if (g.look != null)
+                    foreach (var p in g.look)
+                    {
+                        if (!GameData.PartsDataById.TryGetValue(p.parts, out var row)) continue;
+                        entry.Look.Add(new SnailPartRef
+                        {
+                            PartsId = row.Id,
+                            Type = row.PartsType,
+                            ResourceKey = row.ResourceKey,
+                            ColorKey = string.IsNullOrEmpty(p.color) ? null : p.color,
+                        });
+                    }
+
+                player.Guides.Add(entry);
+            }
         }
 
         public static void Save(PlayerState player)
@@ -96,6 +156,7 @@ namespace SnailPet.Snail
                 favorites = player.Favorites.ToArray(),
                 options = player.Options,
                 hasOptions = true,
+                guides = ToGuideDtos(player),
                 snails = new SnailDto[player.Snails.Count],
                 incubator = new SlotDto[player.Incubator.Length],
             };
@@ -205,6 +266,7 @@ namespace SnailPet.Snail
 
             if (root.eggs != null) player.Eggs.AddRange(root.eggs);
             if (root.favorites != null) player.Favorites.AddRange(root.favorites);
+            RestoreGuides(player, root.guides);
 
             // 설정이 없던 시절의 세이브는 전부 꺼진 것처럼 읽힌다. 그러면 알림 셋이
             // 꺼진 채로 시작해 기본값과 어긋나므로, 적혀 있을 때만 가져온다.
