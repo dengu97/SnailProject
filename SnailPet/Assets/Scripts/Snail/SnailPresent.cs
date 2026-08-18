@@ -157,6 +157,23 @@ namespace SnailPet.Snail
             _bubble.localRotation = Quaternion.Euler(0f, 0f, rotationDeg);
         }
 
+        /// <summary>
+        /// 커서가 말풍선 위에 있는가.
+        ///
+        /// 자리·회전·크기가 이미 트랜스폼에 들어 있으므로 달팽이 히트 판정과 같은 방법으로
+        /// 커서를 로컬로 역변환해 잰다. <b>안 보이면 안 잡힌다</b> — 설정에서 코인 알림을 끄면
+        /// 말풍선이 안 뜨고, 그때는 달팽이를 눌러 받는다.
+        /// </summary>
+        public bool Contains(Vector3 world)
+        {
+            if (_renderer == null || !_renderer.enabled || _renderer.sprite == null) return false;
+
+            var b = _renderer.sprite.bounds;
+            Vector3 local = _bubble.InverseTransformPoint(world);
+            return local.x >= b.min.x && local.x <= b.max.x
+                && local.y >= b.min.y && local.y <= b.max.y;
+        }
+
         /// <summary>화면에 안 보일 때 원인을 좁히기 위한 진단.</summary>
         public string Describe() =>
             $"sprite={( _renderer.sprite != null ? _renderer.sprite.name : "없음")} " +

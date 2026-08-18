@@ -2187,22 +2187,12 @@ namespace SnailPet
 
             if (down && !_wasMouseDown && hasCursor && !_cursorOnUi)
             {
-                if (CursorOnSnail())
+                // 말풍선을 눌러도 받을 수 있다. 달팽이 머리 위에 떠 있어 그쪽을 노리는 사람이 많다.
+                if (CursorOnBubble()) ClaimPresent();
+                else if (CursorOnSnail())
                 {
                     // 선물이 준비돼 있으면 누른 순간 받는다. 그러고도 계속 집어 들 수 있다.
-                    if (_present.Ready
-                        && _present.TryClaim(_growth.Current, _player.Items, out int itemId, out int count))
-                    {
-                        _claimFlashUntil = _t + 1.5f;
-                        _ui.SetCoin(_player.Coins);
-
-                        // 코인은 달팽이 머리 위에서 떠오른다. 그 자리는 말풍선을 놓을 때
-                        // 이미 재고 있으므로, 여기서는 「띄워 달라」고만 표시해 둔다.
-                        _coinPopPending = true;
-
-                        string name = GameData.TokenById.TryGetValue(itemId, out string t) ? t : itemId.ToString();
-                        Say($"      선물 수령: {name} x{count}  → 가방: {_player.Items}");
-                    }
+                    ClaimPresent();
 
                     // 바로 들리지 않는다. 먼저 벽에서 떼어내야 한다.
                     if (!_snailFalling)
@@ -2452,13 +2442,14 @@ namespace SnailPet
             bool hasCursor = TransparentWindow.TryGetCursor(out int cx, out int cy);
             bool onFood = hasCursor && _food.FindAt(cx, cy) != null;
             bool onPoop = hasCursor && _poops != null && _poops.FindAt(VirtualToWorld(cx, cy)) != null;
+            bool onBubble = CursorOnBubble();      // 말풍선도 눌러서 받을 수 있으므로 클릭을 받아야 한다
 
             // 팝업이 떠 있는 동안은 커서가 어디에 있든 통과시키면 안 된다.
             // 통과시키면 팝업 버튼을 눌러도 클릭이 뒤 창으로 새고, 이름 입력 중이면
             // 키보드 포커스까지 같이 잃는다.
             // _cursorOnUi 는 StepDrag 에서 이미 이번 프레임 값으로 갱신됐다
             TransparentWindow.SetClickThrough(
-                !(_cursorOnSnail || onFood || onPoop || _cursorOnUi || _ui.PopupOpen || _drag != DragTarget.None));
+                !(_cursorOnSnail || onBubble || onFood || onPoop || _cursorOnUi || _ui.PopupOpen || _drag != DragTarget.None));
         }
 
         /// <summary>
@@ -2467,6 +2458,36 @@ namespace SnailPet
         /// </summary>
         private const float BubbleGapFraction = 0.12f, BubbleGapMinPx = 3f;
         private bool _bubbleLogged;
+
+        /// <summary>
+        /// 커서가 말풍선 위에 있는가. 달팽이와 말풍선 <b>둘 다</b> 눌러서 받을 수 있게 하려는 것이다.
+        /// </summary>
+        private bool CursorOnBubble()
+        {
+            if (_present == null) return false;
+            if (!TransparentWindow.TryGetCursor(out int cx, out int cy)) return false;
+
+            return _present.Contains(VirtualToWorld(cx, cy));
+        }
+
+        /// <summary>
+        /// 준비된 선물을 받는다. 달팽이를 눌렀을 때와 말풍선을 눌렀을 때가 같은 길을 쓴다.
+        /// </summary>
+        private void ClaimPresent()
+        {
+            if (!_present.Ready
+                || !_present.TryClaim(_growth.Current, _player.Items, out int itemId, out int count)) return;
+
+            _claimFlashUntil = _t + 1.5f;
+            _ui.SetCoin(_player.Coins);
+
+            // 코인은 달팽이 머리 위에서 떠오른다. 그 자리는 말풍선을 놓을 때 이미 재고 있으므로,
+            // 여기서는 「띄워 달라」고만 표시해 둔다.
+            _coinPopPending = true;
+
+            string name = GameData.TokenById.TryGetValue(itemId, out string t) ? t : itemId.ToString();
+            Say($"      선물 수령: {name} x{count}  → 가방: {_player.Items}");
+        }
 
         /// <summary>
         /// 커서가 달팽이 몸통 위에 있는가.
