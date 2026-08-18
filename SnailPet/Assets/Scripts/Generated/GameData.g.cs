@@ -67,15 +67,17 @@ namespace SnailPet.Data
         public readonly string EnumName;
         public readonly int EnumValue;
         public readonly string IconResourceKey;
+        public readonly string SlotResourceKey;
         public readonly int? SortOrder;
         public readonly int? DeformGroup;
 
-        public EnumDataRow(string enumType, string enumName, int enumValue, string iconResourceKey, int? sortOrder, int? deformGroup)
+        public EnumDataRow(string enumType, string enumName, int enumValue, string iconResourceKey, string slotResourceKey, int? sortOrder, int? deformGroup)
         {
             EnumType = enumType;
             EnumName = enumName;
             EnumValue = enumValue;
             IconResourceKey = iconResourceKey;
+            SlotResourceKey = slotResourceKey;
             SortOrder = sortOrder;
             DeformGroup = deformGroup;
         }
@@ -471,32 +473,32 @@ namespace SnailPet.Data
     {
         public static readonly EnumDataRow[] EnumData = new EnumDataRow[]
         {
-            new EnumDataRow("BuffType", "Full", 1, null, null, null),
-            new EnumDataRow("FoodType", "vegetable", 1, null, null, null),
-            new EnumDataRow("FoodType", "bean", 2, null, null, null),
-            new EnumDataRow("FoodType", "magic", 3, null, null, null),
-            new EnumDataRow("PartsType", "Shell", 1, "icon_shell", 100, null),
-            new EnumDataRow("PartsType", "Body", 2, "icon_body", 200, 51),
-            new EnumDataRow("PartsType", "Eyes", 3, "icon_eyes", 400, 51),
-            new EnumDataRow("PartsType", "Feeler", 4, "icon_feeler", 300, 51),
-            new EnumDataRow("PartsType", "Mucus", 5, null, 50, null),
-            new EnumDataRow("RarityType", "Common", 1, "rarity_common", null, null),
-            new EnumDataRow("RarityType", "Rare", 2, "rarity_rare", null, null),
-            new EnumDataRow("RarityType", "Epic", 3, "rarity_epic", null, null),
-            new EnumDataRow("RarityType", "Legendary", 4, "rarity_legendary", null, null),
-            new EnumDataRow("CategoryType", "Food", 1, null, null, null),
-            new EnumDataRow("CategoryType", "Egg", 2, null, null, null),
-            new EnumDataRow("CategoryType", "Item", 3, null, null, null),
-            new EnumDataRow("CategoryType", "Accessories", 4, null, null, null),
-            new EnumDataRow("CategoryType", "Market", 5, null, null, null),
-            new EnumDataRow("CategoryType", "Event", 6, null, null, null),
-            new EnumDataRow("AccessoriesType", "Hat", 1, null, 250, null),
-            new EnumDataRow("AccessoriesType", "Bag", 2, null, 260, null),
-            new EnumDataRow("AccessoriesType", "Mask", 3, null, 251, null),
-            new EnumDataRow("AccessoriesType", "Etc", 4, null, 255, null),
-            new EnumDataRow("ConditionType", "SnailCount", 1, null, null, null),
-            new EnumDataRow("ConditionType", "SnailLevel", 2, null, null, null),
-            new EnumDataRow("ConditionType", "PayItem", 3, null, null, null),
+            new EnumDataRow("BuffType", "Full", 1, null, null, null, null),
+            new EnumDataRow("FoodType", "vegetable", 1, null, null, null, null),
+            new EnumDataRow("FoodType", "bean", 2, null, null, null, null),
+            new EnumDataRow("FoodType", "magic", 3, null, null, null, null),
+            new EnumDataRow("PartsType", "Shell", 1, "icon_shell", null, 100, null),
+            new EnumDataRow("PartsType", "Body", 2, "icon_body", null, 200, 51),
+            new EnumDataRow("PartsType", "Eyes", 3, "icon_eyes", null, 400, 51),
+            new EnumDataRow("PartsType", "Feeler", 4, "icon_feeler", null, 300, 51),
+            new EnumDataRow("PartsType", "Mucus", 5, null, null, 50, null),
+            new EnumDataRow("RarityType", "Common", 1, "rarity_common", "slot2", null, null),
+            new EnumDataRow("RarityType", "Rare", 2, "rarity_rare", "slot_rare", null, null),
+            new EnumDataRow("RarityType", "Epic", 3, "rarity_epic", "slot_epic", null, null),
+            new EnumDataRow("RarityType", "Legendary", 4, "rarity_legendary", "slot_legendary", null, null),
+            new EnumDataRow("CategoryType", "Food", 1, null, null, null, null),
+            new EnumDataRow("CategoryType", "Egg", 2, null, null, null, null),
+            new EnumDataRow("CategoryType", "Item", 3, null, null, null, null),
+            new EnumDataRow("CategoryType", "Accessories", 4, null, null, null, null),
+            new EnumDataRow("CategoryType", "Market", 5, null, null, null, null),
+            new EnumDataRow("CategoryType", "Event", 6, null, null, null, null),
+            new EnumDataRow("AccessoriesType", "Hat", 1, null, null, 250, null),
+            new EnumDataRow("AccessoriesType", "Bag", 2, null, null, 260, null),
+            new EnumDataRow("AccessoriesType", "Mask", 3, null, null, 251, null),
+            new EnumDataRow("AccessoriesType", "Etc", 4, null, null, 255, null),
+            new EnumDataRow("ConditionType", "SnailCount", 1, null, null, null, null),
+            new EnumDataRow("ConditionType", "SnailLevel", 2, null, null, null, null),
+            new EnumDataRow("ConditionType", "PayItem", 3, null, null, null, null),
         };
 
         public static readonly PartsColorDataRow[] PartsColorData = new PartsColorDataRow[]
@@ -599,6 +601,10 @@ namespace SnailPet.Data
             new PartsDataRow(218, 218, 17, RarityType.Rare, PartsType.Feeler, "duckfeeler", false, System.Array.Empty<string>(), 7, 219, 36, 6d),
             new PartsDataRow(228, 228, 17, RarityType.Rare, PartsType.Shell, "rareshell03", true, new string[] { "rareshell03_c01" }, 7, 229, 36, 6d),
             new PartsDataRow(230, 230, 17, RarityType.Rare, PartsType.Shell, "rareshell03", true, new string[] { "rareshell03_c02" }, 7, 231, 36, 6d),
+            new PartsDataRow(257, 257, 17, RarityType.Rare, PartsType.Shell, "dragonfruitshell", false, System.Array.Empty<string>(), 7, 258, 36, 6d),
+            new PartsDataRow(259, 259, 17, RarityType.Rare, PartsType.Shell, "fishshell", false, System.Array.Empty<string>(), 7, 260, 36, 6d),
+            new PartsDataRow(261, 261, 2, RarityType.Common, PartsType.Shell, "ballshell01", false, System.Array.Empty<string>(), 10, 262, 36, 5d),
+            new PartsDataRow(264, 264, 2, RarityType.Common, PartsType.Shell, "ballshell02", false, System.Array.Empty<string>(), 10, 265, 36, 5d),
         };
 
         public static readonly FoodDataRow[] FoodData = new FoodDataRow[]
@@ -644,6 +650,7 @@ namespace SnailPet.Data
         public static readonly BubbleDataRow[] BubbleData = new BubbleDataRow[]
         {
             new BubbleDataRow(52, "bubble_coin", 2d),
+            new BubbleDataRow(254, "bubble_hungry", 2d),
         };
 
         public static readonly LevelUpAdvantageRow[] LevelUpAdvantage = new LevelUpAdvantageRow[]
@@ -920,7 +927,7 @@ namespace SnailPet.Data
             new LanguageDataRow(214, "오리 몸"),
             new LanguageDataRow(216, "튜브(파란색)"),
             new LanguageDataRow(218, "오리 머리"),
-            new LanguageDataRow(215, "어딘가 뽀송해보이는 오리 몸입니다."),
+            new LanguageDataRow(215, "몸에서 날개가 돋아났습니다. 날지는 못하나봐요."),
             new LanguageDataRow(217, "여름 휴가를 가려는 모양입니다."),
             new LanguageDataRow(219, "머리 위에 깃털이 솟아올랐습니다."),
             new LanguageDataRow(226, "5. 오리 달팽이"),
@@ -949,6 +956,24 @@ namespace SnailPet.Data
             new LanguageDataRow(231, "수국으로 둘러싸인 껍질입니다."),
             new LanguageDataRow(252, "삭제"),
             new LanguageDataRow(253, "필요한 재화가 부족합니다."),
+            new LanguageDataRow(255, "보유중인 음식이 없습니다."),
+            new LanguageDataRow(256, "보유중인 장식품이 없습니다."),
+            new LanguageDataRow(257, "용과 껍질"),
+            new LanguageDataRow(258, "용과 달팽이(용and달팽이아님)"),
+            new LanguageDataRow(259, "금붕어 봉투"),
+            new LanguageDataRow(260, "등에 물에 사는 친구를 데리고 다니기로 했습니다."),
+            new LanguageDataRow(263, "구매를 완료했습니다."),
+            new LanguageDataRow(264, "파란 당구공"),
+            new LanguageDataRow(265, "당구공처럼 생겼다고 큐대로 쳐서는 안됩니다."),
+            new LanguageDataRow(261, "검은 당구공"),
+            new LanguageDataRow(262, "당구공처럼 생겼다고 큐대로 쳐서는 안됩니다."),
+            new LanguageDataRow(266, "멀티플레이어"),
+            new LanguageDataRow(267, "친구 목록"),
+            new LanguageDataRow(268, "로비 목록"),
+            new LanguageDataRow(269, "방"),
+            new LanguageDataRow(270, "방 만들기"),
+            new LanguageDataRow(271, "로비ID로 진입"),
+            new LanguageDataRow(272, "랜덤 방으로 진입"),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -1313,6 +1338,25 @@ namespace SnailPet.Data
             { "[아이스크림모자2정보]", 251 },
             { "[삭제]", 252 },
             { "[안내_재화부족]", 253 },
+            { "[배고픔]", 254 },
+            { "[안내_보유음식]", 255 },
+            { "[안내_보유악세]", 256 },
+            { "[레어_용과껍질]", 257 },
+            { "[레어_용과껍질정보]", 258 },
+            { "[레어_금붕어껍질]", 259 },
+            { "[레어_금붕어껍질정보]", 260 },
+            { "[일반_당구공껍질]", 261 },
+            { "[일반_당구공껍질정보]", 262 },
+            { "[안내_구매완료]", 263 },
+            { "[일반_당구공껍질2]", 264 },
+            { "[일반_당구공껍질2정보]", 265 },
+            { "[멀티플레이어]", 266 },
+            { "[친구목록]", 267 },
+            { "[로비목록]", 268 },
+            { "[방]", 269 },
+            { "[방만들기]", 270 },
+            { "[로비ID로진입]", 271 },
+            { "[랜덤방으로진입]", 272 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

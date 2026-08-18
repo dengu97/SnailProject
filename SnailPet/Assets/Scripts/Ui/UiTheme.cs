@@ -72,6 +72,9 @@ namespace SnailPet.Ui
             // 패널 밖에 걸치는 것들 (y 가 음수면 패널 위)
             public static readonly RectInt Settings = new RectInt(  9, -23, 28, 25);
 
+            /// <summary>멀티플레이어 진입. 설정 기어 오른쪽에 나란히 붙는다.</summary>
+            public static readonly RectInt Multi    = new RectInt( 41, -23, 28, 25);
+
             /// <summary>
             /// 코인 줄이 차지하는 띠. <b>이 값의 y 가 위젯 상자를 얼마나 위로 늘릴지를 정한다</b> —
             /// 패널 위치와 <see cref="Above"/> 의 기준이 전부 여기에 매여 있으므로 함부로 바꾸지 말 것.
@@ -122,6 +125,46 @@ namespace SnailPet.Ui
         }
 
         /// <summary>
+        /// 멀티플레이어. 옷장·도감처럼 좌우 패널을 통째로 쓴다.
+        ///
+        /// 목업(PPT 20·21쪽)은 실행 화면 캡처 위에 그린 것이라 캡처 배율(약 1.15배)이 섞여 있다.
+        /// 그래서 값을 그대로 옮기지 않고 <b>다른 화면의 관례에 맞춰 반올림</b>했다 —
+        /// 여백은 목록 패널과 같게, 줄 높이·간격은 목업 비율대로.
+        /// </summary>
+        public static class Multi
+        {
+            // ── 왼쪽: 탭 둘 + 목록 ──
+            public static readonly RectInt FriendTab = new RectInt(10, 19, 64, 23);
+            public static readonly RectInt LobbyTab  = new RectInt(79, 19, 64, 23);
+
+            /// <summary>목록 줄. 6줄이 들어간다.</summary>
+            public static readonly RectInt Row = new RectInt(11, 48, 151, 26);
+            public const int RowStep = 30, RowCount = 6;
+
+            /// <summary>줄 오른쪽 끝의 작은 버튼(친구=초대, 로비=입장).</summary>
+            public static readonly RectInt RowButton = new RectInt(131, 51, 20, 20);
+            public static readonly RectInt RowName   = new RectInt(8, 51, 118, 20);
+
+            // ── 오른쪽: 「방」 ──
+            public static readonly RectInt Title  = new RectInt(0, 8, PanelW, 21);
+            public static readonly RectInt Button = new RectInt(14, 40, 145, 23);
+            public const int ButtonStep = 29;
+
+            // ── 오른쪽: 방에 들어간 뒤 ──
+            /// <summary>방 이름 줄과 그 오른쪽의 나가기.</summary>
+            public static readonly RectInt RoomName = new RectInt(14, 8, 118, 23);
+            public static readonly RectInt RoomOut  = new RectInt(136, 8, 23, 23);
+
+            /// <summary>참가자 줄. 달팽이 그림 + 이름 + 돋보기. max 5.</summary>
+            public static readonly RectInt Member     = new RectInt(14, 40, 145, 36);
+            public const int MemberStep = 40, MemberCount = 5;
+
+            public static readonly RectInt MemberFace = new RectInt(4, 2, 32, 32);
+            public static readonly RectInt MemberName = new RectInt(40, 9, 78, 18);
+            public static readonly RectInt MemberZoom = new RectInt(120, 8, 20, 20);
+        }
+
+        /// <summary>
         /// 잠깐 떴다 사라지는 안내 문구. 글자 길이에 맞춰 <b>가로로만</b> 늘어나고
         /// 높이와 여백은 고정이다.
         /// </summary>
@@ -168,6 +211,9 @@ namespace SnailPet.Ui
             /// 목업의 4행이 다 보이고 다섯째 줄이 살짝 걸쳐 「더 있다」가 드러난다.
             /// </summary>
             public static readonly RectInt RowView = new RectInt(0, 25, PanelW, PanelH - 25);
+
+            /// <summary>목록이 비었을 때 한가운데에 뜨는 안내. 음식·알이 같은 자리를 쓴다.</summary>
+            public static readonly RectInt Empty = new RectInt(10, 100, PanelW - 20, 20);
 
             public static readonly RectInt Row = new RectInt(10, 27, 155, 40);
             public const int RowStep = 47;
@@ -328,7 +374,7 @@ namespace SnailPet.Ui
             /// 안 가졌을 때 비는 것은 왼쪽 목록이라 그쪽으로 옮겼다(2026-08-13 결정).
             /// 좌표는 왼쪽 패널 기준이며, 그리드 안에 넣을 때 <see cref="Max.FoodView"/> 만큼 당긴다.
             /// </summary>
-            public static readonly RectInt Empty = new RectInt(10, 100, PanelW - 20, 20);
+            public static readonly RectInt Empty = Max.Empty;
             public static readonly RectInt Buy   = new RectInt(137, 189, 25, 22);
         }
 

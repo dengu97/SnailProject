@@ -11,6 +11,7 @@ namespace SnailPet.Data
     public static class Enums
     {
         private static Dictionary<string, string> _icon;
+        private static Dictionary<string, string> _slot;
 
         private static string Key(string enumType, string enumName) => enumType + "." + enumName;
 
@@ -18,10 +19,15 @@ namespace SnailPet.Data
         {
             if (_icon != null) return;
             _icon = new Dictionary<string, string>();
+            _slot = new Dictionary<string, string>();
 
             foreach (var e in GameData.EnumData)
+            {
                 if (!string.IsNullOrEmpty(e.IconResourceKey))
                     _icon[Key(e.EnumType, e.EnumName)] = e.IconResourceKey;
+                if (!string.IsNullOrEmpty(e.SlotResourceKey))
+                    _slot[Key(e.EnumType, e.EnumName)] = e.SlotResourceKey;
+            }
         }
 
         /// <summary>
@@ -34,6 +40,16 @@ namespace SnailPet.Data
             return _icon.TryGetValue(Key(typeof(T).Name, value.ToString()), out string key) ? key : null;
         }
 
-        public static void ClearCache() => _icon = null;
+        /// <summary>
+        /// 이 enum 값의 칸 그림 리소스 키(등급별 칸 색). 시트가 비어 있으면 null 이고,
+        /// 부르는 쪽은 기본 칸을 쓰면 된다.
+        /// </summary>
+        public static string SlotOf<T>(T value) where T : System.Enum
+        {
+            EnsureIndex();
+            return _slot.TryGetValue(Key(typeof(T).Name, value.ToString()), out string key) ? key : null;
+        }
+
+        public static void ClearCache() { _icon = null; _slot = null; }
     }
 }

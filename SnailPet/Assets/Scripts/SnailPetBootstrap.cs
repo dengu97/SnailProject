@@ -252,6 +252,10 @@ namespace SnailPet
             SetupUi();
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            // 스팀은 없어도 그만이다. 붙으면 멀티가 열리고, 아니면 그 화면만 잠긴다.
+            bool steam = SteamHub.Init();
+            Say("[9] 스팀 ............ " + (steam ? "OK (" + SteamHub.MyName + ")" : "미연결: " + SteamHub.LastError));
+
             bool ok = TransparentWindow.Apply(clickThrough: true);
             Say("[3] 투명 창 적용 ..... " + (ok ? "OK" : "실패: " + TransparentWindow.LastError));
             Say("[4] 클릭 통과 ....... " + (TransparentWindow.IsClickThrough() ? "OK" : "미적용"));
@@ -312,6 +316,10 @@ namespace SnailPet
             _coins = new CoinPop(transform);
             _present = new SnailPresent(transform);
 
+            // 배고픔 말풍선. 시트에 토큰이 없으면 코인과 같은 크기로 그린다.
+            _hungry = new SnailBubble(transform, HungryBubbleToken, "bubble_hungry",
+                                      SnailPresent.DefaultSize, 9900);
+
             Say("[2] 성장 ............. " + _growth);
             Say(string.Format("      환산: Speed 1 = {0}px/s, Size 1 = {1}px  (레벨 1~{2})",
                 SnailGrowth.PixelsPerSpeedUnit, SnailGrowth.PixelsPerSizeUnit, SnailGrowth.MaxLevel));
@@ -333,6 +341,7 @@ namespace SnailPet
         private void OnApplicationQuit()
         {
             SaveFile.Save(_player);
+            SteamHub.Shutdown();
         }
 
         /// <summary>
@@ -437,6 +446,8 @@ namespace SnailPet
             _ui.Wardrobe += OpenWardrobe;
             _ui.ToggleEquip += EquipAccessory;
             _ui.FilterChanged += RefreshWardrobe;
+
+            WireMulti();
             _ui.Gene     += OpenGene;
             _ui.Sell     += SellSnailFromUi;
             _ui.SellFood += SellFromUi;
@@ -512,6 +523,79 @@ namespace SnailPet
         {
             _ui.SetFoods(_player.OwnedFoods());
             RefreshFavorites();      // 칸에 개수가 같이 뜨므로 음식이 줄면 따라 바뀌어야 한다
+        }
+
+        // ── 멀티플레이어 ──
+        //
+        // 화면은 SnailUi 가 그리고, 스팀 쪽 일은 전부 SteamHub 가 한다. 여기는 둘을 잇기만 한다.
+        // 스팀에 못 붙었으면 더미 목록으로 화면 모양만 볼 수 있게 둔다.
+
+        private void WireMulti()
+        {
+            SteamHub.Note += s => Say("      [스팀] " + s);
+            SteamHub.Changed += RefreshMulti;
+
+            _ui.MultiTabChanged += lobby =>
+            {
+                // 로비 탭으로 옮기는 순간 목록을 새로 받아 온다. 결과는 Changed 로 돌아온다.
+                if (lobby && SteamHub.Available) SteamHub.RefreshLobbies();
+                RefreshMulti();
+            };
+
+            _ui.InviteFriend += i => SteamHub.Invite(i);
+            _ui.EnterLobby   += i => SteamHub.JoinLobby(i);
+            _ui.MakeRoom     += () => SteamHub.CreateLobby();
+            _ui.JoinRandom   += () => SteamHub.JoinRandom();
+            _ui.LeaveRoom    += () => SteamHub.Leave();
+            _ui.JoinById     += () => _ui.ShowLobbyId();
+            _ui.LobbyIdEntered += text => SteamHub.JoinById(text);
+            _ui.ViewMember   += i => Say("      [UI] 참가자 상세: " + (i + 1));
+
+            RefreshMulti();
+        }
+
+        /// <summary>멀티 화면을 지금 상태로 다시 그린다. 목록·방·참가자가 한 번에 맞춰진다.</summary>
+        private void RefreshMulti()
+        {
+            if (_ui == null) return;
+
+            _ui.SetMultiRows(_ui.OnLobbyTab ? LobbyNames() : FriendNames());
+            _ui.SetRoom(SteamHub.InLobby, SteamHub.LobbyName);
+            if (SteamHub.InLobby) _ui.SetMembers(MemberRows());
+        }
+
+        /// <summary>친구 목록. 스팀에 붙었으면 진짜 친구, 아니면 더미.</summary>
+        private static string[] FriendNames()
+        {
+            if (!SteamHub.Available)
+                return new[] { "친구 이름1", "친구 이름2", "친구 이름3", "친구 이름4", "친구 이름5", "친구 이름6" };
+
+            return SteamHub.Friends();
+        }
+
+        private static string[] LobbyNames()
+        {
+            if (!SteamHub.Available)
+                return new[] { "로비 목록01", "로비 목록02", "로비 목록03" };
+
+            return SteamHub.Lobbies();
+        }
+
+        /// <summary>
+        /// 방에 있는 사람들. 남의 달팽이 그림은 아직 못 받아 오므로 이름만 채우고
+        /// 내 달팽이만 그림을 넣는다 — 외형 교환은 다음 차례다.
+        /// </summary>
+        private (string, UnityEngine.Texture)[] MemberRows()
+        {
+            var names = SteamHub.Members();
+            var rows = new (string, UnityEngine.Texture)[names.Length];
+
+            for (int i = 0; i < names.Length; i++)
+            {
+                bool me = names[i] == SteamHub.MyName;
+                rows[i] = (names[i], me && _player.Active != null ? ThumbOf(_player.Active) : null);
+            }
+            return rows;
         }
 
         /// <summary>최소화 창의 즐겨찾기 칸. 등록한 순서 그대로, 가진 개수와 함께 들어간다.</summary>
@@ -1079,6 +1163,9 @@ namespace SnailPet
             _ui.SetCoin(_player.Coins);
             _ui.RefreshShop();
 
+            // 산 것은 가방으로 바로 들어가 화면에 티가 안 난다. 됐다고 한 줄 띄운다.
+            if (!_popupSelling) _ui.NoticePurchased();
+
             Say($"      [UI] {(_popupSelling ? "판매" : "구매")}: {shopId} x{qty} → {_player}");
         }
 
@@ -1523,6 +1610,12 @@ namespace SnailPet
             }
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            SteamHub.Pump();
+
+            // 투명 창이 아직 안 걸렸으면 계속 다시 걸어 본다. 창이 포커스를 못 받고 뜨면 첫
+            // 시도가 실패하는데, 한 번 실패한 채로 두면 검은 화면이 끝까지 남는다.
+            RetryTransparentWindow();
+
             // 모니터 구성이 바뀌면 가상 화면 값부터 다시 잡는다. 이게 어긋나면 UI 를 못 누른다.
             SyncScreen();
 
@@ -2525,7 +2618,22 @@ namespace SnailPet
             // 머리 위 간격은 몸 크기에 비례한다. 예전에는 18px 고정이었는데, 달팽이를
             // 줄인 뒤로는 몸 높이의 절반이 넘는 틈이 되어 말풍선이 멀찍이 떠 보였다.
             float bubbleGap = Mathf.Max(BubbleGapMinPx, bodyDepth * BubbleGapFraction);
-            Vector2 bubbleScreen = foot - n * (bodyDepth + bubbleGap + bubbleHalf);
+
+            // 배고픔 말풍선이 아래, 코인이 그 위다. 둘이 함께 뜰 수 있으므로 쌓아 올린다.
+            // 배고픔은 포만도가 0 인 동안 계속 떠 있고, 설정에서 끄면 알림만 안 뜬다.
+            float upToBubble = bodyDepth + bubbleGap;      // 발에서 말풍선 아래끝까지
+            float hungryHeight = _hungry != null ? _hungry.HalfHeightWorld * px * 2f : 0f;
+            bool hungry = _growth.FullPercent <= 0f && _player.Options.HungryBubble;
+
+            if (_hungry != null)
+            {
+                Vector2 hungryScreen = foot - n * (upToBubble + hungryHeight * 0.5f);
+                _hungry.Place(VirtualToWorld(hungryScreen.x, hungryScreen.y), pose.RotationDeg, hungry);
+            }
+
+            // 배고픔이 떠 있으면 코인은 그만큼 더 위로 올라간다
+            if (hungry) upToBubble += hungryHeight + BubbleStackGapPx;
+            Vector2 bubbleScreen = foot - n * (upToBubble + bubbleHalf);
 
             // 방금 받은 선물이 있으면 그 자리에서 코인이 떠오른다.
             if (_coinPopPending)
@@ -2574,6 +2682,15 @@ namespace SnailPet
         /// (예전 고정값 <see cref="SnailPresent.BubbleGap"/> 18px 은 달팽이가 컸을 때의 값이다.)
         /// </summary>
         private const float BubbleGapFraction = 0.12f, BubbleGapMinPx = 3f;
+
+        /// <summary>말풍선이 둘 이상 뜰 때 사이에 두는 틈(px).</summary>
+        /// <summary>배고픔 말풍선의 BubbleData 토큰. 시트에 넣으면 크기를 거기서 정할 수 있다.</summary>
+        private const string HungryBubbleToken = "[배고픔]";
+
+        private const float BubbleStackGapPx = 2f;
+
+        /// <summary>포만도가 0 인 동안 계속 떠 있는 말풍선. 눌러도 아무 일도 없다.</summary>
+        private SnailBubble _hungry;
         private bool _bubbleLogged;
 
         /// <summary>
@@ -2633,6 +2750,21 @@ namespace SnailPet
         ///  · 달팽이도 옛 화면 기준으로 배치돼 엉뚱한 자리에 그려진다
         /// 실제로 2모니터(3840x1084)로 켜 둔 채 14시간 뒤 한 대가 꺼지면서 그렇게 됐다.
         /// </summary>
+        /// <summary>
+        /// 투명 창을 다시 걸어 본다. 이미 걸렸으면 아무 일도 안 한다.
+        /// 성공/실패를 <b>바뀔 때만</b> 적는다 — 매 프레임 적으면 로그가 넘친다.
+        /// </summary>
+        private void RetryTransparentWindow()
+        {
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            if (TransparentWindow.Applied || Application.isEditor) return;
+
+            if (!TransparentWindow.Apply(clickThrough: true)) return;
+
+            Say($"      [{_t:0.0}s] 투명 창 늦게 적용됨 (처음에는 창이 포커스를 못 받았습니다)");
+#endif
+        }
+
         private void SyncScreen()
         {
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN

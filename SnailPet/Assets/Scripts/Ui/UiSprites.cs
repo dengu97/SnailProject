@@ -102,6 +102,28 @@ namespace SnailPet.Ui
         }
 
         /// <summary>
+        /// 이름으로 불러오는 칸 그림. 등급별 칸(EnumData.SlotResourceKey)이 쓴다.
+        ///
+        /// 9-슬라이스 테두리는 기본 칸(<see cref="Shape.Slot2"/>)의 것을 그대로 물려받는다.
+        /// 같은 크기·같은 모양으로 그린 아트인데 테두리만 없으면 모서리가 다르게 뭉개진다.
+        /// 아트에 이미 테두리가 잡혀 있으면 그쪽이 이긴다.
+        /// </summary>
+        public static Sprite SlotByKey(string key)
+        {
+            if (string.IsNullOrEmpty(key)) return null;
+            if (_byKey.TryGetValue(key, out var cached)) return cached;
+
+            var art = Resources.Load<Sprite>("Ui/Shape/" + key);
+            if (art == null) Debug.LogWarning("[SnailPet] 칸 그림을 찾지 못했습니다: Ui/Shape/" + key);
+            else art = WithBorder(art, Of(Shape.Slot2).border);
+
+            _byKey[key] = art;
+            return art;
+        }
+
+        private static readonly Dictionary<string, Sprite> _byKey = new Dictionary<string, Sprite>();
+
+        /// <summary>
         /// 아트에 9-슬라이스 테두리가 안 잡혀 있을 때 코드로 잡아 주는 값 (원본 픽셀).
         ///
         /// 크게 늘어나는 도형만 적는다. 안내 문구 띠는 글자 길이에 따라 원본(79x54)의 세 배까지

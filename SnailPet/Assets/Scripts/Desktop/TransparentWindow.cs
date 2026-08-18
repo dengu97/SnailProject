@@ -21,6 +21,31 @@ namespace SnailPet.Desktop
         public static bool Applied { get; private set; }
         public static string LastError { get; private set; }
 
+        /// <summary>
+        /// 이 프로세스의 창 손잡이를 찾는다.
+        ///
+        /// <b>GetActiveWindow 는 「부르는 스레드의 활성 창」이라 0 이 오는 경우가 있다</b> —
+        /// 창이 포커스를 못 받은 채 뜨면(다른 창을 만지는 중에 실행하거나 스크립트로 띄우면)
+        /// 그렇다. 그러면 투명·클릭 통과·항상 위가 통째로 안 걸려 검은 화면만 남는다.
+        /// 실제로 2026-08-18 에 그렇게 한 번 실패했다.
+        ///
+        /// 그래서 활성 창이 없으면 이 프로세스의 주 창을 직접 찾는다.
+        /// </summary>
+        private static IntPtr FindOwnWindow()
+        {
+            var hwnd = Win32.GetActiveWindow();
+            if (hwnd != IntPtr.Zero) return hwnd;
+
+            try
+            {
+                using (var me = System.Diagnostics.Process.GetCurrentProcess())
+                    if (me.MainWindowHandle != IntPtr.Zero) return me.MainWindowHandle;
+            }
+            catch { /* 못 읽으면 아래에서 훑는다 */ }
+
+            return IntPtr.Zero;
+        }
+
         /// <summary>가상 화면 전체를 덮는 투명·항상 위·클릭 통과 창으로 만든다.</summary>
         public static bool Apply(bool clickThrough = true)
         {
@@ -32,10 +57,11 @@ namespace SnailPet.Desktop
                 return false;
             }
 
-            IntPtr hwnd = Win32.GetActiveWindow();
+            IntPtr hwnd = FindOwnWindow();
             if (hwnd == IntPtr.Zero)
             {
-                LastError = "GetActiveWindow 가 0 을 돌려줬습니다.";
+                // 창이 아직 안 만들어졌을 수도 있다. 부르는 쪽이 다음 프레임에 다시 시도한다.
+                LastError = "창 손잡이를 못 찾았습니다 (활성 창도 주 창도 없음).";
                 return false;
             }
             Hwnd = hwnd;

@@ -119,4 +119,8 @@ if ($newestSrc -and $newestOut -and $newestSrc.LastWriteTime -gt $newestOut.Last
     exit 1
 }
 
+# 스팀은 exe 옆의 steam_appid.txt 를 읽는다. 없으면 붙지 않으므로 빌드할 때마다 넣어 준다.
+$appid = Join-Path $ProjectPath "steam_appid.txt"
+if (Test-Path $appid) { Copy-Item $appid (Join-Path $ProjectPath "Build") -Force }
+
 Write-Output "OK: 빌드 최신 (산출물 $($newestOut.LastWriteTime))"
