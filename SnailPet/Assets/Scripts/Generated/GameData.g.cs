@@ -597,6 +597,8 @@ namespace SnailPet.Data
             new PartsDataRow(214, 214, 17, RarityType.Rare, PartsType.Body, "rarebody03", true, new string[] { "rarebody03_c01" }, 7, 215, 36, 6d),
             new PartsDataRow(216, 216, 17, RarityType.Rare, PartsType.Shell, "tubeshell", true, new string[] { "tubeshell_c01" }, 7, 217, 36, 6d),
             new PartsDataRow(218, 218, 17, RarityType.Rare, PartsType.Feeler, "duckfeeler", false, System.Array.Empty<string>(), 7, 219, 36, 6d),
+            new PartsDataRow(228, 228, 17, RarityType.Rare, PartsType.Shell, "rareshell03", true, new string[] { "rareshell03_c01" }, 7, 229, 36, 6d),
+            new PartsDataRow(230, 230, 17, RarityType.Rare, PartsType.Shell, "rareshell03", true, new string[] { "rareshell03_c02" }, 7, 231, 36, 6d),
         };
 
         public static readonly FoodDataRow[] FoodData = new FoodDataRow[]
@@ -605,6 +607,14 @@ namespace SnailPet.Data
             new FoodDataRow(32, FoodType.vegetable, 32, RarityType.Common, 7d, 5d, 2.5d, 0, 125, "food_tomato", "food_parts_red", "poop_red", 1, 20d),
             new FoodDataRow(33, FoodType.vegetable, 33, RarityType.Common, 7d, 5d, 5d, 0, 126, "food_zucchini", "food_parts", "poop_green", 1, 20d),
             new FoodDataRow(34, FoodType.bean, 34, RarityType.Common, 15d, 10d, 5d, 35, 127, "food_tofu", "food_parts_white", "poop_brown", 2, 20d),
+            new FoodDataRow(232, FoodType.vegetable, 232, RarityType.Rare, 10d, 20d, 4d, 0, 233, "food_clover", "food_parts", "poop_green", 3, 30d),
+            new FoodDataRow(234, FoodType.vegetable, 234, RarityType.Common, 4d, 2d, 2d, 0, 235, "food_cucumber", "food_parts", "poop_green", 1, 10d),
+            new FoodDataRow(236, FoodType.vegetable, 236, RarityType.Common, 6d, 2d, 3d, 0, 237, "food_carrot", "food_parts_red", "poop_red", 1, 20d),
+            new FoodDataRow(238, FoodType.vegetable, 238, RarityType.Common, 3d, 5d, 3d, 0, 239, "food_blueberry", "food_parts_red", "poop_red", 1, 10d),
+            new FoodDataRow(240, FoodType.vegetable, 240, RarityType.Rare, 13d, 17d, 4d, 0, 241, "food_watermellon", "food_parts", "poop_green", 3, 30d),
+            new FoodDataRow(242, FoodType.vegetable, 242, RarityType.Rare, 11d, 19d, 4d, 0, 243, "food_apple", "food_parts_red", "poop_red", 3, 30d),
+            new FoodDataRow(244, FoodType.vegetable, 244, RarityType.Rare, 15d, 15d, 4d, 0, 245, "food_radish", "food_parts_white", "poop_brown", 3, 30d),
+            new FoodDataRow(246, FoodType.vegetable, 246, RarityType.Rare, 12d, 18d, 4d, 0, 247, "food_bro", "food_parts", "poop_green", 3, 30d),
         };
 
         public static readonly LevelDataRow[] LevelData = new LevelDataRow[]
@@ -666,21 +676,33 @@ namespace SnailPet.Data
             new AccessoriesDataRow(41, 41, AccessoriesType.Bag, "bag01", 93),
             new AccessoriesDataRow(134, 134, AccessoriesType.Etc, "etc01", 135),
             new AccessoriesDataRow(136, 136, AccessoriesType.Mask, "mask01", 137),
+            new AccessoriesDataRow(248, 248, AccessoriesType.Hat, "icecreamhat", 249),
+            new AccessoriesDataRow(250, 250, AccessoriesType.Hat, "icecreamhat2", 251),
         };
 
         public static readonly ShopDataRow[] ShopData = new ShopDataRow[]
         {
-            new ShopDataRow(CategoryType.Food, 31, RarityType.Common, 1, 36, 5, 3, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 2.5d),
-            new ShopDataRow(CategoryType.Food, 32, RarityType.Common, 1, 36, 7, 4, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 3.5d),
-            new ShopDataRow(CategoryType.Food, 33, RarityType.Common, 1, 36, 7, 4, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 3.5d),
-            new ShopDataRow(CategoryType.Food, 34, RarityType.Common, 1, 36, 12, 8, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 6d),
+            new ShopDataRow(CategoryType.Food, 234, RarityType.Common, 1, 36, 3, 2, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 1d),
+            new ShopDataRow(CategoryType.Food, 236, RarityType.Common, 1, 36, 3, 2, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 1d),
+            new ShopDataRow(CategoryType.Food, 31, RarityType.Common, 1, 36, 5, 3, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 2d),
+            new ShopDataRow(CategoryType.Food, 32, RarityType.Common, 1, 36, 7, 4, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 3d),
+            new ShopDataRow(CategoryType.Food, 33, RarityType.Common, 1, 36, 7, 4, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 3d),
+            new ShopDataRow(CategoryType.Food, 34, RarityType.Rare, 1, 36, 12, 8, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 6d),
+            new ShopDataRow(CategoryType.Food, 232, RarityType.Rare, 1, 36, 12, 8, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 6d),
+            new ShopDataRow(CategoryType.Food, 238, RarityType.Common, 1, 36, 4, 3, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 2d),
+            new ShopDataRow(CategoryType.Food, 240, RarityType.Rare, 1, 36, 12, 8, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 6d),
+            new ShopDataRow(CategoryType.Food, 242, RarityType.Rare, 1, 36, 14, 9, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 8d),
+            new ShopDataRow(CategoryType.Food, 244, RarityType.Rare, 1, 36, 14, 9, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 8d),
+            new ShopDataRow(CategoryType.Food, 246, RarityType.Rare, 1, 36, 14, 9, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 8d),
             new ShopDataRow(CategoryType.Egg, 37, RarityType.Common, 1, 36, 50, 35, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 25d),
             new ShopDataRow(CategoryType.Egg, 38, RarityType.Rare, 1, 36, 100, 80, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 50d),
             new ShopDataRow(CategoryType.Egg, 188, RarityType.Epic, 1, 36, 300, 250, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 150d),
             new ShopDataRow(CategoryType.Item, 36, RarityType.Common, 50, 36, 1, null, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), true, null, 0d),
-            new ShopDataRow(CategoryType.Accessories, 39, RarityType.Common, 1, 36, 500, 350, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 250d),
+            new ShopDataRow(CategoryType.Accessories, 39, RarityType.Common, 1, 36, 100, 70, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 50d),
             new ShopDataRow(CategoryType.Accessories, 40, RarityType.Common, 1, 36, 500, 350, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 250d),
             new ShopDataRow(CategoryType.Accessories, 41, RarityType.Common, 1, 36, 500, 350, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 250d),
+            new ShopDataRow(CategoryType.Accessories, 134, RarityType.Common, 1, 36, 500, 350, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 250d),
+            new ShopDataRow(CategoryType.Accessories, 136, RarityType.Common, 1, 36, 500, 350, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 250d),
         };
 
         public static readonly EventDataRow[] EventData = new EventDataRow[]
@@ -903,6 +925,30 @@ namespace SnailPet.Data
             new LanguageDataRow(219, "머리 위에 깃털이 솟아올랐습니다."),
             new LanguageDataRow(226, "5. 오리 달팽이"),
             new LanguageDataRow(227, "여름 휴가를 떠나는 오리 모양의 달패이입니다."),
+            new LanguageDataRow(248, "아이스크림 모자(딸기맛)"),
+            new LanguageDataRow(250, "아이스크림 모자(블루베리맛)"),
+            new LanguageDataRow(249, "아이스크림을 머리에 얹었습니다."),
+            new LanguageDataRow(251, "아이스크림을 머리에 얹었습니다."),
+            new LanguageDataRow(232, "네잎 클로버."),
+            new LanguageDataRow(233, "왜인지 행운이 따라올 것만 같습니다."),
+            new LanguageDataRow(236, "당근"),
+            new LanguageDataRow(237, "살짝 데친 미니 당근입니다."),
+            new LanguageDataRow(238, "블루베리"),
+            new LanguageDataRow(239, "달콤한 블루베리 한 알입니다."),
+            new LanguageDataRow(242, "사과 조각"),
+            new LanguageDataRow(243, "달콤한 사과조각입니다."),
+            new LanguageDataRow(240, "수박 조각"),
+            new LanguageDataRow(241, "작은 수박 조각입니다. 씨를 피해 먹어야겠군요."),
+            new LanguageDataRow(244, "하얀 무"),
+            new LanguageDataRow(245, "작은 하얀색의 무입니다. 수분이 가득하네요."),
+            new LanguageDataRow(246, "브로콜리"),
+            new LanguageDataRow(247, "작은 나무같이 생겼네요."),
+            new LanguageDataRow(228, "수국 껍질(보라색)"),
+            new LanguageDataRow(229, "수국으로 둘러싸인 껍질입니다."),
+            new LanguageDataRow(230, "수국 껍질(파란색)"),
+            new LanguageDataRow(231, "수국으로 둘러싸인 껍질입니다."),
+            new LanguageDataRow(252, "삭제"),
+            new LanguageDataRow(253, "필요한 재화가 부족합니다."),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -912,7 +958,7 @@ namespace SnailPet.Data
 
         public static readonly GameConfigRow[] GameConfig = new GameConfigRow[]
         {
-            new GameConfigRow(5, 1d, 1d, 24d, 10d, 1600d, null),
+            new GameConfigRow(5, 1d, 1d, 16d, 10d, 1600d, null),
         };
 
         public static readonly Dictionary<int, PartsDataRow> PartsDataById = BuildPartsDataById();
@@ -1241,6 +1287,32 @@ namespace SnailPet.Data
             { "[도감_화분달팽이정보]", 225 },
             { "[도감_오리달팽이]", 226 },
             { "[도감_오리달팽이정보]", 227 },
+            { "[레어_수국껍질]", 228 },
+            { "[레어_수국껍질정보]", 229 },
+            { "[레어_수국껍질2]", 230 },
+            { "[레어_수국껍질정보2]", 231 },
+            { "[클로버]", 232 },
+            { "[클로버정보]", 233 },
+            { "[오이]", 234 },
+            { "[오이정보]", 235 },
+            { "[당근]", 236 },
+            { "[당근정보]", 237 },
+            { "[블루베리]", 238 },
+            { "[블루베리정보]", 239 },
+            { "[수박]", 240 },
+            { "[수박정보]", 241 },
+            { "[사과]", 242 },
+            { "[사과정보]", 243 },
+            { "[하얀무]", 244 },
+            { "[하얀무정보]", 245 },
+            { "[브로콜리]", 246 },
+            { "[브로콜리정보]", 247 },
+            { "[아이스크림모자1]", 248 },
+            { "[아이스크림모자1정보]", 249 },
+            { "[아이스크림모자2]", 250 },
+            { "[아이스크림모자2정보]", 251 },
+            { "[삭제]", 252 },
+            { "[안내_재화부족]", 253 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

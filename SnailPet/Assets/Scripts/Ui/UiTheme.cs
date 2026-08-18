@@ -114,6 +114,9 @@ namespace SnailPet.Ui
             /// <summary>칸 오른쪽 아래에 붙는 개수 뱃지. 음식 그리드와 같은 크기다.</summary>
             public static readonly RectInt Count = new RectInt(21, 20, 15, 15);
 
+            /// <summary>「삭제」 문구. 칸 한가운데에 가로로 걸친다.</summary>
+            public static readonly RectInt Ask = new RectInt(2, 11, 32, 13);
+
             /// <summary>빈 칸 수. 마지막 자리에는 최대화 버튼이 들어간다.</summary>
             public const int Slots = 2;
         }
@@ -482,13 +485,19 @@ namespace SnailPet.Ui
 
             // ── 아래쪽: 파츠 목록 (상세 상태) ──
             // 설명·보상과 같은 자리를 나눠 쓴다. 전환 버튼으로 갈아 끼운다.
-            // 시작 높이는 설명 홈(InfoBox)·유전정보 줄(Gene.Slim)과 맞춰 둔다.
-            public static readonly RectInt PartRow    = new RectInt(28, 135, 123, 14);
-            public const int PartStep = 18, PartCount = 4;
+            //
+            // 배치는 <b>유전정보 오른쪽 줄과 같다</b>. 따로 적어 두었더니 도감 쪽만 등급 뱃지가
+            // 동그란 아이콘에 겹쳐 있었다(2026-08-18). 그쪽 값을 그대로 옮겨 오므로
+            // 한쪽만 고쳐져 다시 어긋나는 일이 없다 — 줄 기준 좌표를 줄 자리에 더하기만 한다.
+            private static RectInt InRow(RectInt at) =>
+                new RectInt(Gene.Slim.x + at.x, Gene.Slim.y + at.y, at.width, at.height);
 
-            public static readonly RectInt PartIcon   = new RectInt(18, 133, 16, 16);
-            public static readonly RectInt PartRarity = new RectInt(35, 136, 30, 11);
-            public static readonly RectInt PartName   = new RectInt(63, 134, 98, 17);
+            public static readonly RectInt PartRow    = InRow(Gene.SlimBar);
+            public const int PartStep = Gene.SlimStep, PartCount = 4;
+
+            public static readonly RectInt PartIcon   = InRow(Gene.SlimThumb);
+            public static readonly RectInt PartRarity = InRow(Gene.SlimRarity);
+            public static readonly RectInt PartName   = InRow(Gene.SlimName);
         }
 
         /// <summary>

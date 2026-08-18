@@ -1024,6 +1024,14 @@ namespace SnailPet
             int unit = Shop.UnitCost(row);
             if (unit <= 0) { Say("      [UI] 구매: 가격이 없습니다"); return; }
 
+            // 한 개도 못 사면 수량 팝업을 띄우지 않는다. 띄워 봐야 「네」에서 조용히 실패한다.
+            if (_player.Coins < unit)
+            {
+                _ui.NoticeNoCoins();
+                Say("      [UI] 구매: 코인 부족 (" + _player.Coins + " < " + unit + ")");
+                return;
+            }
+
             _popupSelling = false;
             _popupSnailId = 0;
 
@@ -1059,6 +1067,9 @@ namespace SnailPet
 
             if (result != Shop.Result.Ok)
             {
+                // 팝업을 여는 시점에 걸러지지만, 그 사이 코인이 줄었을 수 있다
+                if (result == Shop.Result.NotEnough && !_popupSelling) _ui.NoticeNoCoins();
+
                 Say($"      [UI] {(_popupSelling ? "판매" : "구매")} 실패: {result}  보유 {_player.Coins}코인");
                 return;
             }

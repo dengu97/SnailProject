@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18 11:04:11",
+  "generatedAt": "2026-08-18 14:14:54",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -237,7 +237,33 @@
     "[도감_화분달팽이]": 224,
     "[도감_화분달팽이정보]": 225,
     "[도감_오리달팽이]": 226,
-    "[도감_오리달팽이정보]": 227
+    "[도감_오리달팽이정보]": 227,
+    "[레어_수국껍질]": 228,
+    "[레어_수국껍질정보]": 229,
+    "[레어_수국껍질2]": 230,
+    "[레어_수국껍질정보2]": 231,
+    "[클로버]": 232,
+    "[클로버정보]": 233,
+    "[오이]": 234,
+    "[오이정보]": 235,
+    "[당근]": 236,
+    "[당근정보]": 237,
+    "[블루베리]": 238,
+    "[블루베리정보]": 239,
+    "[수박]": 240,
+    "[수박정보]": 241,
+    "[사과]": 242,
+    "[사과정보]": 243,
+    "[하얀무]": 244,
+    "[하얀무정보]": 245,
+    "[브로콜리]": 246,
+    "[브로콜리정보]": 247,
+    "[아이스크림모자1]": 248,
+    "[아이스크림모자1정보]": 249,
+    "[아이스크림모자2]": 250,
+    "[아이스크림모자2정보]": 251,
+    "[삭제]": 252,
+    "[안내_재화부족]": 253
   },
   "tables": {
     "EnumData": [
@@ -362,13 +388,23 @@
       {"Id": 212, "NameId": 212, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Eyes", "ResourceKey": "rareeyes01", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 213, "SellItem": 36, "SellCount": 6},
       {"Id": 214, "NameId": 214, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Body", "ResourceKey": "rarebody03", "IsUseColor": true, "Colors": ["rarebody03_c01"], "AppearWeight": 7, "InfoId": 215, "SellItem": 36, "SellCount": 6},
       {"Id": 216, "NameId": 216, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Shell", "ResourceKey": "tubeshell", "IsUseColor": true, "Colors": ["tubeshell_c01"], "AppearWeight": 7, "InfoId": 217, "SellItem": 36, "SellCount": 6},
-      {"Id": 218, "NameId": 218, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Feeler", "ResourceKey": "duckfeeler", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 219, "SellItem": 36, "SellCount": 6}
+      {"Id": 218, "NameId": 218, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Feeler", "ResourceKey": "duckfeeler", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 219, "SellItem": 36, "SellCount": 6},
+      {"Id": 228, "NameId": 228, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Shell", "ResourceKey": "rareshell03", "IsUseColor": true, "Colors": ["rareshell03_c01"], "AppearWeight": 7, "InfoId": 229, "SellItem": 36, "SellCount": 6},
+      {"Id": 230, "NameId": 230, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Shell", "ResourceKey": "rareshell03", "IsUseColor": true, "Colors": ["rareshell03_c02"], "AppearWeight": 7, "InfoId": 231, "SellItem": 36, "SellCount": 6}
     ],
     "FoodData": [
       {"Id": 31, "FoodType": "vegetable", "NameId": 31, "RarityType": "Common", "FullPoint": 5, "HappyPoint": 3, "EatTime": 2, "BuffId": 0, "InfoId": 124, "ResourceKey": "food_lettuce", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 1, "PoopTime": 20},
       {"Id": 32, "FoodType": "vegetable", "NameId": 32, "RarityType": "Common", "FullPoint": 7, "HappyPoint": 5, "EatTime": 2.5, "BuffId": 0, "InfoId": 125, "ResourceKey": "food_tomato", "PartsResourceKey": "food_parts_red", "PoopResourceKey": "poop_red", "PoopCount": 1, "PoopTime": 20},
       {"Id": 33, "FoodType": "vegetable", "NameId": 33, "RarityType": "Common", "FullPoint": 7, "HappyPoint": 5, "EatTime": 5, "BuffId": 0, "InfoId": 126, "ResourceKey": "food_zucchini", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 1, "PoopTime": 20},
-      {"Id": 34, "FoodType": "bean", "NameId": 34, "RarityType": "Common", "FullPoint": 15, "HappyPoint": 10, "EatTime": 5, "BuffId": 35, "InfoId": 127, "ResourceKey": "food_tofu", "PartsResourceKey": "food_parts_white", "PoopResourceKey": "poop_brown", "PoopCount": 2, "PoopTime": 20}
+      {"Id": 34, "FoodType": "bean", "NameId": 34, "RarityType": "Common", "FullPoint": 15, "HappyPoint": 10, "EatTime": 5, "BuffId": 35, "InfoId": 127, "ResourceKey": "food_tofu", "PartsResourceKey": "food_parts_white", "PoopResourceKey": "poop_brown", "PoopCount": 2, "PoopTime": 20},
+      {"Id": 232, "FoodType": "vegetable", "NameId": 232, "RarityType": "Rare", "FullPoint": 10, "HappyPoint": 20, "EatTime": 4, "BuffId": 0, "InfoId": 233, "ResourceKey": "food_clover", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 3, "PoopTime": 30},
+      {"Id": 234, "FoodType": "vegetable", "NameId": 234, "RarityType": "Common", "FullPoint": 4, "HappyPoint": 2, "EatTime": 2, "BuffId": 0, "InfoId": 235, "ResourceKey": "food_cucumber", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 1, "PoopTime": 10},
+      {"Id": 236, "FoodType": "vegetable", "NameId": 236, "RarityType": "Common", "FullPoint": 6, "HappyPoint": 2, "EatTime": 3, "BuffId": 0, "InfoId": 237, "ResourceKey": "food_carrot", "PartsResourceKey": "food_parts_red", "PoopResourceKey": "poop_red", "PoopCount": 1, "PoopTime": 20},
+      {"Id": 238, "FoodType": "vegetable", "NameId": 238, "RarityType": "Common", "FullPoint": 3, "HappyPoint": 5, "EatTime": 3, "BuffId": 0, "InfoId": 239, "ResourceKey": "food_blueberry", "PartsResourceKey": "food_parts_red", "PoopResourceKey": "poop_red", "PoopCount": 1, "PoopTime": 10},
+      {"Id": 240, "FoodType": "vegetable", "NameId": 240, "RarityType": "Rare", "FullPoint": 13, "HappyPoint": 17, "EatTime": 4, "BuffId": 0, "InfoId": 241, "ResourceKey": "food_watermellon", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 3, "PoopTime": 30},
+      {"Id": 242, "FoodType": "vegetable", "NameId": 242, "RarityType": "Rare", "FullPoint": 11, "HappyPoint": 19, "EatTime": 4, "BuffId": 0, "InfoId": 243, "ResourceKey": "food_apple", "PartsResourceKey": "food_parts_red", "PoopResourceKey": "poop_red", "PoopCount": 3, "PoopTime": 30},
+      {"Id": 244, "FoodType": "vegetable", "NameId": 244, "RarityType": "Rare", "FullPoint": 15, "HappyPoint": 15, "EatTime": 4, "BuffId": 0, "InfoId": 245, "ResourceKey": "food_radish", "PartsResourceKey": "food_parts_white", "PoopResourceKey": "poop_brown", "PoopCount": 3, "PoopTime": 30},
+      {"Id": 246, "FoodType": "vegetable", "NameId": 246, "RarityType": "Rare", "FullPoint": 12, "HappyPoint": 18, "EatTime": 4, "BuffId": 0, "InfoId": 247, "ResourceKey": "food_bro", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 3, "PoopTime": 30}
     ],
     "LevelData": [
       {"Level": 1, "LevelUpTime": 0, "NeedFullPoint": 10, "NeedHappyPoint": 10, "UseFullPointTime": 60, "UseHappyPointTime": 60, "Speed": 1, "Size": 4, "CoinCoolTime": 120, "ItemId": 36, "ItemCount": 10, "SellAdvantage": 1},
@@ -415,20 +451,32 @@
       {"Id": 40, "NameId": 40, "AccessoriesType": "Hat", "ResourceKey": "hat02", "InfoId": 92},
       {"Id": 41, "NameId": 41, "AccessoriesType": "Bag", "ResourceKey": "bag01", "InfoId": 93},
       {"Id": 134, "NameId": 134, "AccessoriesType": "Etc", "ResourceKey": "etc01", "InfoId": 135},
-      {"Id": 136, "NameId": 136, "AccessoriesType": "Mask", "ResourceKey": "mask01", "InfoId": 137}
+      {"Id": 136, "NameId": 136, "AccessoriesType": "Mask", "ResourceKey": "mask01", "InfoId": 137},
+      {"Id": 248, "NameId": 248, "AccessoriesType": "Hat", "ResourceKey": "icecreamhat", "InfoId": 249},
+      {"Id": 250, "NameId": 250, "AccessoriesType": "Hat", "ResourceKey": "icecreamhat2", "InfoId": 251}
     ],
     "ShopData": [
-      {"CategoryType": "Food", "Id": 31, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 5, "DiscountCostCount": 3, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 2.5},
-      {"CategoryType": "Food", "Id": 32, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 7, "DiscountCostCount": 4, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 3.5},
-      {"CategoryType": "Food", "Id": 33, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 7, "DiscountCostCount": 4, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 3.5},
-      {"CategoryType": "Food", "Id": 34, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 12, "DiscountCostCount": 8, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 6},
+      {"CategoryType": "Food", "Id": 234, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 3, "DiscountCostCount": 2, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 1},
+      {"CategoryType": "Food", "Id": 236, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 3, "DiscountCostCount": 2, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 1},
+      {"CategoryType": "Food", "Id": 31, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 5, "DiscountCostCount": 3, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 2},
+      {"CategoryType": "Food", "Id": 32, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 7, "DiscountCostCount": 4, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 3},
+      {"CategoryType": "Food", "Id": 33, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 7, "DiscountCostCount": 4, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 3},
+      {"CategoryType": "Food", "Id": 34, "RarityType": "Rare", "ItemCount": 1, "CostItem": 36, "CostCount": 12, "DiscountCostCount": 8, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 6},
+      {"CategoryType": "Food", "Id": 232, "RarityType": "Rare", "ItemCount": 1, "CostItem": 36, "CostCount": 12, "DiscountCostCount": 8, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 6},
+      {"CategoryType": "Food", "Id": 238, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 4, "DiscountCostCount": 3, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 2},
+      {"CategoryType": "Food", "Id": 240, "RarityType": "Rare", "ItemCount": 1, "CostItem": 36, "CostCount": 12, "DiscountCostCount": 8, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 6},
+      {"CategoryType": "Food", "Id": 242, "RarityType": "Rare", "ItemCount": 1, "CostItem": 36, "CostCount": 14, "DiscountCostCount": 9, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 8},
+      {"CategoryType": "Food", "Id": 244, "RarityType": "Rare", "ItemCount": 1, "CostItem": 36, "CostCount": 14, "DiscountCostCount": 9, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 8},
+      {"CategoryType": "Food", "Id": 246, "RarityType": "Rare", "ItemCount": 1, "CostItem": 36, "CostCount": 14, "DiscountCostCount": 9, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 8},
       {"CategoryType": "Egg", "Id": 37, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 50, "DiscountCostCount": 35, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 25},
       {"CategoryType": "Egg", "Id": 38, "RarityType": "Rare", "ItemCount": 1, "CostItem": 36, "CostCount": 100, "DiscountCostCount": 80, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 50},
       {"CategoryType": "Egg", "Id": 188, "RarityType": "Epic", "ItemCount": 1, "CostItem": 36, "CostCount": 300, "DiscountCostCount": 250, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 150},
       {"CategoryType": "Item", "Id": 36, "RarityType": "Common", "ItemCount": 50, "CostItem": 36, "CostCount": 1, "DiscountCostCount": null, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": true, "SellItem": null, "SellCount": 0},
-      {"CategoryType": "Accessories", "Id": 39, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 500, "DiscountCostCount": 350, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 250},
+      {"CategoryType": "Accessories", "Id": 39, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 100, "DiscountCostCount": 70, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 50},
       {"CategoryType": "Accessories", "Id": 40, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 500, "DiscountCostCount": 350, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 250},
-      {"CategoryType": "Accessories", "Id": 41, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 500, "DiscountCostCount": 350, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 250}
+      {"CategoryType": "Accessories", "Id": 41, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 500, "DiscountCostCount": 350, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 250},
+      {"CategoryType": "Accessories", "Id": 134, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 500, "DiscountCostCount": 350, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 250},
+      {"CategoryType": "Accessories", "Id": 136, "RarityType": "Common", "ItemCount": 1, "CostItem": 36, "CostCount": 500, "DiscountCostCount": 350, "StartDate": "2026-07-29T06:00:00", "EndDate": "2026-12-11T23:59:59", "IsShowEndDate": false, "SellItem": 36, "SellCount": 250}
     ],
     "EventData": [
       {"Id": 42, "Weekly": 1, "ShopItemIds": [31, 32, 33, 34], "ItemCount": 1, "Discount": 0.5, "BuyCount": 10},
@@ -642,13 +690,37 @@
       {"Id": 217, "Kr": "여름 휴가를 가려는 모양입니다."},
       {"Id": 219, "Kr": "머리 위에 깃털이 솟아올랐습니다."},
       {"Id": 226, "Kr": "5. 오리 달팽이"},
-      {"Id": 227, "Kr": "여름 휴가를 떠나는 오리 모양의 달패이입니다."}
+      {"Id": 227, "Kr": "여름 휴가를 떠나는 오리 모양의 달패이입니다."},
+      {"Id": 248, "Kr": "아이스크림 모자(딸기맛)"},
+      {"Id": 250, "Kr": "아이스크림 모자(블루베리맛)"},
+      {"Id": 249, "Kr": "아이스크림을 머리에 얹었습니다."},
+      {"Id": 251, "Kr": "아이스크림을 머리에 얹었습니다."},
+      {"Id": 232, "Kr": "네잎 클로버."},
+      {"Id": 233, "Kr": "왜인지 행운이 따라올 것만 같습니다."},
+      {"Id": 236, "Kr": "당근"},
+      {"Id": 237, "Kr": "살짝 데친 미니 당근입니다."},
+      {"Id": 238, "Kr": "블루베리"},
+      {"Id": 239, "Kr": "달콤한 블루베리 한 알입니다."},
+      {"Id": 242, "Kr": "사과 조각"},
+      {"Id": 243, "Kr": "달콤한 사과조각입니다."},
+      {"Id": 240, "Kr": "수박 조각"},
+      {"Id": 241, "Kr": "작은 수박 조각입니다. 씨를 피해 먹어야겠군요."},
+      {"Id": 244, "Kr": "하얀 무"},
+      {"Id": 245, "Kr": "작은 하얀색의 무입니다. 수분이 가득하네요."},
+      {"Id": 246, "Kr": "브로콜리"},
+      {"Id": 247, "Kr": "작은 나무같이 생겼네요."},
+      {"Id": 228, "Kr": "수국 껍질(보라색)"},
+      {"Id": 229, "Kr": "수국으로 둘러싸인 껍질입니다."},
+      {"Id": 230, "Kr": "수국 껍질(파란색)"},
+      {"Id": 231, "Kr": "수국으로 둘러싸인 껍질입니다."},
+      {"Id": 252, "Kr": "삭제"},
+      {"Id": 253, "Kr": "필요한 재화가 부족합니다."}
     ],
     "UnlockData": [
       {"Id": 101, "ConditionType": "SnailLevel", "NeedConditionValue": 2, "CostItem": null, "CostCount": null}
     ],
     "GameConfig": [
-      {"MutationWeight": 5, "FullDecayPerTick": 1, "HappyDecayPerTick": 1, "PixelsPerSpeed": 24, "PixelsPerSize": 10, "FoodGravity": 1600, "Info": null}
+      {"MutationWeight": 5, "FullDecayPerTick": 1, "HappyDecayPerTick": 1, "PixelsPerSpeed": 16, "PixelsPerSize": 10, "FoodGravity": 1600, "Info": null}
     ]
   }
 }

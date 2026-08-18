@@ -47,6 +47,7 @@ namespace SnailPet.Ui
             // 최소화 창 (minimumbadge / slot3)
             MinimumBadge,   // 최소화했을 때 남는 띠
             Slot3,          // 그 띠 위의 칸
+            SlotCount,      // 칸의 개수 뱃지. 숫자가 길어지면 가로로 늘어난다
 
             Notice,         // 잠깐 떴다 사라지는 안내 문구의 바탕
         }
@@ -73,6 +74,7 @@ namespace SnailPet.Ui
         {
             Shape.PanelBorder => "panelborder",
             Shape.FillHappy   => "fill_happy",
+            Shape.SlotCount   => "slot_count",
             Shape.Selection   => "slotline",   // 고른 칸에 덧그리는 테두리
             Shape.RowSelection => "slotline2",
             _ => s.ToString().ToLowerInvariant(),
@@ -111,7 +113,8 @@ namespace SnailPet.Ui
         /// </summary>
         private static Vector4 BorderOf(Shape s) => s switch
         {
-            Shape.Notice => new Vector4(30, 26, 30, 26),
+            Shape.Notice    => new Vector4(30, 26, 30, 26),
+            Shape.SlotCount => new Vector4(30, 26, 30, 26),   // notice 와 같은 도형이다
             _            => Vector4.zero,
         };
 

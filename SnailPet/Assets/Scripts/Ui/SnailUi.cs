@@ -80,6 +80,12 @@ namespace SnailPet.Ui
             /// <summary>즐겨찾기가 꽉 찼는데 또 켜려고 했을 때.</summary>
             public const string NoticeFavoriteFull = "[안내_즐겨찾기2]";
 
+            /// <summary>개수가 0 인 즐겨찾기 칸에 뜨는 「삭제」.</summary>
+            public const string Delete = "[삭제]";
+
+            /// <summary>코인이 모자라 못 살 때.</summary>
+            public const string NoticeNoCoins = "[안내_재화부족]";
+
             /// <summary>도감 목록의 제목. 시트에 넣기 전에는 화면에 토큰이 그대로 나온다.</summary>
             public const string Guide = "[달팽이도감]";
             public const string Traits   = "[보유특징]";
@@ -312,6 +318,9 @@ namespace SnailPet.Ui
             // 하단 액션 첫 칸은 도감으로 바뀌었다. 프리팹에는 예전 돋보기가 구워져 있다.
             if (Count(_actionBtns) > 0) SetGlyph(_actionBtns[0], "icon_book");
 
+            // 음식 상세의 판매도 테두리 없는 아트로 바뀌었다. 프리팹에는 icon_sell 이 구워져 있다.
+            SetGlyph(_foodSellBtn, "btn_sell");
+
             // 상점 뒤로가기도 아트가 들어왔다. 프리팹에는 버튼 도형 + 「←」 글자로 굳어 있다.
             FitBackButton();
 
@@ -486,15 +495,20 @@ namespace SnailPet.Ui
                 var slot = slots[i];
                 if (slot?.Root == null || slot.Count == null) continue;
 
-                if (slot.CountBg == null)
+                if (slot.CountBg == null) slot.CountBg = CountBadge(slot.Root, Max.FoodCountBadge);
+                else
                 {
-                    slot.CountBg = Icon(slot.Root, Max.FoodCountBadge, "icon_circle", Color.white, "CountBg");
-                    slot.CountBg.raycastTarget = false;
+                    // 프리팹에는 동그란 그림(icon_circle)이 구워져 있다. 늘어나는 도형으로 갈아 끼운다.
+                    slot.CountBg.sprite = UiSprites.Of(UiSprites.Shape.SlotCount);
+                    slot.CountBg.type = Image.Type.Sliced;
+                    slot.CountBg.preserveAspect = false;
+                    slot.CountBg.color = UiSprites.IsArt(UiSprites.Shape.SlotCount) ? Color.white : UiTheme.BadgeDark;
+                    PlaceRight((RectTransform)slot.CountBg.transform, Max.FoodCountBadge);
                 }
-
+                slot.CountBg.raycastTarget = false;
                 slot.CountBg.transform.SetAsLastSibling();
 
-                Place((RectTransform)slot.Count.transform, Max.FoodCountBadge);
+                PlaceRight((RectTransform)slot.Count.transform, Max.FoodCountBadge);
                 slot.Count.alignment = TextAnchor.MiddleCenter;
                 slot.Count.color = UiTheme.OnBadge;
                 slot.Count.transform.SetAsLastSibling();
@@ -933,6 +947,8 @@ namespace SnailPet.Ui
             public Text Plus;
             public Image CountBg;
             public Text Count;
+            public Image AskBg;
+            public Text Ask;
             public Button Button;
         }
 
@@ -941,6 +957,7 @@ namespace SnailPet.Ui
         [SerializeField] private MiniSlot[] _miniSlots;
 
         private int[] _favoriteIds = new int[0];
+        private int[] _favoriteCounts = new int[0];
 
         /// <summary>
         /// 최소화 창. 띠 하나에 즐겨찾기 칸 둘과 최대화 버튼이 얹힌다.
@@ -987,10 +1004,16 @@ namespace SnailPet.Ui
                              null, Color.white, "Food");
             slot.Food.raycastTarget = false;
 
-            // 개수는 음식 그리드와 같은 모양이다 — 동그란 아트 위에 흰 숫자.
-            slot.CountBg = Icon(root, UiTheme.Mini.Count, "icon_circle", Color.white, "CountBg");
-            slot.CountBg.raycastTarget = false;
+            // 개수는 음식 그리드와 같은 모양이다. 숫자가 길면 왼쪽으로 늘어난다.
+            slot.CountBg = CountBadge(root, UiTheme.Mini.Count);
             slot.Count = Label(root, UiTheme.Mini.Count, "", 9, UiTheme.OnBadge);
+            PlaceRight((RectTransform)slot.Count.transform, UiTheme.Mini.Count);
+
+            // 개수가 0 인 즐겨찾기를 눌렀을 때 뜨는 「삭제」. 개수 뱃지보다 나중에 지어 그 위에 온다.
+            slot.AskBg = Box(root, UiTheme.Mini.Ask, UiTheme.BadgeDark, UiSprites.Shape.Badge, "AskBg");
+            slot.Ask = LocLabel(root, UiTheme.Mini.Ask, Keys.Delete, 8, UiTheme.OnBadge);
+            slot.AskBg.enabled = false;
+            slot.Ask.enabled = false;
 
             slot.Button = root.gameObject.AddComponent<Button>();
             slot.Button.targetGraphic = bg;
@@ -1004,6 +1027,7 @@ namespace SnailPet.Ui
         public void SetFavorites((int foodId, int count)[] foods)
         {
             _favoriteIds = new int[foods?.Length ?? 0];
+            _favoriteCounts = new int[_favoriteIds.Length];
 
             for (int i = 0; i < Count(_miniSlots); i++)
             {
@@ -1011,7 +1035,7 @@ namespace SnailPet.Ui
                 if (slot == null) continue;
 
                 bool has = foods != null && i < foods.Length;
-                if (has) _favoriteIds[i] = foods[i].foodId;
+                if (has) { _favoriteIds[i] = foods[i].foodId; _favoriteCounts[i] = foods[i].count; }
 
                 var row = has && SnailPet.Data.GameData.FoodDataById.TryGetValue(foods[i].foodId, out var f)
                         ? f : null;
@@ -1027,21 +1051,68 @@ namespace SnailPet.Ui
                 if (slot.Plus != null)    slot.Plus.enabled = !has;
                 if (slot.Count != null)   slot.Count.text = has ? count.ToString() : "";
                 if (slot.CountBg != null) slot.CountBg.enabled = has && slot.CountBg.sprite != null;
+                FitCount(slot.Count, slot.CountBg);
             }
+
+            // 목록이 바뀌면 물어보던 것도 없던 일이 된다
+            AskDelete(-1);
         }
 
         /// <summary>
-        /// 즐겨찾기 칸을 눌렀다. 등록돼 있으면 바로 먹이고(목록에서 먹이는 것과 같은 길),
-        /// 비어 있으면 어디서 등록하는지 알려 준다.
+        /// 즐겨찾기 칸을 눌렀다.
+        ///
+        ///  · 비었으면 → 어디서 등록하는지 안내
+        ///  · 가진 것이 있으면 → 바로 먹이기
+        ///  · 가진 것이 없으면 → 「삭제」를 띄우고, 한 번 더 누르면 즐겨찾기에서 뺀다
+        ///
+        /// 개수가 0 이면 음식 목록에 그 음식이 안 나와 별을 다시 누를 길이 없다.
+        /// 그래서 등록을 푸는 길을 여기에 둔다.
         /// </summary>
         private void PressFavorite(int index)
         {
-            if (index >= 0 && index < _favoriteIds.Length) FeedFood?.Invoke(_favoriteIds[index]);
-            else ShowNotice(SnailPet.Data.Loc.Text(Keys.NoticeFavorite));
+            if (index < 0 || index >= _favoriteIds.Length)
+            {
+                ShowNotice(SnailPet.Data.Loc.Text(Keys.NoticeFavorite));
+                return;
+            }
+
+            int id = _favoriteIds[index];
+            if (_favoriteCounts != null && index < _favoriteCounts.Length && _favoriteCounts[index] > 0)
+            {
+                AskDelete(-1);
+                FeedFood?.Invoke(id);
+                return;
+            }
+
+            // 두 번째로 누른 것이면 뺀다. 빼는 길은 별과 같다 — 켜져 있으면 꺼진다.
+            if (_favoriteAsk == index) { AskDelete(-1); ToggleFavorite?.Invoke(id); return; }
+
+            AskDelete(index);
+        }
+
+        /// <summary>「삭제」를 띄울 칸. −1 이면 아무 데도 안 띄운다.</summary>
+        private int _favoriteAsk = -1;
+
+        private void AskDelete(int index)
+        {
+            _favoriteAsk = index;
+
+            for (int i = 0; i < Count(_miniSlots); i++)
+            {
+                var slot = _miniSlots[i];
+                if (slot == null) continue;
+
+                bool on = i == index;
+                if (slot.AskBg != null) slot.AskBg.enabled = on;
+                if (slot.Ask != null)   slot.Ask.enabled = on;
+            }
         }
 
         /// <summary>즐겨찾기가 꽉 찼다고 알린다. 문구는 UI 가 들고 있다.</summary>
         public void NoticeFavoriteFull() => ShowNotice(SnailPet.Data.Loc.Text(Keys.NoticeFavoriteFull));
+
+        /// <summary>재화가 모자란다고 알린다. 문구는 UI 가 들고 있다.</summary>
+        public void NoticeNoCoins() => ShowNotice(SnailPet.Data.Loc.Text(Keys.NoticeNoCoins));
 
         /// <summary>위젯 상자 기준 좌표로 옮긴다. 목업은 패널 왼쪽 위가 원점이라 코인 줄만큼 내려 준다.</summary>
         private static RectInt Above(RectInt r) => new RectInt(r.x, r.y - At.Coin.y, r.width, r.height);
@@ -1222,6 +1293,52 @@ namespace SnailPet.Ui
         /// 칸의 수량을 적는다. 빈 문자열이면 배지도 같이 감춘다 —
         /// 알처럼 수량이 없는 칸에 빈 동그라미만 남으면 안 된다.
         /// </summary>
+        /// <summary>
+        /// 오른쪽 끝을 고정한 채 놓는다. 개수 뱃지처럼 <b>글자에 따라 가로로 늘어나는</b> 것에 쓴다.
+        /// 피벗이 오른쪽이라 sizeDelta.x 만 키우면 왼쪽으로 자란다.
+        /// </summary>
+        private static void PlaceRight(RectTransform rt, RectInt r)
+        {
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(1f, 1f);
+            rt.sizeDelta = new Vector2(r.width, r.height);
+            rt.anchoredPosition = new Vector2(r.xMax, -r.y);
+        }
+
+        /// <summary>
+        /// 칸의 개수 뱃지.
+        ///
+        /// 동그란 그림(icon_circle)은 두 자리만 넘어가도 숫자가 삐져나왔다. 늘어나는
+        /// 9-슬라이스 도형(slot_count)을 깔고, 오른쪽 끝을 칸 모서리에 고정한 채 왼쪽으로 늘린다.
+        /// 실제 폭은 <see cref="FitCount"/> 가 글자를 재서 정한다.
+        /// </summary>
+        private Image CountBadge(RectTransform root, RectInt at)
+        {
+            var bg = Box(root, at, UiTheme.BadgeDark, UiSprites.Shape.SlotCount, "CountBg");
+            PlaceRight((RectTransform)bg.transform, at);
+            return bg;
+        }
+
+        /// <summary>개수 글자 좌우 여백(px).</summary>
+        private const int CountPadX = 4;
+
+        /// <summary>뱃지 폭을 글자에 맞춘다. 한 자리면 정사각형, 길어지면 그만큼 왼쪽으로 늘어난다.</summary>
+        private static void FitCount(Text count, Image bg)
+        {
+            if (count == null) return;
+
+            var rt = (RectTransform)count.transform;
+            float h = rt.sizeDelta.y;
+            float w = Mathf.Max(h, count.preferredWidth + CountPadX * 2f);
+
+            rt.sizeDelta = new Vector2(w, h);
+            if (bg != null)
+            {
+                var brt = (RectTransform)bg.transform;
+                brt.sizeDelta = new Vector2(w, brt.sizeDelta.y);
+            }
+        }
+
         private static void SetSlotCount(GridSlot slot, string text)
         {
             if (slot == null || slot.Count == null) return;
@@ -1229,6 +1346,8 @@ namespace SnailPet.Ui
             slot.Count.text = text;
             if (slot.CountBg != null) slot.CountBg.enabled = !string.IsNullOrEmpty(text)
                                                           && slot.CountBg.sprite != null;
+
+            FitCount(slot.Count, slot.CountBg);
         }
 
         private GridSlot BuildGridSlot(RectTransform content, int index)
@@ -1257,10 +1376,9 @@ namespace SnailPet.Ui
             slot.Frame.enabled = false;
 
             // 수량은 테두리보다 뒤에 지어야 위에 온다. 고른 칸에서 가려지지 않게 하려는 것이다.
-            slot.CountBg = Icon(root, Max.FoodCountBadge, "icon_circle", Color.white, "CountBg");
-            slot.CountBg.raycastTarget = false;
-
+            slot.CountBg = CountBadge(root, Max.FoodCountBadge);
             slot.Count = Label(root, Max.FoodCountBadge, "", 9, UiTheme.OnBadge);
+            PlaceRight((RectTransform)slot.Count.transform, Max.FoodCountBadge);
 
             slot.Button = root.gameObject.AddComponent<Button>();
             slot.Button.targetGraphic = bg;
@@ -1318,7 +1436,7 @@ namespace SnailPet.Ui
             _feedBtn.targetGraphic = feed;
 
             _foodBuyBtn  = IconButton(_foodPanel, Fd.Buy,  "btn_shop", "Buy");
-            _foodSellBtn = IconButton(_foodPanel, Fd.Sell, "icon_sell", "Sell");
+            _foodSellBtn = IconButton(_foodPanel, Fd.Sell, "btn_sell", "Sell");
         }
 
         /// <summary>보유 음식을 채운다. (음식 Id, 개수) 목록.</summary>
@@ -2914,9 +3032,9 @@ namespace SnailPet.Ui
                 slot.Icon = Icon(root, new RectInt(2, 2, at.width - 4, at.height - 4), null, Color.white, "Icon");
                 slot.Icon.raycastTarget = false;
 
-                slot.CountBg = Icon(root, Max.FoodCountBadge, "icon_circle", Color.white, "CountBg");
-                slot.CountBg.raycastTarget = false;
+                slot.CountBg = CountBadge(root, Max.FoodCountBadge);
                 slot.Count = Label(root, Max.FoodCountBadge, "", 9, UiTheme.OnBadge);
+                PlaceRight((RectTransform)slot.Count.transform, Max.FoodCountBadge);
 
                 root.gameObject.SetActive(false);
                 _guideRewards[i] = slot;
@@ -3573,9 +3691,8 @@ namespace SnailPet.Ui
         /// </summary>
         public void ShowRename(string current)
         {
-            _buyGroup.gameObject.SetActive(false);
+            HidePopupGroups();
             _renameGroup.gameObject.SetActive(true);
-            ResetHatch();
             OpenBlocker();
 
             _renameField.text = current ?? "";
@@ -3734,9 +3851,9 @@ namespace SnailPet.Ui
                                  null, Color.white, "Icon");
                 slot.Icon.raycastTarget = false;
 
-                slot.CountBg = Icon(root, Max.FoodCountBadge, "icon_circle", Color.white, "CountBg");
-                slot.CountBg.raycastTarget = false;
+                slot.CountBg = CountBadge(root, Max.FoodCountBadge);
                 slot.Count = Label(root, Max.FoodCountBadge, "", 9, UiTheme.OnBadge);
+                PlaceRight((RectTransform)slot.Count.transform, Max.FoodCountBadge);
 
                 root.gameObject.SetActive(false);
                 _rewardSlots[i] = slot;
@@ -3810,8 +3927,7 @@ namespace SnailPet.Ui
         /// </summary>
         public void ShowHatch(int eggId, SnailPet.Data.RarityType rarity, Texture snail)
         {
-            _buyGroup.gameObject.SetActive(false);
-            _renameGroup.gameObject.SetActive(false);
+            HidePopupGroups();
             _hatchGroup.gameObject.SetActive(true);
             OpenBlocker();
 
@@ -4119,9 +4235,8 @@ namespace SnailPet.Ui
             _popupMax = Mathf.Max(1, max);
             _popupQty = 1;
 
+            HidePopupGroups();
             _buyGroup.gameObject.SetActive(true);
-            _renameGroup.gameObject.SetActive(false);
-            ResetHatch();
             _popupTitle.text = SnailPet.Data.Loc.Format(selling ? Keys.AskSell : Keys.AskBuy, itemName);
             OpenBlocker();
             PaintPopup();
@@ -4189,6 +4304,7 @@ namespace SnailPet.Ui
             if (_settingsBtn != null) _settingsBtn.gameObject.SetActive(!on);
             if (_panel != null)       _panel.gameObject.SetActive(!on);
 
+            AskDelete(-1);
             CenterCoinRow(on);
 
             // 위로 자란 만큼 화면 밖으로 나갔을 수 있다 (끌어다 위쪽에 두고 최대화한 경우)
