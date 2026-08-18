@@ -1531,6 +1531,7 @@ namespace SnailPet
             DemoDropFood();
             _food.Tick(Time.deltaTime, _box.Bottom);
             UpdateFoodTransforms(px);
+            StepReturn();
 
             // 부스러기도 먹이와 같은 바닥에 떨어진다. 수명이 다하면 흐려지며 사라진다.
             _crumbs.Tick(Time.deltaTime, CrumbGravity, _box.Bottom);
@@ -1732,6 +1733,102 @@ namespace SnailPet
             _eatFlashUntil = _t + 1.2f;
 
             Say($"      다 먹음: {Loc.ById(data.NameId)} (+포만 {data.FullPoint} +행복 {data.HappyPoint}) → {_growth}");
+        }
+
+        // ── 내려둔 먹이 도로 넣기 ──
+        //
+        // 놓아 둔 먹이를 톡 누르면(끌지 않고) 옆에 icon_return 이 뜬다. 그걸 누르면 가방으로
+        // 돌아간다. 먹이를 누르는 동작은 원래 「집어 끌기」라, 끌지 않은 것만 눌렀다고 본다.
+
+        /// <summary>끈 것으로 치지 않는 이동량(px).</summary>
+        private const float TapSlopPixels = 6f;
+
+        private Transform _returnBtn;
+        private SpriteRenderer _returnArt;
+        private FoodItem _returnTarget;
+        private Vector2 _foodPressScreen;
+
+        /// <summary>버튼 크기·자리. 먹이 오른쪽 위 모서리에 걸친다.</summary>
+        private const float ReturnFraction = 0.9f, ReturnMinPixels = 18f;
+
+        private void ShowReturn(FoodItem food)
+        {
+            if (food == null || food.Eaten) return;
+
+            if (_returnBtn == null)
+            {
+                var sprite = Resources.Load<Sprite>("Ui/Icon/icon_return");
+                if (sprite == null)
+                {
+                    Debug.LogWarning("[SnailPet] 도로 넣기 아이콘을 찾지 못했습니다: Ui/Icon/icon_return");
+                    return;
+                }
+
+                var go = new GameObject("ReturnButton");
+                go.transform.SetParent(transform, false);
+                _returnBtn = go.transform;
+                _returnArt = go.AddComponent<SpriteRenderer>();
+                _returnArt.sprite = sprite;
+                _returnArt.sortingOrder = 9500;      // 먹이보다 앞, 말풍선보다 뒤
+            }
+
+            _returnTarget = food;
+            _returnArt.enabled = true;
+        }
+
+        private void HideReturn()
+        {
+            _returnTarget = null;
+            if (_returnArt != null) _returnArt.enabled = false;
+        }
+
+        /// <summary>버튼을 먹이 옆에 붙여 둔다. 먹이가 없어졌거나 들려 있으면 치운다.</summary>
+        private void StepReturn()
+        {
+            if (_returnTarget == null || _returnArt == null || !_returnArt.enabled) return;
+
+            if (_returnTarget.Eaten || _returnTarget.Held) { HideReturn(); return; }
+
+            float pixels = Mathf.Max(ReturnMinPixels, _returnTarget.HalfWidth * ReturnFraction);
+            var sprite = _returnArt.sprite;
+            float world = sprite.rect.width / Mathf.Max(0.0001f, sprite.pixelsPerUnit);
+            float scale = world > 0.0001f ? pixels / world : 1f;
+            _returnBtn.localScale = new Vector3(scale, scale, 1f);
+
+            float x = Mathf.Clamp(_returnTarget.ScreenX + _returnTarget.HalfWidth * 0.95f,
+                                  _box.Left + pixels * 0.5f, _box.Right - pixels * 0.5f);
+            float y = _returnTarget.ScreenY - _returnTarget.Height;
+
+            _returnBtn.position = VirtualToWorld(x, y);
+        }
+
+        /// <summary>커서가 도로 넣기 버튼 위에 있는가.</summary>
+        private bool CursorOnReturn()
+        {
+            if (_returnTarget == null || _returnArt == null || !_returnArt.enabled) return false;
+            if (!TransparentWindow.TryGetCursor(out int cx, out int cy)) return false;
+
+            var b = _returnArt.sprite.bounds;
+            Vector3 local = _returnBtn.InverseTransformPoint(VirtualToWorld(cx, cy));
+            return local.x >= b.min.x && local.x <= b.max.x
+                && local.y >= b.min.y && local.y <= b.max.y;
+        }
+
+        /// <summary>버튼을 눌렀다. 먹이를 가방으로 되돌린다.</summary>
+        private void ReturnFood()
+        {
+            var food = _returnTarget;
+            HideReturn();
+            if (food == null || food.Eaten || food.Data == null) return;
+
+            // 먹던 것을 되돌리면 먹기도 같이 접어야 한다
+            if (_eating == food) CancelEating("도로 넣어서");
+
+            _player.Items.Add(food.Data.Id, 1);
+            _food.Consume(food);
+            RefreshFoods();
+
+            Say($"      도로 넣기: {Loc.ById(food.Data.NameId)}  → 가방: {_player.Items}");
         }
 
         // ── 똥 ──
@@ -2187,8 +2284,10 @@ namespace SnailPet
 
             if (down && !_wasMouseDown && hasCursor && !_cursorOnUi)
             {
+                // 도로 넣기 버튼이 떠 있으면 그게 먼저다. 먹이 위에 걸쳐 있어 먹이보다 앞이어야 한다.
+                if (CursorOnReturn()) ReturnFood();
                 // 말풍선을 눌러도 받을 수 있다. 달팽이 머리 위에 떠 있어 그쪽을 노리는 사람이 많다.
-                if (CursorOnBubble()) ClaimPresent();
+                else if (CursorOnBubble()) ClaimPresent();
                 else if (CursorOnSnail())
                 {
                     // 선물이 준비돼 있으면 누른 순간 받는다. 그러고도 계속 집어 들 수 있다.
@@ -2211,6 +2310,8 @@ namespace SnailPet
                         _dragFood = f;
                         f.Held = true;
                         _grabOffset = new Vector2(f.ScreenX, f.ScreenY) - cursor;
+                        _foodPressScreen = cursor;
+                        if (_returnTarget != f) HideReturn();
                     }
                     else
                     {
@@ -2311,6 +2412,10 @@ namespace SnailPet
                 {
                     _dragFood.Held = false;
                     _dragFood.VelocityY = 0f;
+
+                    // 끌지 않고 톡 눌렀으면 도로 넣기 버튼을 띄운다
+                    if (hasCursor && Vector2.Distance(cursor, _foodPressScreen) <= TapSlopPixels)
+                        ShowReturn(_dragFood);
                 }
                 _drag = DragTarget.None;
                 _dragFood = null;
@@ -2443,13 +2548,14 @@ namespace SnailPet
             bool onFood = hasCursor && _food.FindAt(cx, cy) != null;
             bool onPoop = hasCursor && _poops != null && _poops.FindAt(VirtualToWorld(cx, cy)) != null;
             bool onBubble = CursorOnBubble();      // 말풍선도 눌러서 받을 수 있으므로 클릭을 받아야 한다
+            bool onReturn = CursorOnReturn();      // 도로 넣기 버튼도 마찬가지다
 
             // 팝업이 떠 있는 동안은 커서가 어디에 있든 통과시키면 안 된다.
             // 통과시키면 팝업 버튼을 눌러도 클릭이 뒤 창으로 새고, 이름 입력 중이면
             // 키보드 포커스까지 같이 잃는다.
             // _cursorOnUi 는 StepDrag 에서 이미 이번 프레임 값으로 갱신됐다
             TransparentWindow.SetClickThrough(
-                !(_cursorOnSnail || onBubble || onFood || onPoop || _cursorOnUi || _ui.PopupOpen || _drag != DragTarget.None));
+                !(_cursorOnSnail || onBubble || onReturn || onFood || onPoop || _cursorOnUi || _ui.PopupOpen || _drag != DragTarget.None));
         }
 
         /// <summary>
