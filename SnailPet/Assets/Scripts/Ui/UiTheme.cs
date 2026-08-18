@@ -32,6 +32,9 @@ namespace SnailPet.Ui
         /// <summary>버튼 아트(갈색) 위에 얹는 글자. 부화기 타이머도 같은 색을 쓴다.</summary>
         public static readonly Color OnButton    = Hex("E3D3BD");
 
+        /// <summary>가진 것이 없어 죽여 놓는 그림. 아트 색은 그대로 두고 투명도만 낮춘다.</summary>
+        public static readonly Color Faded       = new Color(1f, 1f, 1f, 0.35f);
+
         // ── 치수 (목업 좌표) ──
         public const int PanelW = 173, PanelH = 220;
         public const int PanelRadius = 6, PanelBorderPx = 1;
@@ -83,6 +86,59 @@ namespace SnailPet.Ui
             public static readonly RectInt CoinText = new RectInt(72, 10, 45, 21);
             public static readonly RectInt Close    = new RectInt(152,  -9, 28, 28);
             public static readonly RectInt Maximize = new RectInt(152,  19, 28, 28);
+        }
+
+        /// <summary>
+        /// 최소화 창. 코인 줄만 남기고 패널 자리에 띠 하나가 들어선다.
+        /// 좌표는 상세 패널과 같은 기준(위젯 상자의 왼쪽 위)이라 띠가 패널 자리에 딱 맞는다.
+        ///
+        /// 칸 크기는 아트에서 그대로 옮겼다 — 띠(minimumbadge)가 400x131 이고 그 위에
+        /// slot3(119x116) 셋이 얹히므로, 띠를 줄인 비율(0.3)을 그대로 곱했다.
+        /// </summary>
+        public static class Mini
+        {
+            /// <summary>
+            /// 띠. y 는 코인 줄 바로 아래 — 패널이 시작하던 자리다.
+            /// x 는 코인 아이콘 왼쪽 끝에 맞췄다 (패널보다 좁아 오른쪽에 붙이면 화면 구석에서
+            /// 코인 줄만 따로 노는 모양이 된다). 코인 줄은 최소화하는 동안 이 띠 가운데로
+            /// 옮겨진다 — SnailUi.CenterCoinRow 참고.
+            /// </summary>
+            public static readonly RectInt Bar = new RectInt(At.CoinIcon.x, -At.Coin.y, 120, 39);
+
+            /// <summary>첫 칸. 띠 안에서의 자리다.</summary>
+            public static readonly RectInt Slot = new RectInt(3, 2, 36, 35);
+
+            /// <summary>칸 사이 간격(칸 폭 + 틈).</summary>
+            public const int SlotStep = 39;
+
+            /// <summary>칸 오른쪽 아래에 붙는 개수 뱃지. 음식 그리드와 같은 크기다.</summary>
+            public static readonly RectInt Count = new RectInt(21, 20, 15, 15);
+
+            /// <summary>빈 칸 수. 마지막 자리에는 최대화 버튼이 들어간다.</summary>
+            public const int Slots = 2;
+        }
+
+        /// <summary>
+        /// 잠깐 떴다 사라지는 안내 문구. 글자 길이에 맞춰 <b>가로로만</b> 늘어나고
+        /// 높이와 여백은 고정이다.
+        /// </summary>
+        public static class Notice
+        {
+            public const int Height = 26;
+            public const int PadX = 14;
+            public const int MinWidth = 60;
+            public const int MaxWidth = 320;
+            public const int FontSize = 12;
+
+            /// <summary>
+            /// 위젯 안에서의 자리.
+            ///
+            /// 세로는 위젯 한가운데를 <b>앵커로</b> 잡는다 — 최소화로 상자가 줄어도 따라온다.
+            /// 가로는 오른쪽 끝에서 패널 기둥 한가운데까지 되돌아온 값이다. 위젯 상자는 최대화
+            /// 기준으로 잡혀 있어서 상자의 한가운데는 접었을 때 빈 왼쪽 절반에 떨어진다.
+            /// </summary>
+            public static readonly Vector2 Anchor = new Vector2(1f, 0.5f);
+            public static readonly Vector2 Offset = new Vector2(-(At.Close.xMax - PanelW * 0.5f), 0f);
         }
 
         /// <summary>
@@ -298,7 +354,11 @@ namespace SnailPet.Ui
             // 옷장과 같은 이유로 메인 상세의 초상 자리를 그대로 쓴다.
             public static readonly RectInt Preview = At.Portrait;
 
-            public static readonly RectInt Slim = new RectInt(20, 141, 145, 17);
+            /// <summary>
+            /// 파츠 한 줄. 도감의 파츠 목록(<see cref="Guide.PartRow"/>)·설명과 같은 높이에서
+            /// 시작한다 — 세 화면이 같은 자리를 나눠 쓰므로 하나를 옮기면 나머지도 옮겨야 한다.
+            /// </summary>
+            public static readonly RectInt Slim = new RectInt(20, 134, 145, 17);
             public const int SlimStep = 18;
 
             // 아래는 줄 왼쪽 위가 원점
@@ -403,22 +463,32 @@ namespace SnailPet.Ui
             public static readonly RectInt Image  = new RectInt(28, 28, 125, 105);
 
             /// <summary>실루엣 오른쪽의 전환 버튼. 설명↔파츠 목록을 오간다.</summary>
-            public static readonly RectInt Toggle = new RectInt(130, 113, 23, 23);
+            public static readonly RectInt Toggle = new RectInt(130, 106, 23, 23);
+
+            /// <summary>
+            /// 채운 칸에 이름 위로 찍히는 도장(icon_complete2).
+            /// 목록 줄의 <see cref="RowDone"/> 와 짝이지만 그림이 다르다 — 이쪽은 가로로 긴 스탬프다.
+            /// </summary>
+            public static readonly RectInt Done = new RectInt(6, 2, 58, 42);
 
             // ── 아래쪽: 설명과 보상 (기본 상태) ──
-            public static readonly RectInt Info = new RectInt(16, 144, 144, 27);
+
+            /// <summary>설명 뒤에 까는 홈. 글자보다 사방으로 조금씩 넓다.</summary>
+            public static readonly RectInt InfoBox = new RectInt(12, 132, 149, 36);
+            public static readonly RectInt Info    = new RectInt(16, 137, 144, 27);
 
             public static readonly RectInt Reward = new RectInt(31, 176, 32, 32);
             public const int RewardStep = 37, RewardCount = 3;
 
             // ── 아래쪽: 파츠 목록 (상세 상태) ──
             // 설명·보상과 같은 자리를 나눠 쓴다. 전환 버튼으로 갈아 끼운다.
-            public static readonly RectInt PartRow    = new RectInt(28, 142, 123, 14);
+            // 시작 높이는 설명 홈(InfoBox)·유전정보 줄(Gene.Slim)과 맞춰 둔다.
+            public static readonly RectInt PartRow    = new RectInt(28, 135, 123, 14);
             public const int PartStep = 18, PartCount = 4;
 
-            public static readonly RectInt PartIcon   = new RectInt(18, 140, 16, 16);
-            public static readonly RectInt PartRarity = new RectInt(35, 143, 30, 11);
-            public static readonly RectInt PartName   = new RectInt(63, 141, 98, 17);
+            public static readonly RectInt PartIcon   = new RectInt(18, 133, 16, 16);
+            public static readonly RectInt PartRarity = new RectInt(35, 136, 30, 11);
+            public static readonly RectInt PartName   = new RectInt(63, 134, 98, 17);
         }
 
         /// <summary>

@@ -74,6 +74,12 @@ namespace SnailPet.Ui
 
             public const string Wardrobe = "[옷장]";
 
+            /// <summary>빈 즐겨찾기 칸을 눌렀을 때의 안내.</summary>
+            public const string NoticeFavorite = "[안내_즐겨찾기]";
+
+            /// <summary>즐겨찾기가 꽉 찼는데 또 켜려고 했을 때.</summary>
+            public const string NoticeFavoriteFull = "[안내_즐겨찾기2]";
+
             /// <summary>도감 목록의 제목. 시트에 넣기 전에는 화면에 토큰이 그대로 나온다.</summary>
             public const string Guide = "[달팽이도감]";
             public const string Traits   = "[보유특징]";
@@ -212,6 +218,22 @@ namespace SnailPet.Ui
             if (_doneGroup == null) BuildGuideDoneGroup();
             if (_rewardGroup == null) BuildRewardGroup();
 
+            // 상품 미리보기 뒤의 달팽이 실루엣. 상점 패널은 프리팹에 있으므로 여기서 붙인다.
+            if (_pickShape == null) _pickShape = ShapeBehind(_pickIcon, "PickShape");
+            if (_shopShape == null) _shopShape = ShapeBehind(_shopIcon, "PreviewShape");
+
+            // 최소화 창과 안내 문구도 프리팹에는 없다.
+            if (_miniRoot == null) BuildMini();
+            if (_notice == null) BuildNotice();
+
+            // 끌어 옮기기. 위젯 루트에 하나만 붙으면 자식 전부에 걸린다 (UiDragMove 참고).
+            if (_widget != null && _widget.GetComponent<UiDragMove>() == null)
+                _widget.gameObject.AddComponent<UiDragMove>();
+
+            // 최소화에서 되돌아올 때 쓸 크기. 프리팹에서 손댔을 수 있으니 코드 값이 아니라
+            // 지금 값을 기억한다.
+            if (_widget != null) _widgetSize = _widget.sizeDelta;
+
             // 설정 화면은 상세보기와 같은 목록 패널에 붙는다. 그 패널은 필드가 아니라
             // 지을 때의 지역 변수라, 이미 거기 붙어 있는 상세보기를 통해 찾는다.
             if (_settingsRoot == null && _geneRoot != null)
@@ -261,6 +283,17 @@ namespace SnailPet.Ui
                 if (_geneRows[i] == null) continue;
                 if (_geneRows[i].Name != null) Place((RectTransform)_geneRows[i].Name.transform, UiTheme.Gene.RowName);
                 if (_geneRows[i].Info != null) Place((RectTransform)_geneRows[i].Info.transform, UiTheme.Gene.RowInfo);
+            }
+
+            // 오른쪽 한 줄짜리 목록도 프리팹에 구워져 있어 UiTheme 를 고쳐도 안 움직인다.
+            // 도감 파츠 목록과 같은 높이로 맞추려고 올린 값이라 여기서 다시 놓는다.
+            // (구울 때의 값과 같은지 확인하고 옮긴 것이다 — 손으로 만진 자리가 아니다)
+            for (int i = 0; i < Count(_geneSlims); i++)
+            {
+                if (_geneSlims[i]?.Root == null) continue;
+
+                var s = UiTheme.Gene.Slim;
+                Place(_geneSlims[i].Root, new RectInt(s.x, s.y + i * UiTheme.Gene.SlimStep, s.width, s.height));
             }
 
             // 프리팹에는 덮개가 반투명 검정으로 구워져 있다. 이제 어둡게 하는 일은
@@ -560,6 +593,16 @@ namespace SnailPet.Ui
             Hook(_settingsBtn, () => Settings?.Invoke());
             Hook(_closeBtn,    () =>
             {
+                // 달팽이 화면에서는 X 가 아니라 최소화 버튼이다 (ShrinksOnClose).
+                // 나가는 것이므로 여기서도 골라 둔 달팽이는 푼다.
+                if (ShrinksOnClose)
+                {
+                    ResetPick();
+                    SetMinimized(true);
+                    Close?.Invoke();
+                    return;
+                }
+
                 // X 는 어디서 눌러도 달팽이 화면으로 돌아간 다음 접는다. 음식·알·상점 탭이나
                 // 옷장·설정에 있던 그대로 접으면, 다시 펼쳤을 때 엉뚱한 화면이 열려 어색하다.
                 //
@@ -576,6 +619,11 @@ namespace SnailPet.Ui
                 Close?.Invoke();
             });
             Hook(_maximizeBtn, () => { SetMaximized(true);  Maximize?.Invoke(); });
+
+            // 최소화 창의 최대화는 처음 모습(접힌 달팽이 정보)으로 되돌린다. 목록까지 펼치지는 않는다.
+            Hook(_miniMaxBtn,  () => SetMinimized(false));
+
+            for (int i = 0; i < Count(_miniSlots); i++) { int k = i; Hook(_miniSlots[i]?.Button, () => PressFavorite(k)); }
 
             // 하단 액션 4개. 순서는 BuildActions 의 이름 배열과 같다.
             var actions = new UnityEngine.Events.UnityAction[]
@@ -752,6 +800,7 @@ namespace SnailPet.Ui
             BuildGauges();
             BuildActions();
             BuildOutside();
+            BuildMini();
             BuildList();
             BuildFoodDetail();
             BuildEggPanel();
@@ -761,6 +810,7 @@ namespace SnailPet.Ui
             BuildGuidePanel();
             BuildSettingsPanel();
             BuildPopup();
+            BuildNotice();      // 팝업 위에도 떠야 하므로 맨 나중에 짓는다
 
             // 프리팹에는 목록을 펼친 채로 굽는다. 접힌 채로 구우면 프리팹을 열었을 때
             // 왼쪽 절반이 통째로 안 보여 배치를 손볼 수가 없다.
@@ -874,6 +924,124 @@ namespace SnailPet.Ui
             _closeBtn = IconButton(_detailRoot, Above(At.Close), "btn_close", "Close", tint: Color.white);
             _maximizeBtn = IconButton(_detailRoot, Above(At.Maximize), "btn_maximize", "Maximize", tint: Color.white);
         }
+
+        [Serializable]
+        public sealed class MiniSlot
+        {
+            public RectTransform Root;
+            public Image Food;
+            public Text Plus;
+            public Image CountBg;
+            public Text Count;
+            public Button Button;
+        }
+
+        [SerializeField] private RectTransform _miniRoot;
+        [SerializeField] private Button _miniMaxBtn;
+        [SerializeField] private MiniSlot[] _miniSlots;
+
+        private int[] _favoriteIds = new int[0];
+
+        /// <summary>
+        /// 최소화 창. 띠 하나에 즐겨찾기 칸 둘과 최대화 버튼이 얹힌다.
+        /// </summary>
+        private void BuildMini()
+        {
+            var bar = UiTheme.Mini.Bar;
+
+            _miniRoot = NewRect("Mini", _detailRoot);
+            Place(_miniRoot, bar);
+
+            // 띠 위에서는 클릭이 바탕화면으로 새면 안 된다 (패널과 같은 이유)
+            Box(_miniRoot, new RectInt(0, 0, bar.width, bar.height),
+                UiTheme.PanelFill, UiSprites.Shape.MinimumBadge, "MiniBadge").raycastTarget = true;
+
+            var slot = UiTheme.Mini.Slot;
+            _miniSlots = new MiniSlot[UiTheme.Mini.Slots];
+            for (int i = 0; i < _miniSlots.Length; i++) _miniSlots[i] = BuildMiniSlot(Nth(slot, i), i);
+
+            _miniMaxBtn = IconButton(_miniRoot, Nth(slot, UiTheme.Mini.Slots),
+                                     "btn_maximize", "MiniMaximize", tint: Color.white);
+
+            _miniRoot.gameObject.SetActive(false);
+
+            static RectInt Nth(RectInt slot, int i) =>
+                new RectInt(slot.x + UiTheme.Mini.SlotStep * i, slot.y, slot.width, slot.height);
+        }
+
+        /// <summary>
+        /// 즐겨찾기 칸 하나. 등록돼 있으면 음식 그림이, 비어 있으면 부화기처럼 + 가 뜬다.
+        /// </summary>
+        private MiniSlot BuildMiniSlot(RectInt at, int index)
+        {
+            var root = NewRect("MiniSlot" + index, _miniRoot);
+            Place(root, at);
+
+            var bg = Backdrop(root.gameObject, UiSprites.Shape.Slot3, UiTheme.Slot);
+            var slot = new MiniSlot { Root = root };
+
+            slot.Plus = Label(root, new RectInt(0, 0, at.width, at.height), "+", 20, UiTheme.Ink);
+
+            const int pad = 5;
+            slot.Food = Icon(root, new RectInt(pad, pad, at.width - pad * 2, at.height - pad * 2),
+                             null, Color.white, "Food");
+            slot.Food.raycastTarget = false;
+
+            // 개수는 음식 그리드와 같은 모양이다 — 동그란 아트 위에 흰 숫자.
+            slot.CountBg = Icon(root, UiTheme.Mini.Count, "icon_circle", Color.white, "CountBg");
+            slot.CountBg.raycastTarget = false;
+            slot.Count = Label(root, UiTheme.Mini.Count, "", 9, UiTheme.OnBadge);
+
+            slot.Button = root.gameObject.AddComponent<Button>();
+            slot.Button.targetGraphic = bg;
+            return slot;
+        }
+
+        /// <summary>
+        /// 즐겨찾기 칸을 채운다. 등록한 순서 그대로 놓인다.
+        /// 가진 것이 없으면 그림을 흐리게 두고 개수에 0 을 띄운다 — 눌러도 안 나간다는 표시다.
+        /// </summary>
+        public void SetFavorites((int foodId, int count)[] foods)
+        {
+            _favoriteIds = new int[foods?.Length ?? 0];
+
+            for (int i = 0; i < Count(_miniSlots); i++)
+            {
+                var slot = _miniSlots[i];
+                if (slot == null) continue;
+
+                bool has = foods != null && i < foods.Length;
+                if (has) _favoriteIds[i] = foods[i].foodId;
+
+                var row = has && SnailPet.Data.GameData.FoodDataById.TryGetValue(foods[i].foodId, out var f)
+                        ? f : null;
+                int count = has ? foods[i].count : 0;
+
+                if (slot.Food != null)
+                {
+                    slot.Food.sprite = FoodSprite(row);
+                    slot.Food.enabled = slot.Food.sprite != null;
+                    slot.Food.color = count > 0 ? Color.white : UiTheme.Faded;
+                }
+
+                if (slot.Plus != null)    slot.Plus.enabled = !has;
+                if (slot.Count != null)   slot.Count.text = has ? count.ToString() : "";
+                if (slot.CountBg != null) slot.CountBg.enabled = has && slot.CountBg.sprite != null;
+            }
+        }
+
+        /// <summary>
+        /// 즐겨찾기 칸을 눌렀다. 등록돼 있으면 바로 먹이고(목록에서 먹이는 것과 같은 길),
+        /// 비어 있으면 어디서 등록하는지 알려 준다.
+        /// </summary>
+        private void PressFavorite(int index)
+        {
+            if (index >= 0 && index < _favoriteIds.Length) FeedFood?.Invoke(_favoriteIds[index]);
+            else ShowNotice(SnailPet.Data.Loc.Text(Keys.NoticeFavorite));
+        }
+
+        /// <summary>즐겨찾기가 꽉 찼다고 알린다. 문구는 UI 가 들고 있다.</summary>
+        public void NoticeFavoriteFull() => ShowNotice(SnailPet.Data.Loc.Text(Keys.NoticeFavoriteFull));
 
         /// <summary>위젯 상자 기준 좌표로 옮긴다. 목업은 패널 왼쪽 위가 원점이라 코인 줄만큼 내려 준다.</summary>
         private static RectInt Above(RectInt r) => new RectInt(r.x, r.y - At.Coin.y, r.width, r.height);
@@ -1682,6 +1850,7 @@ namespace SnailPet.Ui
             Box(_shopPanel, Sh.Preview, UiTheme.Slot, UiSprites.Shape.Slot, "PickPreview");
             _pickIcon = Icon(_shopPanel, Sh.Preview, null, Color.white, "PickIcon");
             _pickIcon.raycastTarget = false;
+            _pickShape = ShapeBehind(_pickIcon, "PickShape");
 
             _pickName = Label(_shopPanel, Sh.Name, "", 12, UiTheme.Ink);
             Icon(_shopPanel, Sh.PickCoin, "icon_coin", Color.white, "PickCoinIcon").raycastTarget = false;
@@ -1718,6 +1887,7 @@ namespace SnailPet.Ui
             Box(_shopItemPanel, Fd.Preview, UiTheme.Slot, UiSprites.Shape.Slot, "Preview");
             _shopIcon = Icon(_shopItemPanel, Fd.Preview, null, Color.white, "PreviewIcon");
             _shopIcon.raycastTarget = false;
+            _shopShape = ShapeBehind(_shopIcon, "PreviewShape");
 
             // 포만·행복은 음식에만 있다. 한 상자에 묶어 통째로 껐다 켠다.
             _shopStats = NewRect("Stats", _shopItemPanel);
@@ -1879,6 +2049,7 @@ namespace SnailPet.Ui
                 _shopInfo.text = "";
                 _shopCost.text = "";
                 _shopIcon.enabled = false;
+                if (_shopShape != null) _shopShape.enabled = false;
                 _shopRarityBadge.enabled = false;
                 _shopRarityIcon.enabled = false;
                 _shopRarityText.text = "";
@@ -1904,6 +2075,7 @@ namespace SnailPet.Ui
             _shopCost.color = sale ? UiTheme.Discount : UiTheme.OnButton;
             _shopIcon.sprite = ProductSprite(row);
             _shopIcon.enabled = _shopIcon.sprite != null;
+            ShowShape(_shopShape, _shopIcon, row.CategoryType);
 
             ApplyRarity(_shopRarityIcon, _shopRarityBadge, _shopRarityText, row.RarityType);
 
@@ -1937,6 +2109,51 @@ namespace SnailPet.Ui
         }
 
         /// <summary>상품 그림. 카테고리마다 아트가 있는 폴더가 다르다.</summary>
+        [SerializeField] private Image _pickShape, _shopShape;
+
+        /// <summary>
+        /// 상품 미리보기 뒤에 까는 달팽이 실루엣(snail_shape2).
+        ///
+        /// 악세서리 아트는 파츠와 같은 1200x1200 공유 캔버스에 그려져 있다. 그래서 미리보기
+        /// 칸에 통째로 넣으면 그림이 <b>달팽이에 얹힐 자리</b>에 그대로 온다 — 모자가 칸 왼쪽
+        /// 위에 작게 뜨는 것이 그 때문이다. 실루엣도 같은 캔버스라 아이콘과 같은 자리에 같은
+        /// 크기로 깔기만 하면 저절로 맞는다. 칸 치수를 따로 계산할 필요가 없다.
+        ///
+        /// 자리는 아이콘에서 그대로 베낀다. 프리팹에서 미리보기를 손으로 옮겨도 따라온다.
+        /// </summary>
+        private Image ShapeBehind(Image icon, string name)
+        {
+            if (icon == null) return null;
+
+            var src = (RectTransform)icon.transform;
+            var rt = NewRect(name, (RectTransform)src.parent);
+
+            rt.anchorMin = src.anchorMin;
+            rt.anchorMax = src.anchorMax;
+            rt.pivot = src.pivot;
+            rt.sizeDelta = src.sizeDelta;
+            rt.anchoredPosition = src.anchoredPosition;
+            rt.localScale = src.localScale;
+            rt.SetSiblingIndex(src.GetSiblingIndex());   // 아이콘 바로 뒤에 깔린다
+
+            var img = rt.gameObject.AddComponent<Image>();
+            img.sprite = Resources.Load<Sprite>("Ui/Icon/snail_shape2");
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+            img.enabled = false;
+            return img;
+        }
+
+        /// <summary>악세서리일 때만 실루엣을 보인다. 음식이나 알은 얹을 몸이 없다.</summary>
+        private static void ShowShape(Image shape, Image icon, SnailPet.Data.CategoryType category)
+        {
+            if (shape == null) return;
+
+            shape.enabled = category == SnailPet.Data.CategoryType.Accessories
+                         && shape.sprite != null
+                         && icon != null && icon.enabled;
+        }
+
         private static Sprite ProductSprite(ShopRow row)
         {
             string folder = row.CategoryType switch
@@ -1971,6 +2188,7 @@ namespace SnailPet.Ui
 
             bool has = row != null;
             _pickIcon.enabled = has;
+            if (_pickShape != null) _pickShape.enabled = false;
             _pickCost.enabled = has;
             _pickWas.enabled = has;
             _pickStrike.enabled = has;
@@ -1988,6 +2206,7 @@ namespace SnailPet.Ui
             _pickName.text = SnailPet.Snail.Shop.NameOf(row);
             _pickIcon.sprite = ProductSprite(row);
             _pickIcon.enabled = _pickIcon.sprite != null;
+            ShowShape(_pickShape, _pickIcon, row.CategoryType);
             ApplyRarity(_pickRarityIcon, _pickRarityBadge, _pickRarityText, row.RarityType);
 
             bool sale = SnailPet.Snail.Shop.IsDiscounted(row);
@@ -2675,6 +2894,9 @@ namespace SnailPet.Ui
             _guideBasic = Fill(NewRect("Basic", _guidePanel));
             _guideDetail = Fill(NewRect("Detail", _guidePanel));
 
+            // 설명 뒤에 까는 홈. 설명과 함께 나왔다 들어가야 하므로 같은 묶음에 넣는다.
+            Box(_guideBasic, UiTheme.Guide.InfoBox, UiTheme.Slot, UiSprites.Shape.Slot, "InfoBox");
+
             _guideInfo = Label(_guideBasic, UiTheme.Guide.Info, "", 8, UiTheme.Ink);
             _guideInfo.horizontalOverflow = HorizontalWrapMode.Wrap;
 
@@ -2734,7 +2956,14 @@ namespace SnailPet.Ui
             _guideRarityIcon = Icon(_guidePanel, UiTheme.Guide.Rarity, null, Color.white, "RarityIcon");
             _guideRarityIcon.raycastTarget = false;
             BakeRarity(_guideRarityIcon, _guideRarityBadge, _guideRarityText);
+
+            // 완료 도장은 이름 위에 겹친다. 맨 나중에 지어야 이름칸에 안 가린다.
+            _guideDone = Icon(_guidePanel, UiTheme.Guide.Done, "icon_complete2", Color.white, "Done");
+            _guideDone.raycastTarget = false;
+            _guideDone.enabled = false;
         }
+
+        [SerializeField] private Image _guideDone;
 
         /// <summary>도감에 들어가거나 나온다.</summary>
         public void OpenGuide(bool on)
@@ -2810,7 +3039,9 @@ namespace SnailPet.Ui
         /// 고른 칸의 상세를 채운다. <paramref name="look"/> 이 null 이면 아직 안 채운 칸이라
         /// 공용 실루엣이 나온다.
         /// </summary>
-        public void SetGuideDetail(string name, string info, SnailPet.Data.RarityType rarity, Texture look)
+        /// <param name="done">채운 칸인가. 이름 위에 완료 도장이 찍힌다.</param>
+        public void SetGuideDetail(string name, string info, SnailPet.Data.RarityType rarity,
+                                   Texture look, bool done)
         {
             _guideTitle.text = name;
             _guideInfo.text = info;
@@ -2819,6 +3050,7 @@ namespace SnailPet.Ui
             _guideImage.texture = look;
             _guideImage.enabled = look != null;
             if (_guideShape != null) _guideShape.enabled = look == null && _guideShape.sprite != null;
+            if (_guideDone != null)  _guideDone.enabled  = done && _guideDone.sprite != null;
         }
 
         /// <summary>같은 모양을 y 만 내려 다시 쓴다. 줄이 여러 개인 곳에서.</summary>
@@ -3142,9 +3374,22 @@ namespace SnailPet.Ui
         /// </summary>
         private void RefreshClose()
         {
-            if (_closeBtn != null)
-                _closeBtn.interactable = !(_options.AlwaysMax && !InOverlay && _tab == 0);
+            if (_closeBtn == null) return;
+
+            _closeBtn.interactable = !(_options.AlwaysMax && !InOverlay && _tab == 0);
+            SetGlyph(_closeBtn, ShrinksOnClose ? "btn_minize" : "btn_close");
         }
+
+        /// <summary>
+        /// X 가 최소화 버튼인가.
+        ///
+        /// 달팽이 정보 화면이면 <b>목록이 펼쳐져 있든 아니든</b> 최소화 버튼이다. 나머지
+        /// (음식·알·상점 탭, 옷장·유전·도감·설정)에서는 X 그대로이고 하는 일도 그대로다.
+        ///
+        /// 처음에는 접혀 있을 때만 최소화로 뒀는데, 다른 탭에 갔다가 달팽이 탭으로 돌아오면
+        /// 목록이 펼쳐진 채라 X 가 그대로 남아 있었다. 「화면」이 기준이지 크기가 기준이 아니다.
+        /// </summary>
+        private bool ShrinksOnClose => !InOverlay && _tab == 0;
 
         [SerializeField] private CanvasScaler _scaler;
 
@@ -3663,9 +3908,97 @@ namespace SnailPet.Ui
             ApplyPopupGrow();
         }
 
+        // ── 안내 문구 ──
+        //
+        // 가운데에 잠깐 떴다 사라지는 띠. 즐겨찾기 말고도 쓸 데가 많으므로
+        // 「글자만 주면 알아서 뜬다」 하나로 만들어 둔다.
+
+        [SerializeField] private RectTransform _notice;
+        [SerializeField] private Text _noticeText;
+        [SerializeField] private CanvasGroup _noticeFade;
+
+        private const float NoticeGrow = 0.16f, NoticeHold = 2.4f, NoticeGone = 0.3f;
+
+        /// <summary>0 이상이면 떠 있는 중. 다 지나면 −1 로 두고 손대지 않는다.</summary>
+        private float _noticeTime = -1f;
+
+        private void BuildNotice()
+        {
+            _notice = NewRect("Notice", _widget);
+            _notice.anchorMin = _notice.anchorMax = UiTheme.Notice.Anchor;
+            _notice.pivot = new Vector2(0.5f, 0.5f);
+            _notice.sizeDelta = new Vector2(UiTheme.Notice.MinWidth, UiTheme.Notice.Height);
+            _notice.anchoredPosition = UiTheme.Notice.Offset;
+
+            // 알림일 뿐이므로 클릭을 먹지 않는다. 뒤의 버튼이 그대로 눌려야 한다.
+            Backdrop(_notice.gameObject, UiSprites.Shape.Notice, UiTheme.PanelFill).raycastTarget = false;
+
+            _noticeText = Label(_notice, new RectInt(0, 0, UiTheme.Notice.MinWidth, UiTheme.Notice.Height),
+                                "", UiTheme.Notice.FontSize, UiTheme.Ink);
+
+            // 글자는 띠와 함께 늘어나야 하므로 네 귀퉁이에 매어 둔다
+            var rt = (RectTransform)_noticeText.transform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+
+            _noticeFade = _notice.gameObject.AddComponent<CanvasGroup>();
+            _notice.gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// 안내 문구를 잠깐 띄운다. 띠는 글자 길이에 맞춰 늘어난다.
+        /// 이미 떠 있으면 그 자리에서 글자만 바뀌고 시간이 다시 흐른다.
+        /// </summary>
+        public void ShowNotice(string message)
+        {
+            if (_notice == null || _noticeText == null) return;
+
+            _noticeText.text = message ?? "";
+
+            // preferredWidth 는 레이아웃을 기다리지 않고 그 자리에서 재 준다
+            float w = _noticeText.preferredWidth + UiTheme.Notice.PadX * 2;
+            _notice.sizeDelta = new Vector2(
+                Mathf.Round(Mathf.Clamp(w, UiTheme.Notice.MinWidth, UiTheme.Notice.MaxWidth)),
+                UiTheme.Notice.Height);
+
+            _notice.gameObject.SetActive(true);
+            _notice.SetAsLastSibling();      // 팝업 위에도 떠야 한다
+            _noticeTime = 0f;
+            ApplyNotice();
+        }
+
+        private void ApplyNotice()
+        {
+            if (_notice == null) return;
+
+            // 팝업과 같은 곡선으로 스르륵 커진다
+            float s = Mathf.LerpUnclamped(0.88f, 1f, EaseOutBack(Mathf.Clamp01(_noticeTime / NoticeGrow)));
+            _notice.localScale = new Vector3(s, s, 1f);
+
+            // 마지막 한 자락은 흐려지며 사라진다
+            if (_noticeFade != null)
+                _noticeFade.alpha = Mathf.Clamp01((NoticeGrow + NoticeHold + NoticeGone - _noticeTime) / NoticeGone);
+        }
+
+        private void StepNotice()
+        {
+            if (_noticeTime < 0f) return;
+
+            _noticeTime += Time.deltaTime;
+            if (_noticeTime >= NoticeGrow + NoticeHold + NoticeGone)
+            {
+                _noticeTime = -1f;
+                if (_notice != null) _notice.gameObject.SetActive(false);
+                return;
+            }
+            ApplyNotice();
+        }
+
         private void Update()
         {
             StepPopupGrow();
+            StepNotice();
             StepHatch();
         }
 
@@ -3830,13 +4163,100 @@ namespace SnailPet.Ui
         public void SetMaximized(bool on)
         {
             Maximized = on;
-            _listRoot.gameObject.SetActive(on);
+            _listRoot.gameObject.SetActive(on && !Minimized);
 
             // 펼친 상태에서는 최대화 버튼이 할 일이 없다. 접는 것은 X 가 맡는다.
-            if (_maximizeBtn != null) _maximizeBtn.gameObject.SetActive(!on);
+            if (_maximizeBtn != null) _maximizeBtn.gameObject.SetActive(!on && !Minimized);
         }
 
         public bool Maximized { get; private set; }
+
+        /// <summary>
+        /// 최소화. 코인 줄과 띠 하나만 남기고 전부 접는다.
+        ///
+        /// <b>위젯 상자도 같이 줄인다.</b> 안에 있는 것들은 상자의 왼쪽 위에 매여 있고
+        /// 상자는 화면 오른쪽 아래에 붙어 있어서, 높이를 줄이면 코인 줄이 띠 위로 따라 내려온다.
+        /// 상자만 남기고 내용을 끄면 코인 줄이 화면 위쪽에 혼자 떠 있게 된다.
+        /// </summary>
+        public void SetMinimized(bool on)
+        {
+            Minimized = on;
+
+            if (_widget != null)
+                _widget.sizeDelta = on ? new Vector2(_widgetSize.x, UiTheme.Mini.Bar.yMax) : _widgetSize;
+
+            if (_miniRoot != null)    _miniRoot.gameObject.SetActive(on);
+            if (_settingsBtn != null) _settingsBtn.gameObject.SetActive(!on);
+            if (_panel != null)       _panel.gameObject.SetActive(!on);
+
+            CenterCoinRow(on);
+
+            // 위로 자란 만큼 화면 밖으로 나갔을 수 있다 (끌어다 위쪽에 두고 최대화한 경우)
+            if (_widget != null) _widget.GetComponent<UiDragMove>()?.ClampNow();
+
+            // 최소화 중에는 목록도 최대화 버튼도 나오지 않는다.
+            // 되돌아오면 언제나 처음 모습(접힌 달팽이 정보)이다 — 펼쳐 뒀던 목록까지 되살리지는 않는다.
+            SetMaximized(on && Maximized);
+
+            if (_closeBtn != null) _closeBtn.gameObject.SetActive(!on);
+            RefreshClose();
+        }
+
+        public bool Minimized { get; private set; }
+
+        /// <summary>최소화에서 되돌아올 위젯 상자 크기. <see cref="Bind"/> 에서 채운다.</summary>
+        private Vector2 _widgetSize = new Vector2(UiTheme.PanelW + At.Close.xMax,
+                                                  UiTheme.PanelH - At.Coin.y);
+
+        /// <summary>지금 코인 줄을 오른쪽으로 밀어 둔 양. 되돌릴 때 그대로 뺀다.</summary>
+        private float _coinShift;
+
+        /// <summary>
+        /// 최소화 동안만 코인 줄을 띠 가운데로 민다. 띠가 패널보다 좁아 제자리에 두면 왼쪽으로 쏠린다.
+        ///
+        /// 코인 셋(알약·아이콘·숫자)은 프리팹에서 손으로 맞춘 자리라 <b>절대 좌표를 쓰지 않는다</b>.
+        /// 지금 자리를 재서 옮길 양만 구하고, 되돌아올 때는 그만큼만 뺀다.
+        /// </summary>
+        private void CenterCoinRow(bool on)
+        {
+            var row = CoinRow();
+            float want = on ? CoinShift(row) : 0f;
+            float delta = want - _coinShift;
+            if (Mathf.Approximately(delta, 0f)) return;
+
+            foreach (var rt in row)
+                if (rt != null) rt.anchoredPosition += new Vector2(delta, 0f);
+
+            _coinShift = want;
+        }
+
+        private RectTransform[] CoinRow() => new[]
+        {
+            _detailRoot != null ? _detailRoot.Find("CoinIcon") as RectTransform : null,
+            _detailRoot != null ? _detailRoot.Find("CoinPill") as RectTransform : null,
+            _coinText   != null ? (RectTransform)_coinText.transform : null,
+        };
+
+        /// <summary>코인 줄의 지금 폭을 재서 띠 가운데에 놓으려면 얼마나 밀어야 하는지.</summary>
+        private static float CoinShift(RectTransform[] row)
+        {
+            float min = float.MaxValue, max = float.MinValue;
+            foreach (var rt in row)
+            {
+                if (rt == null) continue;
+
+                // 아이콘은 피벗이 가운데이고 배율도 1이 아니다 (프리팹에서 0.8배로 줄여 뒀다)
+                float width = rt.rect.width * rt.localScale.x;
+                float left  = rt.anchoredPosition.x - rt.pivot.x * width;
+
+                min = Mathf.Min(min, left);
+                max = Mathf.Max(max, left + width);
+            }
+            if (min > max) return 0f;
+
+            var bar = UiTheme.Mini.Bar;
+            return bar.x + (bar.width - (max - min)) * 0.5f - min;
+        }
 
         // ── 값 넣기 ──
 
@@ -3909,8 +4329,13 @@ namespace SnailPet.Ui
         /// <summary>
         /// 커서가 위젯 위에 있는가. 창의 클릭 통과를 끌지 정하는 데 쓴다.
         /// 좌표는 가상 화면(왼쪽 위 원점).
+        ///
+        /// <b>화면 크기로 정규화해서 옮긴다.</b> 가상 화면 값과 실제 창 크기가 어긋날 수 있기
+        /// 때문이다 — 모니터를 하나 끄면 창은 줄어드는데 부르는 쪽이 든 값은 옛 크기다.
+        /// 그대로 빼면 커서가 캔버스 밖으로 나가 <b>UI 가 영영 안 눌린다</b>. 실제로 그렇게
+        /// 종료 버튼까지 못 누르는 일이 있었다. (근본 대책은 SnailPetBootstrap.SyncScreen)
         /// </summary>
-        public bool ContainsCursor(int virtualX, int virtualY, int vLeft, int vTop, int vHeight)
+        public bool ContainsCursor(int virtualX, int virtualY, int vLeft, int vTop, int vWidth, int vHeight)
         {
             var es = EventSystem.current;
             if (es == null) return false;
@@ -3919,7 +4344,10 @@ namespace SnailPet.Ui
             // 비어 있는 왼쪽 절반까지 UI 로 잡히고, 그 위에서 바탕화면 클릭이 막힌다.
             // 레이캐스터에 물어보면 실제로 그려진 것만 걸린다.
             _pointer ??= new PointerEventData(es);
-            _pointer.position = new Vector2(virtualX - vLeft, vHeight - (virtualY - vTop));
+
+            float x = vWidth  > 0 ? (virtualX - vLeft) * (float)Screen.width  / vWidth  : virtualX - vLeft;
+            float y = vHeight > 0 ? (virtualY - vTop)  * (float)Screen.height / vHeight : virtualY - vTop;
+            _pointer.position = new Vector2(x, Screen.height - y);
 
             _hits.Clear();
             es.RaycastAll(_pointer, _hits);

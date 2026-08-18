@@ -141,8 +141,12 @@ namespace SnailPet.Data
         public readonly int BuffId;
         public readonly int InfoId;
         public readonly string ResourceKey;
+        public readonly string PartsResourceKey;
+        public readonly string PoopResourceKey;
+        public readonly int PoopCount;
+        public readonly double PoopTime;
 
-        public FoodDataRow(int id, FoodType foodType, int nameId, RarityType rarityType, double fullPoint, double happyPoint, double eatTime, int buffId, int infoId, string resourceKey)
+        public FoodDataRow(int id, FoodType foodType, int nameId, RarityType rarityType, double fullPoint, double happyPoint, double eatTime, int buffId, int infoId, string resourceKey, string partsResourceKey, string poopResourceKey, int poopCount, double poopTime)
         {
             Id = id;
             FoodType = foodType;
@@ -154,6 +158,10 @@ namespace SnailPet.Data
             BuffId = buffId;
             InfoId = infoId;
             ResourceKey = resourceKey;
+            PartsResourceKey = partsResourceKey;
+            PoopResourceKey = poopResourceKey;
+            PoopCount = poopCount;
+            PoopTime = poopTime;
         }
     }
 
@@ -544,35 +552,59 @@ namespace SnailPet.Data
             new PartsDataRow(15, 15, 2, RarityType.Common, PartsType.Shell, "commonshell02", true, new string[] { "commonshell02_c06" }, 10, 70, 36, 5d),
             new PartsDataRow(16, 16, 17, RarityType.Rare, PartsType.Shell, "rareshell01", true, new string[] { "rareshell01_c01" }, 7, 71, 36, 10d),
             new PartsDataRow(147, 147, 17, RarityType.Rare, PartsType.Shell, "rareshell02", true, new string[] { "rareshell02_c01" }, 7, 148, 36, 10d),
+            new PartsDataRow(168, 168, 169, RarityType.Epic, PartsType.Shell, "epicshell01", true, new string[] { "epicshell01_c01" }, 5, 170, 36, 20d),
+            new PartsDataRow(171, 171, 169, RarityType.Epic, PartsType.Shell, "epicshell01", true, new string[] { "epicshell01_c02" }, 5, 170, 36, 20d),
+            new PartsDataRow(191, 191, 2, RarityType.Common, PartsType.Shell, "commonshell03", false, System.Array.Empty<string>(), 10, 192, 36, 5d),
+            new PartsDataRow(202, 202, 17, RarityType.Rare, PartsType.Shell, "mellonshell", false, System.Array.Empty<string>(), 7, 203, 36, 10d),
             new PartsDataRow(18, 18, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c01" }, 10, 72, 36, 5d),
             new PartsDataRow(19, 19, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c02" }, 10, 73, 36, 5d),
             new PartsDataRow(20, 20, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c03" }, 10, 74, 36, 5d),
             new PartsDataRow(102, 102, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c04" }, 10, 103, 36, 5d),
             new PartsDataRow(104, 104, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c05" }, 10, 105, 36, 5d),
             new PartsDataRow(106, 106, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c06" }, 10, 107, 36, 5d),
+            new PartsDataRow(193, 193, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "commonbody01_c07" }, 10, 194, 36, 5d),
+            new PartsDataRow(172, 172, 2, RarityType.Common, PartsType.Body, "commonbody01", true, new string[] { "tomatobody" }, 10, 173, 36, 5d),
             new PartsDataRow(21, 21, 2, RarityType.Common, PartsType.Body, "commonbody02", true, new string[] { "commonbody02_c01" }, 10, 75, 36, 5d),
+            new PartsDataRow(195, 195, 2, RarityType.Common, PartsType.Body, "commonbody05", false, System.Array.Empty<string>(), 10, 196, 36, 5d),
             new PartsDataRow(53, 53, 2, RarityType.Common, PartsType.Body, "commonbody03", true, new string[] { "commonbody03_c01" }, 10, 76, 36, 5d),
             new PartsDataRow(108, 108, 2, RarityType.Common, PartsType.Body, "commonbody03", true, new string[] { "commonbody03_c02" }, 10, 109, 36, 5d),
-            new PartsDataRow(122, 122, 2, RarityType.Rare, PartsType.Body, "rarebody01", true, new string[] { "rarebody01_c01" }, 7, 123, 36, 10d),
+            new PartsDataRow(122, 122, 17, RarityType.Rare, PartsType.Body, "rarebody01", true, new string[] { "rarebody01_c01" }, 7, 123, 36, 10d),
             new PartsDataRow(164, 164, 2, RarityType.Common, PartsType.Body, "commonbody04", true, new string[] { "commonbody04_c01" }, 10, 165, 36, 5d),
+            new PartsDataRow(174, 174, 169, RarityType.Epic, PartsType.Body, "epicbody01", false, System.Array.Empty<string>(), 5, 175, 36, 20d),
+            new PartsDataRow(204, 204, 17, RarityType.Rare, PartsType.Body, "rarebody02", true, new string[] { "rarebody02_c01" }, 7, 205, 36, 10d),
             new PartsDataRow(22, 22, 2, RarityType.Common, PartsType.Eyes, "commoneyes01", false, System.Array.Empty<string>(), 10, 77, 36, 5d),
             new PartsDataRow(23, 23, 2, RarityType.Common, PartsType.Eyes, "commoneyes02", false, System.Array.Empty<string>(), 10, 78, 36, 5d),
             new PartsDataRow(24, 24, 2, RarityType.Common, PartsType.Eyes, "commoneyes03", false, System.Array.Empty<string>(), 10, 79, 36, 5d),
             new PartsDataRow(25, 25, 2, RarityType.Common, PartsType.Eyes, "commoneyes04", false, System.Array.Empty<string>(), 10, 80, 36, 5d),
             new PartsDataRow(110, 110, 2, RarityType.Common, PartsType.Eyes, "commoneyes05", false, System.Array.Empty<string>(), 10, 111, 36, 5d),
+            new PartsDataRow(176, 176, 2, RarityType.Common, PartsType.Eyes, "commoneyes06", false, System.Array.Empty<string>(), 10, 177, 36, 5d),
+            new PartsDataRow(197, 197, 2, RarityType.Common, PartsType.Eyes, "commoneyes06", false, System.Array.Empty<string>(), 10, 198, 36, 5d),
+            new PartsDataRow(206, 206, 2, RarityType.Common, PartsType.Eyes, "commoneyes06", false, System.Array.Empty<string>(), 10, 207, 36, 5d),
+            new PartsDataRow(178, 178, 169, RarityType.Epic, PartsType.Eyes, "epiceyes01", false, System.Array.Empty<string>(), 5, 179, 36, 20d),
             new PartsDataRow(26, 26, 2, RarityType.Common, PartsType.Feeler, "commonfeeler01", true, new string[] { "commonfeeler01_c01" }, 10, 81, 36, 5d),
             new PartsDataRow(138, 138, 2, RarityType.Common, PartsType.Feeler, "commonfeeler02", true, new string[] { "commonfeeler02_c01" }, 10, 139, 36, 5d),
             new PartsDataRow(140, 140, 2, RarityType.Common, PartsType.Feeler, "commonfeeler02", true, new string[] { "commonfeeler02_c02" }, 10, 139, 36, 5d),
             new PartsDataRow(54, 54, 2, RarityType.Common, PartsType.Feeler, "commonfeeler03", true, new string[] { "commonfeeler03_c01" }, 10, 86, 36, 5d),
             new PartsDataRow(29, 29, 2, RarityType.Common, PartsType.Feeler, "commonfeeler04", true, new string[] { "commonfeeler04_c01" }, 10, 84, 36, 5d),
+            new PartsDataRow(180, 180, 169, RarityType.Epic, PartsType.Feeler, "epicfeeler01", false, System.Array.Empty<string>(), 5, 181, 36, 20d),
+            new PartsDataRow(199, 199, 2, RarityType.Common, PartsType.Feeler, "plantfeeler", false, System.Array.Empty<string>(), 10, 200, 36, 5d),
+            new PartsDataRow(182, 182, 2, RarityType.Common, PartsType.Feeler, "tomatofeeler", false, System.Array.Empty<string>(), 10, 183, 36, 6d),
+            new PartsDataRow(184, 184, 2, RarityType.Common, PartsType.Shell, "tomatoshell", false, System.Array.Empty<string>(), 10, 185, 36, 6d),
+            new PartsDataRow(186, 186, 17, RarityType.Rare, PartsType.Shell, "plantshell", false, System.Array.Empty<string>(), 7, 187, 36, 10d),
+            new PartsDataRow(208, 208, 17, RarityType.Rare, PartsType.Feeler, "rarefeeler01", false, System.Array.Empty<string>(), 7, 209, 36, 6d),
+            new PartsDataRow(210, 210, 17, RarityType.Rare, PartsType.Eyes, "rareeyes02", false, System.Array.Empty<string>(), 7, 211, 36, 6d),
+            new PartsDataRow(212, 212, 17, RarityType.Rare, PartsType.Eyes, "rareeyes01", false, System.Array.Empty<string>(), 7, 213, 36, 6d),
+            new PartsDataRow(214, 214, 17, RarityType.Rare, PartsType.Body, "rarebody03", true, new string[] { "rarebody03_c01" }, 7, 215, 36, 6d),
+            new PartsDataRow(216, 216, 17, RarityType.Rare, PartsType.Shell, "tubeshell", true, new string[] { "tubeshell_c01" }, 7, 217, 36, 6d),
+            new PartsDataRow(218, 218, 17, RarityType.Rare, PartsType.Feeler, "duckfeeler", false, System.Array.Empty<string>(), 7, 219, 36, 6d),
         };
 
         public static readonly FoodDataRow[] FoodData = new FoodDataRow[]
         {
-            new FoodDataRow(31, FoodType.vegetable, 31, RarityType.Common, 5d, 3d, 2d, 0, 124, "food_lettuce"),
-            new FoodDataRow(32, FoodType.vegetable, 32, RarityType.Common, 7d, 5d, 2.5d, 0, 125, "food_tomato"),
-            new FoodDataRow(33, FoodType.vegetable, 33, RarityType.Common, 7d, 5d, 5d, 0, 126, "food_zucchini"),
-            new FoodDataRow(34, FoodType.bean, 34, RarityType.Common, 15d, 10d, 5d, 35, 127, "food_tofu"),
+            new FoodDataRow(31, FoodType.vegetable, 31, RarityType.Common, 5d, 3d, 2d, 0, 124, "food_lettuce", "food_parts", "poop_green", 1, 20d),
+            new FoodDataRow(32, FoodType.vegetable, 32, RarityType.Common, 7d, 5d, 2.5d, 0, 125, "food_tomato", "food_parts_red", "poop_red", 1, 20d),
+            new FoodDataRow(33, FoodType.vegetable, 33, RarityType.Common, 7d, 5d, 5d, 0, 126, "food_zucchini", "food_parts", "poop_green", 1, 20d),
+            new FoodDataRow(34, FoodType.bean, 34, RarityType.Common, 15d, 10d, 5d, 35, 127, "food_tofu", "food_parts_white", "poop_brown", 2, 20d),
         };
 
         public static readonly LevelDataRow[] LevelData = new LevelDataRow[]
@@ -623,7 +655,8 @@ namespace SnailPet.Data
         public static readonly EggDataRow[] EggData = new EggDataRow[]
         {
             new EggDataRow(37, 37, 180, RarityType.Common, "egg_common", 89, new int[] { 2 }),
-            new EggDataRow(38, 38, 600, RarityType.Rare, "egg_rare", 90, new int[] { 2, 17 }),
+            new EggDataRow(38, 38, 300, RarityType.Rare, "egg_rare", 90, new int[] { 2, 17 }),
+            new EggDataRow(188, 188, 600, RarityType.Epic, "egg_epic", 189, new int[] { 2, 17, 169 }),
         };
 
         public static readonly AccessoriesDataRow[] AccessoriesData = new AccessoriesDataRow[]
@@ -642,7 +675,8 @@ namespace SnailPet.Data
             new ShopDataRow(CategoryType.Food, 33, RarityType.Common, 1, 36, 7, 4, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 3.5d),
             new ShopDataRow(CategoryType.Food, 34, RarityType.Common, 1, 36, 12, 8, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 6d),
             new ShopDataRow(CategoryType.Egg, 37, RarityType.Common, 1, 36, 50, 35, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 25d),
-            new ShopDataRow(CategoryType.Egg, 38, RarityType.Rare, 1, 36, 300, 210, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 150d),
+            new ShopDataRow(CategoryType.Egg, 38, RarityType.Rare, 1, 36, 100, 80, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 50d),
+            new ShopDataRow(CategoryType.Egg, 188, RarityType.Epic, 1, 36, 300, 250, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 150d),
             new ShopDataRow(CategoryType.Item, 36, RarityType.Common, 50, 36, 1, null, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), true, null, 0d),
             new ShopDataRow(CategoryType.Accessories, 39, RarityType.Common, 1, 36, 500, 350, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 250d),
             new ShopDataRow(CategoryType.Accessories, 40, RarityType.Common, 1, 36, 500, 350, new System.DateTime(2026, 7, 29, 6, 0, 0), new System.DateTime(2026, 12, 11, 23, 59, 59), false, 36, 250d),
@@ -676,7 +710,11 @@ namespace SnailPet.Data
 
         public static readonly SnailGuideRow[] SnailGuide = new SnailGuideRow[]
         {
-            new SnailGuideRow(166, 166, 167, RarityType.Common, 147, null, 122, null, null, null, null, null, 31, 1, null, null, null, null),
+            new SnailGuideRow(166, 166, 167, RarityType.Common, 147, null, 122, null, null, null, null, null, 36, 300, 31, 1, null, null),
+            new SnailGuideRow(220, 220, 221, RarityType.Common, 172, null, 182, null, 184, null, null, null, 36, 300, 31, 1, null, null),
+            new SnailGuideRow(222, 222, 223, RarityType.Epic, 174, null, 178, null, 168, null, 180, null, 36, 600, 31, 1, null, null),
+            new SnailGuideRow(224, 224, 225, RarityType.Rare, 186, null, 199, null, 193, null, null, null, 36, 400, 31, 1, null, null),
+            new SnailGuideRow(226, 226, 227, RarityType.Rare, 214, null, 216, null, 218, null, 210, null, 36, 500, 31, 1, null, null),
         };
 
         public static readonly LanguageDataRow[] LanguageData = new LanguageDataRow[]
@@ -816,6 +854,55 @@ namespace SnailPet.Data
             new LanguageDataRow(163, "종료"),
             new LanguageDataRow(166, "1. 아이스크림 달팽이"),
             new LanguageDataRow(167, "누군가 달팽이 위로 아이스크림을 쏟았어요!\n하지만 달팽이는 생각보다 나쁘지 않았나 봅니다."),
+            new LanguageDataRow(174, "라멘으로 감싼 몸"),
+            new LanguageDataRow(175, "말랑하고 눅눅한 라멘을 몸에 감고있습니다."),
+            new LanguageDataRow(180, "젓가락 더듬이"),
+            new LanguageDataRow(181, "젓가락 형태로 발전한 더듬이."),
+            new LanguageDataRow(168, "라멘그릇(빨간색)"),
+            new LanguageDataRow(171, "라멘그릇(파란색)"),
+            new LanguageDataRow(170, "누군가 달팽이 위로 라멘을 쏟았어요!"),
+            new LanguageDataRow(178, "라멘 어묵"),
+            new LanguageDataRow(179, "나루토마키를 닮은  눈."),
+            new LanguageDataRow(173, "토마토색을 닮은 몸."),
+            new LanguageDataRow(172, "토마토 몸"),
+            new LanguageDataRow(182, "토마토 더듬이"),
+            new LanguageDataRow(183, "토마토를 닮은 더듬이."),
+            new LanguageDataRow(184, "왕 토마토"),
+            new LanguageDataRow(185, "토마토를 통째로 집으로 쓰고 있습니다."),
+            new LanguageDataRow(176, "슬픈 눈"),
+            new LanguageDataRow(177, "어딘가 슬퍼보이는 눈입니다."),
+            new LanguageDataRow(186, "몬스테리아 껍질"),
+            new LanguageDataRow(187, "등에 있는 식물은 비상식량입니다."),
+            new LanguageDataRow(190, "즐겨찾기 설정으로 등록할 수 있어요!"),
+            new LanguageDataRow(201, "즐겨찾기는 최대 두개만 등록할 수 있어요!"),
+            new LanguageDataRow(202, "메론빵 껍질"),
+            new LanguageDataRow(203, "향긋한 메론 냄새가 납니다!"),
+            new LanguageDataRow(199, "새싹 더듬이"),
+            new LanguageDataRow(200, "머리 위로 싹이 났습니다."),
+            new LanguageDataRow(204, "물개 몸"),
+            new LanguageDataRow(205, "물을 너무 좋아하더니 물개가 되어버렸네요."),
+            new LanguageDataRow(220, "2. 토마토 달팽이"),
+            new LanguageDataRow(221, "토마토를 너무 좋아하던 달팽이는…\n자신이 토마토가 되기로 했습니다."),
+            new LanguageDataRow(222, "3. 라멘 달팽이"),
+            new LanguageDataRow(223, "라멘에 칭칭 감겨있는 이 달팽이는 눅눅하고 따뜻한 감촉에 이대로 지내기로 했습니다."),
+            new LanguageDataRow(224, "4. 화분 달팽이"),
+            new LanguageDataRow(225, "등 뒤에 있는 식물은 어느정도 자라면 먹으면서 크기를 유지한답니다."),
+            new LanguageDataRow(208, "초롱아귀 더듬이"),
+            new LanguageDataRow(209, "누군가를 유인하려는걸까?"),
+            new LanguageDataRow(206, "앵두 입술"),
+            new LanguageDataRow(207, "도돔하니 귀여운 입술입니다."),
+            new LanguageDataRow(210, "오리 얼굴"),
+            new LanguageDataRow(211, "물을 좋아한다는 점은 닮았네요!"),
+            new LanguageDataRow(212, "물개 얼굴"),
+            new LanguageDataRow(213, "어딘가 맹해보이는 물개얼굴입니다."),
+            new LanguageDataRow(214, "오리 몸"),
+            new LanguageDataRow(216, "튜브(파란색)"),
+            new LanguageDataRow(218, "오리 머리"),
+            new LanguageDataRow(215, "어딘가 뽀송해보이는 오리 몸입니다."),
+            new LanguageDataRow(217, "여름 휴가를 가려는 모양입니다."),
+            new LanguageDataRow(219, "머리 위에 깃털이 솟아올랐습니다."),
+            new LanguageDataRow(226, "5. 오리 달팽이"),
+            new LanguageDataRow(227, "여름 휴가를 떠나는 오리 모양의 달패이입니다."),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -1094,6 +1181,66 @@ namespace SnailPet.Data
             { "[일반달팽이_종이몸01정보]", 165 },
             { "[도감_아이스크림달팽이]", 166 },
             { "[도감_아이스크림달팽이정보]", 167 },
+            { "[에픽_라멘껍질01]", 168 },
+            { "[에픽그룹]", 169 },
+            { "[에픽_라멘껍질정보]", 170 },
+            { "[에픽_라멘껍질02]", 171 },
+            { "[일반_토마토바디]", 172 },
+            { "[일반_토마토바디정보]", 173 },
+            { "[에픽_라멘몸]", 174 },
+            { "[에픽_라멘몸정보]", 175 },
+            { "[일반달팽이_눈06]", 176 },
+            { "[일반달팽이_눈06정보]", 177 },
+            { "[에픽_라멘눈]", 178 },
+            { "[에픽_라멘눈정보]", 179 },
+            { "[에픽_라멘더듬이]", 180 },
+            { "[에픽_라멘더듬이정보]", 181 },
+            { "[일반_토마토더듬이]", 182 },
+            { "[일반_토마토더듬이정보]", 183 },
+            { "[일반_토마토껍질]", 184 },
+            { "[일반_토마토껍질정보]", 185 },
+            { "[일반_화분껍질]", 186 },
+            { "[일반_화분껍질정보]", 187 },
+            { "[에픽알01]", 188 },
+            { "[에픽알01정보]", 189 },
+            { "[안내_즐겨찾기]", 190 },
+            { "[일반_이끼껍질]", 191 },
+            { "[일반_이끼껍질정보]", 192 },
+            { "[일반_토양몸]", 193 },
+            { "[일반_토양몸정보]", 194 },
+            { "[일반_이끼바디]", 195 },
+            { "[일반_이끼바디정보]", 196 },
+            { "[일반달팽이_눈07]", 197 },
+            { "[일반달팽이_눈07정보]", 198 },
+            { "[일반_새싹더듬이]", 199 },
+            { "[일반_새싹더듬이정보]", 200 },
+            { "[안내_즐겨찾기2]", 201 },
+            { "[레어_메론빵껍질]", 202 },
+            { "[레어_메론빵껍질정보]", 203 },
+            { "[레어_물개몸]", 204 },
+            { "[레어_물개몸정보]", 205 },
+            { "[일반달팽이_눈08]", 206 },
+            { "[일반달팽이_눈08정보]", 207 },
+            { "[레어_아귀더듬이]", 208 },
+            { "[레어_아귀더듬이정보]", 209 },
+            { "[레어_오리눈]", 210 },
+            { "[레어_오리눈정보]", 211 },
+            { "[레어_물개눈]", 212 },
+            { "[레어_물개눈정보]", 213 },
+            { "[레어_오리몸]", 214 },
+            { "[레어_오리몸정보]", 215 },
+            { "[레어_튜브껍질]", 216 },
+            { "[레어_튜브껍질정보]", 217 },
+            { "[레어_오리머리]", 218 },
+            { "[레어_오리머리정보]", 219 },
+            { "[도감_토마토달팽이]", 220 },
+            { "[도감_토마토달팽이정보]", 221 },
+            { "[도감_라멘달팽이]", 222 },
+            { "[도감_라멘달팽이정보]", 223 },
+            { "[도감_화분달팽이]", 224 },
+            { "[도감_화분달팽이정보]", 225 },
+            { "[도감_오리달팽이]", 226 },
+            { "[도감_오리달팽이정보]", 227 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

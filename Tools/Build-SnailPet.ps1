@@ -50,15 +50,46 @@ if ($live) {
 
 $dll = Join-Path $ProjectPath "Build\SnailPet_Data\Managed\Assembly-CSharp.dll"
 
-# 에셋을 추가하거나 바꾼 뒤 첫 실행은 임포트만 하고 끝난다. 두 번까지 돌려 본다.
-$log = $null
-for ($try = 1; $try -le 2; $try++) {
-    $log = & $Unity -batchmode -quit -projectPath $ProjectPath -executeMethod $Method -logFile - 2>&1
+# 로그는 반드시 파일로 받는다.
+#   -logFile - 로 표준출력에 받아 2>&1 로 캡처하면, PowerShell 5.1 이 네이티브 stderr 를
+#   ErrorRecord 로 감싸는 바람에 Select-String 이 "error CS" 를 못 잡는다.
+#   실제로 컴파일 에러가 난 빌드가 신선도 검사에만 걸려서, 원인을 못 보고 세 번을 헛돌렸다.
+#
+# 시도마다 <b>다른 파일</b>에 쓴다. 한 파일을 돌려 쓰면 두 번째 시도에서 지우다 실패한다 —
+# 앞 시도의 유니티가 프로세스 목록에서 사라진 뒤에도 로그 파일 손잡이를 잠깐 더 쥐고 있다.
 
-    $errors = $log | Select-String -Pattern "error CS|Aborting batchmode|cannot open the same project"
-    if ($errors) {
+# 에셋을 추가하거나 바꾼 뒤 첫 실행은 임포트만 하고 끝난다. 두 번까지 돌려 본다.
+for ($try = 1; $try -le 2; $try++) {
+    $logPath = Join-Path $env:TEMP "SnailPet-build.$try.log"
+
+    # 못 지워도 그냥 간다. 유니티가 열면서 어차피 비운다.
+    Remove-Item $logPath -Force -ErrorAction SilentlyContinue
+
+    & $Unity -batchmode -quit -projectPath $ProjectPath -executeMethod $Method -logFile $logPath
+
+    # 로그를 파일로 받으면 이 호출은 <b>유니티가 끝나기 전에 돌아온다</b> — 유니티가 자기
+    # 자신을 다시 띄우고 부모는 먼저 빠진다. (-logFile - 로 받던 때는 파이프를 끝까지 읽느라
+    # 저절로 기다려졌다.) 그래서 여기서 기다리지 않으면 반쯤 쓰인 로그를 읽고 에러를 못 본다.
+    Start-Sleep -Seconds 1
+    while (Get-Process | Where-Object { $_.ProcessName -eq 'Unity' }) { Start-Sleep -Seconds 2 }
+
+    $errors = @()
+    if (Test-Path $logPath) {
+        # 같은 에러가 로그에 서너 번 되풀이되므로 줄 단위로 추린다
+        $errors = @(Select-String -Path $logPath -Pattern "error CS|Aborting batchmode|cannot open the same project" |
+                    ForEach-Object { $_.Line.Trim() } | Sort-Object -Unique)
+    }
+    if ($errors.Count -gt 0) {
+        # 첫 실행에서는 방금 더한 .cs 가 아직 안 잡혀 「타입이 없다」가 나올 수 있다.
+        # 그건 진짜 오류가 아니므로 마지막 시도에서만 실패로 친다.
+        if ($try -lt 2) {
+            Write-Output "첫 실행에 오류가 있었습니다. 새 파일이 아직 안 잡힌 것일 수 있어 한 번 더 돌립니다."
+            continue
+        }
+
         Write-Output "FAIL: 빌드 실패"
         $errors | Select-Object -First 10 | ForEach-Object { "  $_" }
+        Write-Output "  (전체 로그: $logPath)"
         exit 1
     }
 
@@ -69,7 +100,6 @@ for ($try = 1; $try -le 2; $try++) {
     }
 
     if ($try -eq 1) { Write-Output "첫 실행이 임포트만 하고 끝났습니다. 다시 빌드합니다." }
-    while (Get-Process | Where-Object { $_.ProcessName -eq 'Unity' }) { Start-Sleep -Seconds 2 }
 }
 
 if (-not (Test-Path $dll)) { Write-Output "FAIL: 산출물이 없습니다: $dll"; exit 1 }
@@ -85,6 +115,7 @@ if ($newestSrc -and $newestOut -and $newestSrc.LastWriteTime -gt $newestOut.Last
     Write-Output "FAIL: 빌드가 소스보다 오래됐습니다."
     Write-Output "  산출물  : $($newestOut.LastWriteTime)  $($newestOut.Name)"
     Write-Output "  최신 소스: $($newestSrc.LastWriteTime)  $($newestSrc.Name)"
+    Write-Output "  위에 에러가 안 찍혔으면 로그를 직접 볼 것: $logPath"
     exit 1
 }
 

@@ -15,7 +15,11 @@ namespace SnailPet.Snail
     /// </summary>
     public sealed class CrumbField
     {
-        private const string ArtPath = "Ui/Icon/food_parts";
+        /// <summary>부스러기 아트가 있는 곳. <c>FoodData.PartsResourceKey</c> 가 이 아래의 파일 이름이다.</summary>
+        private const string ArtFolder = "Ui/Icon/";
+
+        /// <summary>키가 비었거나 그 파일이 없을 때 쓰는 그림.</summary>
+        private const string DefaultArt = "food_parts";
 
         /// <summary>사라지기 직전 이만큼의 시간 동안 흐려진다.</summary>
         private const float FadeSeconds = 0.5f;
@@ -33,35 +37,48 @@ namespace SnailPet.Snail
 
         private readonly Transform _parent;
         private readonly List<Crumb> _items = new List<Crumb>();
-        private Sprite _sprite;
-        private bool _looked;
+
+        /// <summary>키별 그림. 못 찾은 키는 공용 그림이 들어가 있어 다시 찾지 않는다.</summary>
+        private readonly Dictionary<string, Sprite> _sprites = new Dictionary<string, Sprite>();
 
         public CrumbField(Transform parent) { _parent = parent; }
 
         public IReadOnlyList<Crumb> Items => _items;
         public int Count => _items.Count;
 
-        private Sprite Art()
+        /// <summary>
+        /// 음식마다 다른 부스러기 그림.
+        ///
+        /// 키가 비었거나 그 파일이 없으면 공용 그림으로 떨어진다 — 아트가 아직 안 나온 음식도
+        /// 부스러기는 튀어야 한다. 없는 키는 한 번만 경고하고 공용 그림을 캐시에 넣어 둔다.
+        /// </summary>
+        private Sprite Art(string key)
         {
-            if (_looked) return _sprite;
+            if (string.IsNullOrEmpty(key)) key = DefaultArt;
+            if (_sprites.TryGetValue(key, out var cached)) return cached;
 
-            _looked = true;
-            _sprite = Resources.Load<Sprite>(ArtPath);
-            if (_sprite == null)
-                Debug.LogWarning("[SnailPet] 부스러기 아트를 찾지 못했습니다: " + ArtPath);
-            return _sprite;
+            var sprite = Resources.Load<Sprite>(ArtFolder + key);
+            if (sprite == null)
+            {
+                Debug.LogWarning("[SnailPet] 부스러기 아트를 찾지 못했습니다: " + ArtFolder + key);
+                if (key != DefaultArt) sprite = Art(DefaultArt);
+            }
+
+            _sprites[key] = sprite;
+            return sprite;
         }
 
         /// <summary>
         /// 한 조각 튀긴다.
         /// </summary>
+        /// <param name="art">그림 이름(<c>FoodData.PartsResourceKey</c>). 비면 공용 그림.</param>
         /// <param name="screen">튀기 시작하는 화면 좌표.</param>
         /// <param name="pixels">화면에서 보일 크기(가로 픽셀).</param>
         /// <param name="speed">초당 픽셀. 방향은 위쪽 반원 안에서 아무렇게나 잡는다.</param>
         /// <param name="life">몇 초 뒤에 사라질지.</param>
-        public void Spawn(Vector2 screen, float pixels, float speed, float life)
+        public void Spawn(string art, Vector2 screen, float pixels, float speed, float life)
         {
-            var sprite = Art();
+            var sprite = Art(art);
             if (sprite == null) return;
 
             var go = new GameObject("Crumb");

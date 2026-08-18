@@ -140,17 +140,27 @@ namespace SnailPet.Snail
 
         /// <summary>
         /// 즐겨찾기해 둔 음식. 개체가 아니라 <b>유저</b>의 것이라 달팽이를 바꿔도 그대로다.
-        /// 지금은 별이 켜지는 표시까지만 한다.
+        /// 최소화 창의 칸에 <b>등록한 순서 그대로</b> 놓이므로 순서를 흩뜨리면 안 된다.
         /// </summary>
         public readonly List<int> Favorites = new List<int>();
 
+        /// <summary>등록할 수 있는 개수. 최소화 창의 칸 수와 같다.</summary>
+        public const int MaxFavorites = 2;
+
         public bool IsFavorite(int foodId) => Favorites.Contains(foodId);
 
-        /// <summary>별을 눌렀다. 켜져 있으면 끄고 꺼져 있으면 켠다.</summary>
-        public void ToggleFavorite(int foodId)
+        /// <summary>
+        /// 별을 눌렀다. 켜져 있으면 끄고 꺼져 있으면 켠다.
+        /// 자리가 없어 켜지 못하면 false — 부르는 쪽이 안내 문구를 띄운다.
+        /// </summary>
+        public bool ToggleFavorite(int foodId)
         {
-            if (foodId <= 0) return;
-            if (!Favorites.Remove(foodId)) Favorites.Add(foodId);
+            if (foodId <= 0) return false;
+            if (Favorites.Remove(foodId)) return true;
+            if (Favorites.Count >= MaxFavorites) return false;
+
+            Favorites.Add(foodId);
+            return true;
         }
 
         /// <summary>부화 중인 칸. eggId 가 0 이면 빈 칸이다.</summary>

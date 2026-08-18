@@ -308,6 +308,7 @@ namespace SnailPet
 
             _food = new FoodField(transform);
             _crumbs = new CrumbField(transform);
+            _poops = new PoopField(transform);
             _coins = new CoinPop(transform);
             _present = new SnailPresent(transform);
 
@@ -460,9 +461,19 @@ namespace SnailPet
             _ui.FoodSelected += id => _ui.SetFavorite(_player.IsFavorite(id));
             _ui.ToggleFavorite += id =>
             {
-                _player.ToggleFavorite(id);
+                string name = Loc.ById(GameData.FoodDataById[id].NameId);
+
+                // 칸이 둘뿐이라 셋째는 등록되지 않는다. 별도 그대로 꺼진 채 둔다.
+                if (!_player.ToggleFavorite(id))
+                {
+                    _ui.NoticeFavoriteFull();
+                    Say($"      [UI] 즐겨찾기 자리 없음 (최대 {PlayerState.MaxFavorites}개): {name}");
+                    return;
+                }
+
                 _ui.SetFavorite(_player.IsFavorite(id));
-                Say($"      [UI] 즐겨찾기 {(_player.IsFavorite(id) ? "켬" : "끔")}: {Loc.ById(GameData.FoodDataById[id].NameId)}");
+                RefreshFavorites();
+                Say($"      [UI] 즐겨찾기 {(_player.IsFavorite(id) ? "켬" : "끔")}: {name}");
             };
 
             _ui.PutEgg       += PutEggInIncubator;
@@ -483,7 +494,7 @@ namespace SnailPet
             _ui.SetOptions(_player.Options);
 
             RefreshEggs();
-            RefreshFoods();
+            RefreshFoods();      // 즐겨찾기 칸도 여기서 같이 채워진다
             RefreshSnail();
 
             var pick = Shop.Today(System.DateTime.Now);
@@ -497,7 +508,21 @@ namespace SnailPet
         }
 
         /// <summary>보유 음식을 음식 탭에 반영한다.</summary>
-        private void RefreshFoods() => _ui.SetFoods(_player.OwnedFoods());
+        private void RefreshFoods()
+        {
+            _ui.SetFoods(_player.OwnedFoods());
+            RefreshFavorites();      // 칸에 개수가 같이 뜨므로 음식이 줄면 따라 바뀌어야 한다
+        }
+
+        /// <summary>최소화 창의 즐겨찾기 칸. 등록한 순서 그대로, 가진 개수와 함께 들어간다.</summary>
+        private void RefreshFavorites()
+        {
+            var ids = _player.Favorites;
+            var rows = new (int foodId, int count)[ids.Count];
+            for (int i = 0; i < rows.Length; i++) rows[i] = (ids[i], (int)_player.Items.CountOf(ids[i]));
+
+            _ui.SetFavorites(rows);
+        }
 
         /// <summary>
         /// 활성 개체를 상세 패널과 목록에 반영한다.
@@ -587,7 +612,8 @@ namespace SnailPet
                 look = _guideView.Texture;
             }
 
-            _ui.SetGuideDetail(Loc.ById(row.NameId), Loc.ById(row.InfoId), row.RarityType, look);
+            _ui.SetGuideDetail(Loc.ById(row.NameId), Loc.ById(row.InfoId), row.RarityType,
+                               look, entry != null);
             _ui.SetGuideRewards(RewardIcons(row));
             _ui.SetGuideParts(GuideParts(row));
         }
@@ -1486,6 +1512,9 @@ namespace SnailPet
             }
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            // 모니터 구성이 바뀌면 가상 화면 값부터 다시 잡는다. 이게 어긋나면 UI 를 못 누른다.
+            SyncScreen();
+
             // 매 프레임 다시 읽는다. 창 모드일 때 창을 옮기면 달팽이가 자동으로 따라붙고,
             // 화면 모드일 때는 해상도·모니터 구성이 바뀌어도 알아서 맞춰진다.
             _box = ResolveBox();
@@ -1493,6 +1522,7 @@ namespace SnailPet
             float pxPerWorldY = _vHeight / Mathf.Max(1f, 2f * _cam.orthographicSize);
             float pxPerWorldX = _vWidth  / Mathf.Max(1f, 2f * _cam.orthographicSize * _cam.aspect);
             float px = (pxPerWorldX + pxPerWorldY) * 0.5f;   // 회전하면 두 축이 섞이므로 평균을 쓴다
+            _pxPerWorld = px;      // 프레임 안에서 px 를 못 받는 곳(클릭 처리)이 쓴다
 
             float footDepth = Mathf.Abs(_bounds.Foot) * _scale * px;
             float halfExtent = BoxWalk.HalfExtent(_bounds.Left * _scale * px, _bounds.Right * _scale * px);
@@ -1506,6 +1536,7 @@ namespace SnailPet
             _crumbs.Tick(Time.deltaTime, CrumbGravity, _box.Bottom);
             _coins.Tick(Time.deltaTime);
             UpdateCrumbTransforms();
+            _poops.Tick(Time.deltaTime);
 
             StepDrag(footDepth, halfExtent);
 
@@ -1551,6 +1582,7 @@ namespace SnailPet
                 _snail.localScale = new Vector3(pose.FlipX ? -_scale : _scale, _scale, 1f);
 
                 StepPresent(pose, footDepth, px);
+                StepPoop(pose, footDepth, px);
             }
 
             // 반전 여부를 읽어야 하므로 루트 스케일이 정해진 뒤에 적용한다
@@ -1691,6 +1723,7 @@ namespace SnailPet
 
             var data = _eating.Data;
             _growth.Feed(data.FullPoint, data.HappyPoint, data.BuffId);
+            SchedulePoop(data);
             _food.Consume(_eating);
 
             _eating = null;
@@ -1699,6 +1732,96 @@ namespace SnailPet
             _eatFlashUntil = _t + 1.2f;
 
             Say($"      다 먹음: {Loc.ById(data.NameId)} (+포만 {data.FullPoint} +행복 {data.HappyPoint}) → {_growth}");
+        }
+
+        // ── 똥 ──
+        //
+        // 먹고 나면 FoodData.PoopTime 초 간격으로 PoopCount 번 싼다. 예를 들어 20초 · 3개면
+        // 20초마다 하나씩 세 번, 다 싸는 데 60초가 걸린다. 여러 개를 먹으면 예약이 겹쳐 쌓인다.
+        //
+        // 싼 자리에 그대로 붙어 있고, 유저가 눌러야 치워진다. 치우면 말풍선과 같은 값의 코인을 준다.
+
+        private PoopField _poops;
+
+        /// <summary>이번 프레임의 「월드 1 = 화면 몇 px」. 프레임 계산에서 받아 둔다.</summary>
+        private float _pxPerWorld = 1f;
+
+        /// <summary>싸야 할 때(초)와 그림. 먹을 때마다 PoopCount 개가 예약된다.</summary>
+        private readonly List<(float at, string art)> _poopDue = new List<(float, string)>();
+
+        /// <summary>몸 높이에 대한 크기 비율과 최소 크기(px). 부스러기와 같은 이유로 최소값을 둔다.</summary>
+        private const float PoopFraction = 0.42f, PoopMinPixels = 10f;
+
+        /// <summary>먹은 음식의 똥을 예약한다.</summary>
+        private void SchedulePoop(FoodDataRow data)
+        {
+            if (data == null || data.PoopCount <= 0 || string.IsNullOrEmpty(data.PoopResourceKey)) return;
+
+            float every = Mathf.Max(0f, (float)data.PoopTime);
+            for (int i = 1; i <= data.PoopCount; i++) _poopDue.Add((_t + every * i, data.PoopResourceKey));
+
+            Say($"      똥 예약: {data.PoopResourceKey} x{data.PoopCount} ({every:0.#}초 간격)");
+        }
+
+        /// <summary>때가 된 예약을 지금 자리에 내려놓는다.</summary>
+        private void StepPoop(SnailPose pose, float footDepth, float px)
+        {
+            if (_poops == null || _poopDue.Count == 0) return;
+
+            for (int i = _poopDue.Count - 1; i >= 0; i--)
+            {
+                if (_t < _poopDue[i].at) continue;
+
+                DropPoop(_poopDue[i].art, pose, footDepth, px);
+                _poopDue.RemoveAt(i);
+            }
+        }
+
+        /// <summary>
+        /// 발밑에 한 덩이 놓는다.
+        ///
+        /// 자세(회전·반전)를 그대로 물려받아 벽에 붙은 것으로 보이게 하고,
+        /// 벽에서 반높이만큼 안쪽으로 들여 놓아 그림이 벽에 반쯤 묻히지 않게 한다.
+        /// </summary>
+        private void DropPoop(string art, SnailPose pose, float footDepth, float px)
+        {
+            var n = BoxWalk.OutwardNormal(_anchor);
+            Vector2 foot = pose.RootScreen + n * footDepth;
+
+            float bodyPx = (_bounds.Top - _bounds.Foot) * _scale * px;
+            float pixels = Mathf.Max(PoopMinPixels, bodyPx * PoopFraction);
+
+            var poop = _poops.Spawn(art, foot, pixels, pose.RotationDeg, pose.FlipX);
+            if (poop == null) return;
+
+            poop.Screen = foot - n * poop.HalfHeight;
+            Say($"      [{_t:0.0}s] 똥: {art} @({poop.Screen.x:0},{poop.Screen.y:0})");
+        }
+
+        /// <summary>
+        /// 똥을 눌렀다. 스르륵 사라지고 코인이 떠오른다.
+        /// 주는 값은 말풍선과 똑같다 — 지금 레벨의 LevelData 가 정한다.
+        /// </summary>
+        private void ClaimPoop(PoopField.Poop poop, float px)
+        {
+            _poops.Remove(poop);
+
+            var level = _growth.Current;
+            if (level != null && level.ItemId > 0 && level.ItemCount > 0)
+            {
+                _player.Items.Add(level.ItemId, level.ItemCount);
+                _ui.SetCoin(_player.Coins);
+
+                string name = GameData.TokenById.TryGetValue(level.ItemId, out string t)
+                            ? t : level.ItemId.ToString();
+                Say($"      똥 치움: {name} x{level.ItemCount}  → 가방: {_player.Items}");
+            }
+
+            float bodyPx = (_bounds.Top - _bounds.Foot) * _scale * px;
+            _coins?.Pop(poop.Screen,
+                        Mathf.Max(CoinPopMinPixels, bodyPx * CoinPopFraction),
+                        Mathf.Max(CoinPopMinRise, bodyPx * CoinPopRiseFraction),
+                        CoinPopLife);
         }
 
         /// <summary>먹이에서 이만큼 벗어나도 계속 먹는다. 없으면 살짝 흔들릴 때마다 끊긴다.</summary>
@@ -1751,7 +1874,10 @@ namespace SnailPet
                 _eating.ScreenY - _eating.Height * 0.6f);
 
             float pixels = Mathf.Max(CrumbMinPixels, (_bounds.Top - _bounds.Foot) * _scale * CrumbFraction);
-            _crumbs.Spawn(from, pixels, CrumbSpeed * UnityEngine.Random.Range(0.7f, 1.3f),
+
+            // 부스러기 그림은 음식마다 다르다 (FoodData.PartsResourceKey).
+            _crumbs.Spawn(_eating.Data?.PartsResourceKey, from, pixels,
+                          CrumbSpeed * UnityEngine.Random.Range(0.7f, 1.3f),
                           UnityEngine.Random.Range(CrumbLifeMin, CrumbLifeMax));
         }
 
@@ -1834,6 +1960,15 @@ namespace SnailPet
             if (_coins != null)
                 foreach (var c in _coins.Items)
                     if (c.Root != null) c.Root.position = VirtualToWorld(c.Screen.x, c.Screen.y);
+
+            // 똥은 자세까지 그대로 두고 자리만 옮긴다 — 창이 움직여도 벽에 붙어 있어야 한다.
+            if (_poops != null)
+                foreach (var p in _poops.Items)
+                    if (p.Root != null)
+                    {
+                        p.Root.position = VirtualToWorld(p.Screen.x, p.Screen.y);
+                        p.Root.localRotation = Quaternion.Euler(0f, 0f, p.RotationDeg);
+                    }
         }
 
         /// <summary>먹던 것을 접는다. 먹이는 그대로 남고 진행은 0 으로 돌아간다.</summary>
@@ -2048,7 +2183,7 @@ namespace SnailPet
             // UI 를 누른 것을 달팽이·먹이를 집은 것으로 오해하면 안 된다.
             // 위젯이 화면 오른쪽 아래에 있어 달팽이와 겹치는 자리다.
             _cursorOnUi = hasCursor && _ui != null
-                       && _ui.ContainsCursor(cx, cy, _vLeft, _vTop, _vHeight);
+                       && _ui.ContainsCursor(cx, cy, _vLeft, _vTop, _vWidth, _vHeight);
 
             if (down && !_wasMouseDown && hasCursor && !_cursorOnUi)
             {
@@ -2086,6 +2221,12 @@ namespace SnailPet
                         _dragFood = f;
                         f.Held = true;
                         _grabOffset = new Vector2(f.ScreenX, f.ScreenY) - cursor;
+                    }
+                    else
+                    {
+                        // 먹이도 달팽이도 아니면 똥일 수 있다. 누르면 치워지고 코인이 나온다.
+                        var poop = _poops?.FindAt(VirtualToWorld(cx, cy));
+                        if (poop != null) ClaimPoop(poop, _pxPerWorld);
                     }
                 }
             }
@@ -2310,13 +2451,14 @@ namespace SnailPet
             _cursorOnSnail = CursorOnSnail();
             bool hasCursor = TransparentWindow.TryGetCursor(out int cx, out int cy);
             bool onFood = hasCursor && _food.FindAt(cx, cy) != null;
+            bool onPoop = hasCursor && _poops != null && _poops.FindAt(VirtualToWorld(cx, cy)) != null;
 
             // 팝업이 떠 있는 동안은 커서가 어디에 있든 통과시키면 안 된다.
             // 통과시키면 팝업 버튼을 눌러도 클릭이 뒤 창으로 새고, 이름 입력 중이면
             // 키보드 포커스까지 같이 잃는다.
             // _cursorOnUi 는 StepDrag 에서 이미 이번 프레임 값으로 갱신됐다
             TransparentWindow.SetClickThrough(
-                !(_cursorOnSnail || onFood || _cursorOnUi || _ui.PopupOpen || _drag != DragTarget.None));
+                !(_cursorOnSnail || onFood || onPoop || _cursorOnUi || _ui.PopupOpen || _drag != DragTarget.None));
         }
 
         /// <summary>
@@ -2341,6 +2483,32 @@ namespace SnailPet
             Vector3 local = _snail.InverseTransformPoint(VirtualToWorld(cx, cy));
             return local.x >= _bounds.Left && local.x <= _bounds.Right
                 && local.y >= _bounds.Foot && local.y <= _bounds.Top;
+        }
+
+        /// <summary>
+        /// 모니터 구성이 바뀌었는지 보고, 바뀌었으면 가상 화면 값을 다시 잡는다.
+        ///
+        /// <b>이 값들은 시작할 때 한 번만 잡혀 있었다.</b> 그래서 모니터를 하나 끄거나 해상도를
+        /// 바꾸면 화면↔가상좌표 환산이 어긋난 채로 남았고, 그때부터
+        ///  · 커서를 캔버스 좌표로 옮기는 <see cref="SnailUi.ContainsCursor"/> 가 항상 빗나가
+        ///    클릭 통과가 안 꺼지고 <b>UI 를 영영 못 누르게 된다</b> (종료 버튼까지 막힌다)
+        ///  · 달팽이도 옛 화면 기준으로 배치돼 엉뚱한 자리에 그려진다
+        /// 실제로 2모니터(3840x1084)로 켜 둔 채 14시간 뒤 한 대가 꺼지면서 그렇게 됐다.
+        /// </summary>
+        private void SyncScreen()
+        {
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            var v = TransparentWindow.VirtualScreen;
+            if (v.Left == _vLeft && v.Top == _vTop && v.Width == _vWidth && v.Height == _vHeight) return;
+
+            Say($"      화면 구성이 바뀌었습니다: ({_vLeft},{_vTop},{_vWidth},{_vHeight}) → ({v.Left},{v.Top},{v.Width},{v.Height})");
+
+            _vLeft = v.Left; _vTop = v.Top; _vWidth = v.Width; _vHeight = v.Height;
+            Screen.SetResolution(_vWidth, _vHeight, FullScreenMode.Windowed);
+
+            // 창을 다시 만든 셈이므로 투명·클릭 통과 속성도 다시 건다
+            TransparentWindow.Apply(clickThrough: true);
+#endif
         }
 
         private ScreenRect ResolveBox()

@@ -43,6 +43,12 @@ namespace SnailPet.Ui
             Guage,          // 게이지 트랙 (파일 이름이 guage 다)
             LevelBadge,     // 나이 뱃지
             Slot2,          // 음식·알·상품 그리드의 정사각 칸
+
+            // 최소화 창 (minimumbadge / slot3)
+            MinimumBadge,   // 최소화했을 때 남는 띠
+            Slot3,          // 그 띠 위의 칸
+
+            Notice,         // 잠깐 떴다 사라지는 안내 문구의 바탕
         }
 
         /// <summary>역할별 기본 모서리 반지름. 아트가 없을 때만 쓴다.</summary>
@@ -80,7 +86,7 @@ namespace SnailPet.Ui
             if (_art.TryGetValue(shape, out var art)) return art;
 
             art = Resources.Load<Sprite>("Ui/Shape/" + FileOf(shape));
-            if (art != null) _fromArt.Add(shape);
+            if (art != null) { _fromArt.Add(shape); art = WithBorder(art, BorderOf(shape)); }
             else art = shape switch
             {
                 Shape.PanelBorder => Border(RadiusOf(shape), 1),
@@ -91,6 +97,35 @@ namespace SnailPet.Ui
 
             _art[shape] = art;
             return art;
+        }
+
+        /// <summary>
+        /// 아트에 9-슬라이스 테두리가 안 잡혀 있을 때 코드로 잡아 주는 값 (원본 픽셀).
+        ///
+        /// 크게 늘어나는 도형만 적는다. 안내 문구 띠는 글자 길이에 따라 원본(79x54)의 세 배까지
+        /// 늘어나는데, 테두리가 0 이면 둥근 끝이 통째로 늘어나 납작해진다.
+        /// 값은 원본의 곡선이 끝나는 지점을 재서 넣었다.
+        ///
+        /// 임포터 설정으로 넣는 편이 낫지만 <b>.meta 를 손으로 고치면 유니티가 되돌려 놓는다</b>.
+        /// 스프라이트 에디터에서 잡아 주면 그쪽이 이긴다 (아래 <see cref="WithBorder"/> 참고).
+        /// </summary>
+        private static Vector4 BorderOf(Shape s) => s switch
+        {
+            Shape.Notice => new Vector4(30, 26, 30, 26),
+            _            => Vector4.zero,
+        };
+
+        /// <summary>
+        /// 테두리가 없는 스프라이트를 같은 그림 · 같은 테두리로 다시 만든다.
+        /// 아트에 이미 테두리가 잡혀 있으면 그대로 둔다 — 아트 쪽이 원본이다.
+        /// </summary>
+        private static Sprite WithBorder(Sprite art, Vector4 border)
+        {
+            if (art == null || border == Vector4.zero || art.border != Vector4.zero) return art;
+
+            // 9-슬라이스는 FullRect 라야 한다. Tight 로 만들면 잘라 붙이지 못한다.
+            return Sprite.Create(art.texture, art.rect, new Vector2(0.5f, 0.5f),
+                                 art.pixelsPerUnit, 0, SpriteMeshType.FullRect, border);
         }
 
         /// <summary>
