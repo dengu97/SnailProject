@@ -84,6 +84,7 @@ namespace SnailPet.Ui
             public const string MakeRoom    = "[방만들기]";
             public const string JoinById    = "[로비ID로진입]";
             public const string JoinRandom  = "[랜덤방으로진입]";
+            public const string LobbyIdAsk  = "[안내_로비ID]";
 
             /// <summary>빈 즐겨찾기 칸을 눌렀을 때의 안내.</summary>
             public const string NoticeFavorite = "[안내_즐겨찾기]";
@@ -237,6 +238,7 @@ namespace SnailPet.Ui
             // 도감 완성·보상 묶음도 팝업 판의 자식이라 프리팹에는 없다.
             if (_doneGroup == null) BuildGuideDoneGroup();
             if (_rewardGroup == null) BuildRewardGroup();
+            if (_guestGroup == null) BuildGuestGroup();
 
             // 상품 미리보기 뒤의 달팽이 실루엣. 상점 패널은 프리팹에 있으므로 여기서 붙인다.
             if (_pickShape == null) _pickShape = ShapeBehind(_pickIcon, "PickShape");
@@ -258,6 +260,13 @@ namespace SnailPet.Ui
 
             // 최소화 창과 안내 문구도 프리팹에는 없다.
             if (_miniRoot == null) BuildMini();
+
+            // 파티 탭은 프리팹에 없다 (탭이 넷일 때 구웠다). 모자란 것만 지어 붙인다.
+            FitTabs();
+
+            // 이름 변경 팝업의 제목·확인 글자. 프리팹에는 필드로 안 잡혀 있어 이름으로 찾는다
+            // (로비ID 로 열 때 글자를 갈아 끼워야 한다).
+            if (_renameTitle == null || _renameOkText == null) FindRenameTexts();
             if (_notice == null) BuildNotice();
 
             // 끌어 옮기기. 위젯 루트에 하나만 붙으면 자식 전부에 걸린다 (UiDragMove 참고).
@@ -281,8 +290,6 @@ namespace SnailPet.Ui
             // 멀티플레이어도 마찬가지다. 진입 버튼은 설정 기어 오른쪽에 붙인다.
             if (_multiRoot == null && _geneRoot != null) BuildMultiList((RectTransform)_geneRoot.parent);
             if (_multiPanel == null) BuildMultiPanel();
-            if (_multiBtn == null && _detailRoot != null)
-                _multiBtn = IconButton(_detailRoot, Above(UiTheme.At.Multi), "tab_snail", "Multi");
 
             // 「부화시킬 알이 없습니다」는 프리팹에 부화기 패널에 구워져 있다. 비는 쪽은
             // 왼쪽 목록이므로 그리로 옮긴다. 다시 구우면 처음부터 그 자리에 지어진다.
@@ -692,7 +699,6 @@ namespace SnailPet.Ui
             for (int i = 0; i < Count(_guideRows); i++) { int k = i; Hook(_guideRows[i]?.Button, () => PickGuide(k)); }
             Hook(_guideToggle, ToggleGuideDetail);
 
-            Hook(_multiBtn,       () => OpenMulti(true));
             Hook(_friendTab,      () => SetMultiTab(false));
             Hook(_lobbyTab,       () => SetMultiTab(true));
             Hook(_makeRoomBtn,    () => MakeRoom?.Invoke());
@@ -1173,7 +1179,44 @@ namespace SnailPet.Ui
         /// <summary>위젯 상자 기준 좌표로 옮긴다. 목업은 패널 왼쪽 위가 원점이라 코인 줄만큼 내려 준다.</summary>
         private static RectInt Above(RectInt r) => new RectInt(r.x, r.y - At.Coin.y, r.width, r.height);
 
-        private static readonly string[] TabKeys = { "tab_snail", "tab_food", "tab_egg", "tab_shop" };
+        private static readonly string[] TabKeys = { "tab_snail", "tab_food", "tab_egg", "tab_shop", "tab_party" };
+
+        private static readonly string[] TabNames =
+            { "TabSnail", "TabFood", "TabEgg", "TabShop", "TabParty" };
+
+        /// <summary>
+        /// 탭 줄을 지금 개수에 맞춘다.
+        ///
+        /// <b>프리팹에는 탭이 넷일 때의 모습이 구워져 있다.</b> 그래서 코드에 다섯째(파티)를
+        /// 더해도 살아날 때는 안 생긴다 — 배열이 프리팹에서 오기 때문이다.
+        /// 모자란 만큼만 지어 붙이고, 이미 있는 넷은 건드리지 않는다.
+        /// </summary>
+        private void FitTabs()
+        {
+            int have = Count(_tabBtns);
+            if (have >= Max.Tabs.Length && Count(_tabs) >= Max.Tabs.Length) return;
+
+            var btns = new Button[Max.Tabs.Length];
+            var arts = new Image[Max.Tabs.Length];
+            for (int i = 0; i < have && i < btns.Length; i++)
+            {
+                btns[i] = _tabBtns[i];
+                arts[i] = i < Count(_tabs) ? _tabs[i] : null;
+            }
+
+            var parent = have > 0 && _tabBtns[0] != null
+                       ? (RectTransform)_tabBtns[0].transform.parent : _listRoot;
+
+            for (int i = have; i < btns.Length; i++)
+            {
+                // 탭 아트에는 종이 모양 배경이 들어 있어 Button 도형을 따로 깔지 않는다.
+                btns[i] = IconButton(parent, Above(Max.Tabs[i]), TabArt(i, false), TabNames[i]);
+                arts[i] = btns[i].transform.Find("Glyph").GetComponent<Image>();
+            }
+
+            _tabBtns = btns;
+            _tabs = arts;
+        }
 
         /// <summary>
         /// 탭 아트. 고른 탭과 안 고른 탭은 <b>그림 자체가 다르다</b> — 아트에 종이 모양
@@ -1195,16 +1238,9 @@ namespace SnailPet.Ui
         /// </summary>
         private void BuildList()
         {
-            var tabNames = new[] { "TabSnail", "TabFood", "TabEgg", "TabShop" };
-
             _tabs = new Image[Max.Tabs.Length];
             _tabBtns = new Button[Max.Tabs.Length];
-            for (int i = 0; i < _tabs.Length; i++)
-            {
-                // 탭 아트에는 종이 모양 배경이 들어 있어 Button 도형을 따로 깔지 않는다.
-                _tabBtns[i] = IconButton(_listRoot, Above(Max.Tabs[i]), TabArt(i, false), tabNames[i]);
-                _tabs[i] = _tabBtns[i].transform.Find("Glyph").GetComponent<Image>();
-            }
+            FitTabs();
 
             var panel = Panel(_listRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
             _listTitle = Label(panel, new RectInt(0, 8, UiTheme.PanelW, 16), "", 12, UiTheme.Ink);
@@ -1944,15 +1980,12 @@ namespace SnailPet.Ui
             bool moved = _tab != was;
 
             // 탭을 누르면 옷장·상세보기·설정에서 빠져나온다. 셋 다 왼쪽 패널을 통째로 쓰기 때문이다.
-            if (_inWardrobe || _inGene || _inSettings || _inGuide || _inMulti)
+            if (_inWardrobe || _inGene || _inSettings || _inGuide)
             {
                 _inWardrobe = false;
                 _inGene = false;
                 _inSettings = false;
                 _inGuide = false;
-                _inMulti = false;
-                if (_multiRoot != null)  _multiRoot.gameObject.SetActive(false);
-                if (_multiPanel != null) _multiPanel.gameObject.SetActive(false);
                 if (_wardrobeRoot != null)  _wardrobeRoot.gameObject.SetActive(false);
                 if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
                 if (_geneRoot != null)      _geneRoot.gameObject.SetActive(false);
@@ -1964,13 +1997,20 @@ namespace SnailPet.Ui
             }
 
             // 탭이 왼쪽 목록과 오른쪽 상세를 함께 바꾼다. 둘은 항상 같은 것을 보여 줘야 한다.
-            bool food = _tab == 1, egg = _tab == 2, shop = _tab == 3;
+            // 파티(멀티플레이어)는 다섯째 탭이다 — 옷장·도감처럼 얹히는 화면이 아니라 탭 자신이다.
+            bool food = _tab == 1, egg = _tab == 2, shop = _tab == 3, multi = _tab == 4;
+            _inMulti = multi;
+
             if (_foodGridRoot != null) _foodGridRoot.gameObject.SetActive(food);
             if (_foodPanel != null)    _foodPanel.gameObject.SetActive(food);
             if (_eggGridRoot != null)  _eggGridRoot.gameObject.SetActive(egg);
             if (_eggPanel != null)     _eggPanel.gameObject.SetActive(egg);
-            if (_panel != null)        _panel.gameObject.SetActive(!food && !egg && !shop);
-            if (_rowGridRoot != null)  _rowGridRoot.gameObject.SetActive(!food && !egg && !shop);
+            if (_multiRoot != null)    _multiRoot.gameObject.SetActive(multi);
+            if (_multiPanel != null)   _multiPanel.gameObject.SetActive(multi);
+            if (_panel != null)        _panel.gameObject.SetActive(!food && !egg && !shop && !multi);
+            if (_rowGridRoot != null)  _rowGridRoot.gameObject.SetActive(!food && !egg && !shop && !multi);
+
+            if (multi) PaintMultiTabs();
 
             // 상점은 들어올 때마다 카테고리 목록에서 시작한다
             _shopCat = -1;
@@ -1984,7 +2024,7 @@ namespace SnailPet.Ui
                 else _tabs[i].color = i == _tab ? UiTheme.TabOn : UiTheme.TabOff;
             }
 
-            string[] titles = { Keys.SnailList, Keys.FoodList, Keys.EggList, Keys.Shop };
+            string[] titles = { Keys.SnailList, Keys.FoodList, Keys.EggList, Keys.Shop, Keys.Multiplayer };
             _listTitle.text = SnailPet.Data.Loc.Text(titles[_tab]);
             RefreshClose();      // 설정에서 나왔으면 X 가 다시 접는 버튼이 된다
 
@@ -2344,7 +2384,7 @@ namespace SnailPet.Ui
         /// </summary>
         private void RefreshBackButton()
         {
-            bool back = (_tab == 3 && _shopCat >= 0) || _inWardrobe || _inGene || _inGuide || _inMulti;
+            bool back = (_tab == 3 && _shopCat >= 0) || _inWardrobe || _inGene || _inGuide;
 
             if (_shopBack != null) _shopBack.gameObject.SetActive(back);
             if (_closeBtn != null) _closeBtn.gameObject.SetActive(!back);
@@ -2359,7 +2399,6 @@ namespace SnailPet.Ui
             if (_inWardrobe) { OpenWardrobe(false); return; }
             if (_inGene)     { OpenGene(false); return; }
             if (_inGuide)    { OpenGuide(false); return; }
-            if (_inMulti)    { OpenMulti(false); return; }
 
             LeaveShopCategory();
         }
@@ -2912,8 +2951,8 @@ namespace SnailPet.Ui
             public Button Zoom;
         }
 
-        [SerializeField] private RectTransform _multiRoot, _multiPanel;
-        [SerializeField] private Button _multiBtn, _friendTab, _lobbyTab;
+        [SerializeField] private RectTransform _multiRoot, _multiPanel, _multiContent;
+        [SerializeField] private Button _friendTab, _lobbyTab;
         [SerializeField] private Image _friendTabBg, _lobbyTabBg;
         [SerializeField] private MultiRow[] _multiRows;
         [SerializeField] private RectTransform _roomGroup, _lobbyGroup;
@@ -2948,13 +2987,17 @@ namespace SnailPet.Ui
             _friendTab = TabChip(_multiRoot, UiTheme.Multi.FriendTab, Keys.FriendList, out _friendTabBg, "FriendTab");
             _lobbyTab  = TabChip(_multiRoot, UiTheme.Multi.LobbyTab,  Keys.LobbyList,  out _lobbyTabBg,  "LobbyTab");
 
+            // 줄은 잘리는 영역 안에 넣는다. 안 그러면 6줄이 패널을 뚫고 나간다.
+            BuildScrollView(_multiRoot, "MultiList", UiTheme.Multi.View, out var listRoot, out _multiContent);
+            listRoot.gameObject.SetActive(true);      // 멀티 루트가 통째로 켜고 꺼진다
+
             _multiRows = new MultiRow[UiTheme.Multi.RowCount];
             for (int i = 0; i < _multiRows.Length; i++)
             {
                 var r = UiTheme.Multi.Row;
                 var at = new RectInt(r.x, r.y + i * UiTheme.Multi.RowStep, r.width, r.height);
 
-                var root = NewRect("MultiRow" + i, _multiRoot);
+                var root = NewRect("MultiRow" + i, _multiContent);
                 Place(root, at);
 
                 var bg = Backdrop(root.gameObject, UiSprites.Shape.Slot, UiTheme.Slot);
@@ -3031,52 +3074,11 @@ namespace SnailPet.Ui
             }
         }
 
-        /// <summary>멀티플레이어에 들어가거나 나온다.</summary>
-        public void OpenMulti(bool on)
-        {
-            _inMulti = on;
-            if (on)
-            {
-                _inWardrobe = _inGene = _inSettings = _inGuide = false;
-                if (_wardrobeRoot != null)  _wardrobeRoot.gameObject.SetActive(false);
-                if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
-                if (_geneRoot != null)      _geneRoot.gameObject.SetActive(false);
-                if (_genePanel != null)     _genePanel.gameObject.SetActive(false);
-                if (_settingsRoot != null)  _settingsRoot.gameObject.SetActive(false);
-                if (_settingsPanel != null) _settingsPanel.gameObject.SetActive(false);
-                if (_guideRoot != null)     _guideRoot.gameObject.SetActive(false);
-                if (_guidePanel != null)    _guidePanel.gameObject.SetActive(false);
-                SetMaximized(true);
-            }
-            ApplyMulti();
-        }
-
-        private void ApplyMulti()
-        {
-            if (_multiRoot == null) return;
-
-            _multiRoot.gameObject.SetActive(_inMulti);
-            _multiPanel.gameObject.SetActive(_inMulti);
-
-            if (!_inMulti) { SetTab(_tab); return; }
-
-            if (_rowGridRoot != null)    _rowGridRoot.gameObject.SetActive(false);
-            if (_foodGridRoot != null)   _foodGridRoot.gameObject.SetActive(false);
-            if (_eggGridRoot != null)    _eggGridRoot.gameObject.SetActive(false);
-            if (_shopCatRoot != null)    _shopCatRoot.gameObject.SetActive(false);
-            if (_shopGridRoot != null)   _shopGridRoot.gameObject.SetActive(false);
-            if (_shopFilterRoot != null) _shopFilterRoot.gameObject.SetActive(false);
-            if (_panel != null)          _panel.gameObject.SetActive(false);
-            if (_foodPanel != null)      _foodPanel.gameObject.SetActive(false);
-            if (_eggPanel != null)       _eggPanel.gameObject.SetActive(false);
-            if (_shopPanel != null)      _shopPanel.gameObject.SetActive(false);
-            if (_shopItemPanel != null)  _shopItemPanel.gameObject.SetActive(false);
-
-            _listTitle.text = SnailPet.Data.Loc.Text(Keys.Multiplayer);
-            PaintMultiTabs();
-            RefreshClose();
-            RefreshBackButton();
-        }
+        /// <summary>
+        /// 멀티플레이어로 가거나 나온다. 다섯째 탭이라 탭을 옮기는 것이 전부다 —
+        /// 켜고 끄는 일은 <see cref="SetTab"/> 이 다른 탭과 똑같이 처리한다.
+        /// </summary>
+        public void OpenMulti(bool on) => SetTab(on ? 4 : 0);
 
         private void SetMultiTab(bool lobby)
         {
@@ -3104,6 +3106,19 @@ namespace SnailPet.Ui
                 bool has = i < count;
                 _multiRows[i].Root.gameObject.SetActive(has);
                 if (has) _multiRows[i].Name.text = names[i];
+            }
+
+            // 내용 높이가 스크롤 범위를 정한다.
+            //
+            // 줄 수가 아니라 <b>실제로 만들어 둔 줄 수</b>로 잡아야 한다. 이름이 20개를 넘어도
+            // 줄은 그만큼만 있으므로, 이름 수로 잡으면 줄이 없는 빈 곳까지 굴러가 목록이
+            // 통째로 사라진 것처럼 보인다.
+            if (_multiContent != null)
+            {
+                int shown = Mathf.Min(count, Count(_multiRows));
+                _multiContent.sizeDelta = new Vector2(UiTheme.PanelW,
+                    Mathf.Max(UiTheme.Multi.View.height,
+                              UiTheme.Multi.Row.y + shown * UiTheme.Multi.RowStep));
             }
         }
 
@@ -3277,19 +3292,10 @@ namespace SnailPet.Ui
 
             if (!_inGene) { SetTab(_tab); return; }
 
-            // 상세보기에 있는 동안에는 목록·그리드·상세가 전부 물러난다
-            if (_rowGridRoot != null)   _rowGridRoot.gameObject.SetActive(false);
-            if (_foodGridRoot != null)  _foodGridRoot.gameObject.SetActive(false);
-            if (_eggGridRoot != null)   _eggGridRoot.gameObject.SetActive(false);
-            if (_shopCatRoot != null)   _shopCatRoot.gameObject.SetActive(false);
-            if (_shopGridRoot != null)  _shopGridRoot.gameObject.SetActive(false);
-            if (_wardrobeRoot != null)  _wardrobeRoot.gameObject.SetActive(false);
-            if (_panel != null)         _panel.gameObject.SetActive(false);
-            if (_foodPanel != null)     _foodPanel.gameObject.SetActive(false);
-            if (_eggPanel != null)      _eggPanel.gameObject.SetActive(false);
-            if (_shopPanel != null)     _shopPanel.gameObject.SetActive(false);
-            if (_shopItemPanel != null) _shopItemPanel.gameObject.SetActive(false);
-            if (_wardrobePanel != null) _wardrobePanel.gameObject.SetActive(false);
+            // 상세보기에 있는 동안에는 나머지 화면이 전부 물러난다
+            HideScreens();
+            _geneRoot.gameObject.SetActive(true);
+            _genePanel.gameObject.SetActive(true);
 
             _listTitle.text = SnailPet.Data.Loc.Text(Keys.Traits);
             RefreshClose();
@@ -3576,16 +3582,9 @@ namespace SnailPet.Ui
 
             if (!_inGuide) { SetTab(_tab); return; }
 
-            if (_rowGridRoot != null)   _rowGridRoot.gameObject.SetActive(false);
-            if (_foodGridRoot != null)  _foodGridRoot.gameObject.SetActive(false);
-            if (_eggGridRoot != null)   _eggGridRoot.gameObject.SetActive(false);
-            if (_shopCatRoot != null)   _shopCatRoot.gameObject.SetActive(false);
-            if (_shopGridRoot != null)  _shopGridRoot.gameObject.SetActive(false);
-            if (_panel != null)         _panel.gameObject.SetActive(false);
-            if (_foodPanel != null)     _foodPanel.gameObject.SetActive(false);
-            if (_eggPanel != null)      _eggPanel.gameObject.SetActive(false);
-            if (_shopPanel != null)     _shopPanel.gameObject.SetActive(false);
-            if (_shopItemPanel != null) _shopItemPanel.gameObject.SetActive(false);
+            HideScreens();
+            _guideRoot.gameObject.SetActive(true);
+            _guidePanel.gameObject.SetActive(true);
 
             _listTitle.text = SnailPet.Data.Loc.Text(Keys.Guide);
             RefreshClose();
@@ -3873,17 +3872,10 @@ namespace SnailPet.Ui
 
             if (!_inSettings) { SetTab(_tab); return; }
 
-            // 설정에 있는 동안에는 목록·그리드·상세가 전부 물러난다
-            if (_rowGridRoot != null)   _rowGridRoot.gameObject.SetActive(false);
-            if (_foodGridRoot != null)  _foodGridRoot.gameObject.SetActive(false);
-            if (_eggGridRoot != null)   _eggGridRoot.gameObject.SetActive(false);
-            if (_shopCatRoot != null)   _shopCatRoot.gameObject.SetActive(false);
-            if (_shopGridRoot != null)  _shopGridRoot.gameObject.SetActive(false);
-            if (_panel != null)         _panel.gameObject.SetActive(false);
-            if (_foodPanel != null)     _foodPanel.gameObject.SetActive(false);
-            if (_eggPanel != null)      _eggPanel.gameObject.SetActive(false);
-            if (_shopPanel != null)     _shopPanel.gameObject.SetActive(false);
-            if (_shopItemPanel != null) _shopItemPanel.gameObject.SetActive(false);
+            // 설정에 있는 동안에는 나머지 화면이 전부 물러난다
+            HideScreens();
+            _settingsRoot.gameObject.SetActive(true);
+            _settingsPanel.gameObject.SetActive(true);
 
             _listTitle.text = SnailPet.Data.Loc.Text(Keys.SnailSetting);
             PaintSettings();
@@ -3947,7 +3939,7 @@ namespace SnailPet.Ui
         /// 달팽이 정보 화면에서 들어가 좌우 패널을 통째로 쓰는 화면들. X 가 여기서는
         /// 접는 버튼이 아니라 되돌아가는 버튼이 된다.
         /// </summary>
-        private bool InOverlay => _inSettings || _inWardrobe || _inGene || _inGuide || _inMulti;
+        private bool InOverlay => _inSettings || _inWardrobe || _inGene || _inGuide;
 
         /// <summary>
         /// X 를 잠글지 정한다. 「항상 최대화」가 막는 것은 <b>접는 동작</b>뿐이고,
@@ -4130,7 +4122,7 @@ namespace SnailPet.Ui
             _renameGroup = Fill(NewRect("RenameGroup", _popup));
             _renameGroup.gameObject.SetActive(false);
 
-            LocLabel(_renameGroup, Pop.RenameTitle, Keys.AskRename, 12, UiTheme.Ink);
+            _renameTitle = LocLabel(_renameGroup, Pop.RenameTitle, Keys.AskRename, 12, UiTheme.Ink);
 
             var box = Box(_renameGroup, Pop.RenameField, UiTheme.Slot, UiSprites.Shape.Name, "Field");
             box.raycastTarget = true;
@@ -4149,7 +4141,7 @@ namespace SnailPet.Ui
 
             var okBox = Box(_renameGroup, Pop.RenameOk, UiTheme.Slot, UiSprites.Shape.Button, "Ok");
             okBox.raycastTarget = true;
-            LocLabel(_renameGroup, Pop.RenameOk, Keys.DoRename, 10, UiTheme.Ink);
+            _renameOkText = LocLabel(_renameGroup, Pop.RenameOk, Keys.DoRename, 10, UiTheme.Ink);
             _renameOk = okBox.gameObject.AddComponent<Button>();
             _renameOk.targetGraphic = okBox;
         }
@@ -4158,11 +4150,40 @@ namespace SnailPet.Ui
         /// 이름 변경 팝업을 띄운다.
         /// 글자를 받아야 하므로 <b>여는 동안만</b> 창이 키보드 포커스를 빌린다.
         /// </summary>
-        /// <summary>로비 ID 를 받는다. 이름 변경 팝업을 그대로 쓰고 무엇으로 열었는지만 남긴다.</summary>
+        /// <summary>
+        /// 로비 ID 를 받는다. 이름 변경 팝업을 그대로 쓰고 <b>글자만 갈아 끼운다</b> —
+        /// 입력칸과 키보드 포커스 처리가 이미 그 팝업에 있어 그대로 얻어 간다.
+        /// </summary>
         public void ShowLobbyId()
         {
             ShowRename("");
             _renameForLobby = true;      // ShowRename 이 이름 변경으로 돌려놓으므로 그 뒤에 세운다
+
+            if (_renameTitle != null)  _renameTitle.text  = SnailPet.Data.Loc.Text(Keys.LobbyIdAsk);
+            if (_renameOkText != null) _renameOkText.text = SnailPet.Data.Loc.Text(Keys.Confirm);
+        }
+
+        [SerializeField] private Text _renameTitle, _renameOkText;
+
+        /// <summary>
+        /// 이름 변경 팝업의 제목·확인 글자를 찾아 둔다.
+        ///
+        /// 프리팹에는 이 둘이 필드로 안 잡혀 있다 (글자를 바꿀 일이 없어서 그냥 지었었다).
+        /// 로비ID 로 쓰면서 갈아 끼울 일이 생겼으므로 <b>자리로 가려낸다</b> — 제목은 위쪽,
+        /// 확인은 버튼 자리에 있는 글자다. 다시 구우면 필드로 잡히고 이 함수는 지나간다.
+        /// </summary>
+        private void FindRenameTexts()
+        {
+            if (_renameGroup == null) return;
+
+            foreach (var text in _renameGroup.GetComponentsInChildren<Text>(true))
+            {
+                var rt = (RectTransform)text.transform;
+                if (_renameTitle == null && Mathf.Abs(rt.anchoredPosition.y + Pop.RenameTitle.y) < 2f)
+                    _renameTitle = text;
+                else if (_renameOkText == null && Mathf.Abs(rt.anchoredPosition.y + Pop.RenameOk.y) < 2f)
+                    _renameOkText = text;
+            }
         }
 
         /// <summary>로비 ID 를 넣고 확인을 눌렀다.</summary>
@@ -4173,6 +4194,11 @@ namespace SnailPet.Ui
         public void ShowRename(string current)
         {
             _renameForLobby = false;
+
+            // 로비ID 로 열었던 글자가 남아 있을 수 있다. 이름 변경 쪽으로 되돌린다.
+            if (_renameTitle != null)  _renameTitle.text  = SnailPet.Data.Loc.Text(Keys.AskRename);
+            if (_renameOkText != null) _renameOkText.text = SnailPet.Data.Loc.Text(Keys.DoRename);
+
             HidePopupGroups();
             _renameGroup.gameObject.SetActive(true);
             OpenBlocker();
@@ -4373,6 +4399,113 @@ namespace SnailPet.Ui
             OpenBlocker();
         }
 
+        // ── 남의 달팽이 한 장 ──
+        //
+        // 방 목록에서 돋보기를 누르면 뜬다. 팝업 판을 다른 묶음들과 나눠 쓰고,
+        // 이 묶음만 판이 조금 크다 (초상 + 파츠 넉 줄이 들어간다).
+
+        [SerializeField] private RectTransform _guestGroup;
+        [SerializeField] private Text _guestSteam, _guestName, _guestRarityText;
+        [SerializeField] private Image _guestRarityBadge, _guestRarityIcon;
+        [SerializeField] private RawImage _guestFace;
+        [SerializeField] private GuideRow[] _guestParts;
+
+        private void BuildGuestGroup()
+        {
+            _guestGroup = Fill(NewRect("GuestGroup", _popup));
+            _guestGroup.gameObject.SetActive(false);
+
+            _guestSteam = Label(_guestGroup, Pop.GuestSteam, "", 12, UiTheme.Ink);
+
+            Box(_guestGroup, Pop.GuestName, UiTheme.Slot, UiSprites.Shape.Name, "GuestNameBox");
+            _guestName = Label(_guestGroup, Pop.GuestName, "", 10, UiTheme.Ink);
+
+            // 초상 자리. 그림은 부트스트랩이 넘겨 준다.
+            Box(_guestGroup, Pop.GuestFace, UiTheme.RowSlot, UiSprites.Shape.Slot2, "GuestFaceBox");
+            var face = NewRect("GuestFace", _guestGroup);
+            Place(face, Pop.GuestFace);
+            _guestFace = face.gameObject.AddComponent<RawImage>();
+            _guestFace.raycastTarget = false;
+            _guestFace.enabled = false;
+
+            _guestRarityBadge = Box(_guestGroup, Pop.GuestRarity, UiTheme.BadgeDark, UiSprites.Shape.Badge, "GuestRarity");
+            _guestRarityText  = Label(_guestGroup, Pop.GuestRarity, "", 9, UiTheme.OnBadge);
+            Shrink(_guestRarityText);
+            _guestRarityIcon = Icon(_guestGroup, Pop.GuestRarity, null, Color.white, "GuestRarityIcon");
+            _guestRarityIcon.raycastTarget = false;
+            BakeRarity(_guestRarityIcon, _guestRarityBadge, _guestRarityText);
+
+            // 파츠 줄. 유전정보·도감과 같은 모양이다 (아이콘 + 등급 + 이름).
+            _guestParts = new GuideRow[Pop.GuestPartCount];
+            for (int i = 0; i < _guestParts.Length; i++)
+            {
+                int dy = i * Pop.GuestPartStep;
+                var row = new GuideRow();
+
+                Box(_guestGroup, Offset(Pop.GuestPartRow, dy), UiTheme.Slot, UiSprites.Shape.Slot, "GuestPartBar" + i);
+
+                row.Done = Icon(_guestGroup, Offset(Pop.GuestPartIcon, dy), null, Color.white, "GuestPartIcon" + i);
+                row.Done.raycastTarget = false;
+
+                var rarityAt = Offset(Pop.GuestPartRarity, dy);
+                row.RarityBadge = Box(_guestGroup, rarityAt, UiTheme.BadgeDark, UiSprites.Shape.Badge, "GuestPartRarity" + i);
+                row.Rarity = Label(_guestGroup, rarityAt, "", 7, UiTheme.OnBadge);
+                Shrink(row.Rarity);
+                row.RarityIcon = Icon(_guestGroup, rarityAt, null, Color.white, "GuestPartRarityIcon" + i);
+                row.RarityIcon.raycastTarget = false;
+                BakeRarity(row.RarityIcon, row.RarityBadge, row.Rarity);
+
+                row.Name = Label(_guestGroup, Offset(Pop.GuestPartName, dy), "", 8, UiTheme.Ink);
+                row.Name.alignment = TextAnchor.MiddleLeft;
+
+                _guestParts[i] = row;
+            }
+        }
+
+        /// <summary>
+        /// 남의 달팽이 한 장을 띄운다. 닫기 X 로만 닫는다 — 볼 뿐이라 고를 것이 없다.
+        /// </summary>
+        public void ShowGuestCard(string steamName, string snailName, SnailPet.Data.RarityType rarity,
+                                  Texture face,
+                                  (SnailPet.Data.PartsType type, SnailPet.Data.RarityType rarity, string name)[] parts)
+        {
+            if (_guestGroup == null) return;
+
+            HidePopupGroups();
+            _guestGroup.gameObject.SetActive(true);
+
+            // 이 묶음만 판이 크다. 가운데 피벗이라 크기만 바꾸면 그대로 가운데에 남는다.
+            _popup.sizeDelta = new Vector2(Pop.W, Pop.GuestH);
+
+            _guestSteam.text = steamName ?? "";
+            _guestName.text = string.IsNullOrWhiteSpace(snailName)
+                            ? SnailPet.Data.Loc.Text(Keys.NoName) : snailName;
+            ApplyRarity(_guestRarityIcon, _guestRarityBadge, _guestRarityText, rarity);
+
+            _guestFace.texture = face;
+            _guestFace.enabled = face != null;
+
+            int count = parts?.Length ?? 0;
+            for (int i = 0; i < Count(_guestParts); i++)
+            {
+                var row = _guestParts[i];
+                bool has = i < count;
+
+                if (row.Name != null) row.Name.text = has ? parts[i].name : "";
+                ApplyPartIcon(row.Done, has ? parts[i].type : (SnailPet.Data.PartsType?)null);
+
+                if (has) ApplyRarity(row.RarityIcon, row.RarityBadge, row.Rarity, parts[i].rarity);
+                else
+                {
+                    if (row.RarityIcon != null)  row.RarityIcon.enabled = false;
+                    if (row.RarityBadge != null) row.RarityBadge.enabled = false;
+                    if (row.Rarity != null)      row.Rarity.text = "";
+                }
+            }
+
+            OpenBlocker();
+        }
+
         /// <summary>팝업 묶음은 한 번에 하나만 보인다. 판 크기도 기본으로 되돌린다.</summary>
         private void HidePopupGroups()
         {
@@ -4380,6 +4513,7 @@ namespace SnailPet.Ui
             if (_renameGroup != null) _renameGroup.gameObject.SetActive(false);
             if (_doneGroup != null)   _doneGroup.gameObject.SetActive(false);
             if (_rewardGroup != null) _rewardGroup.gameObject.SetActive(false);
+            if (_guestGroup != null)  _guestGroup.gameObject.SetActive(false);
             ResetHatch();
 
             if (_popup != null) _popup.sizeDelta = new Vector2(Pop.W, Pop.H);
@@ -4754,6 +4888,39 @@ namespace SnailPet.Ui
             // 더 못 올리거나 못 내리면 눌러도 소용없다는 것을 보인다
             if (_popupMinus != null) _popupMinus.interactable = _popupQty > 1;
             if (_popupPlus != null)  _popupPlus.interactable  = _popupQty < _popupMax;
+        }
+
+        /// <summary>
+        /// 왼쪽 목록과 오른쪽 상세를 <b>전부</b> 내린다. 한 화면이 다른 화면 위에 겹쳐 보이지
+        /// 않게 하려는 것이다. 부르는 쪽은 이걸 먼저 부르고 자기 것만 다시 켠다.
+        ///
+        /// 예전에는 화면마다 「나머지 끄기」 목록을 손으로 들고 있었다. 그래서 파티 탭을 더했을 때
+        /// 설정·도감·상세보기 셋이 그것만 못 꺼서 뒤에 비쳐 보였다 — 목록을 하나로 모아 둔다.
+        /// </summary>
+        private void HideScreens()
+        {
+            if (_rowGridRoot != null)    _rowGridRoot.gameObject.SetActive(false);
+            if (_foodGridRoot != null)   _foodGridRoot.gameObject.SetActive(false);
+            if (_eggGridRoot != null)    _eggGridRoot.gameObject.SetActive(false);
+            if (_shopCatRoot != null)    _shopCatRoot.gameObject.SetActive(false);
+            if (_shopGridRoot != null)   _shopGridRoot.gameObject.SetActive(false);
+            if (_shopFilterRoot != null) _shopFilterRoot.gameObject.SetActive(false);
+            if (_multiRoot != null)      _multiRoot.gameObject.SetActive(false);
+            if (_wardrobeRoot != null)   _wardrobeRoot.gameObject.SetActive(false);
+            if (_geneRoot != null)       _geneRoot.gameObject.SetActive(false);
+            if (_guideRoot != null)      _guideRoot.gameObject.SetActive(false);
+            if (_settingsRoot != null)   _settingsRoot.gameObject.SetActive(false);
+
+            if (_panel != null)          _panel.gameObject.SetActive(false);
+            if (_foodPanel != null)      _foodPanel.gameObject.SetActive(false);
+            if (_eggPanel != null)       _eggPanel.gameObject.SetActive(false);
+            if (_shopPanel != null)      _shopPanel.gameObject.SetActive(false);
+            if (_shopItemPanel != null)  _shopItemPanel.gameObject.SetActive(false);
+            if (_multiPanel != null)     _multiPanel.gameObject.SetActive(false);
+            if (_wardrobePanel != null)  _wardrobePanel.gameObject.SetActive(false);
+            if (_genePanel != null)      _genePanel.gameObject.SetActive(false);
+            if (_guidePanel != null)     _guidePanel.gameObject.SetActive(false);
+            if (_settingsPanel != null)  _settingsPanel.gameObject.SetActive(false);
         }
 
         /// <summary>목록을 펼칠지. 상세 패널은 화면에서 제자리에 남는다.</summary>

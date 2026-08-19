@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18 21:52:12",
+  "generatedAt": "2026-08-18 23:08:42",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -282,7 +282,8 @@
     "[방]": 269,
     "[방만들기]": 270,
     "[로비ID로진입]": 271,
-    "[랜덤방으로진입]": 272
+    "[랜덤방으로진입]": 272,
+    "[안내_로비ID]": 273
   },
   "tables": {
     "EnumData": [
@@ -756,7 +757,8 @@
       {"Id": 269, "Kr": "방"},
       {"Id": 270, "Kr": "방 만들기"},
       {"Id": 271, "Kr": "로비ID로 진입"},
-      {"Id": 272, "Kr": "랜덤 방으로 진입"}
+      {"Id": 272, "Kr": "랜덤 방으로 진입"},
+      {"Id": 273, "Kr": "로비ID를 입력하세요."}
     ],
     "UnlockData": [
       {"Id": 101, "ConditionType": "SnailLevel", "NeedConditionValue": 2, "CostItem": null, "CostCount": null}

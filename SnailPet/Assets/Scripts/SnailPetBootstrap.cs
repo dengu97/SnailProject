@@ -253,6 +253,9 @@ namespace SnailPet
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             // 스팀은 없어도 그만이다. 붙으면 멀티가 열리고, 아니면 그 화면만 잠긴다.
+            // 휠은 포커스 없는 창에 안 온다. 저수준 훅으로 받아 UGUI 에 넘긴다.
+            MouseWheelHook.Install();
+
             bool steam = SteamHub.Init();
             Say("[9] 스팀 ............ " + (steam ? "OK (" + SteamHub.MyName + ")" : "미연결: " + SteamHub.LastError));
 
@@ -313,6 +316,7 @@ namespace SnailPet
             _food = new FoodField(transform);
             _crumbs = new CrumbField(transform);
             _poops = new PoopField(transform);
+            _guestField = new GuestField(transform);
             _coins = new CoinPop(transform);
             _present = new SnailPresent(transform);
 
@@ -342,6 +346,7 @@ namespace SnailPet
         {
             SaveFile.Save(_player);
             SteamHub.Shutdown();
+            MouseWheelHook.Remove();
         }
 
         /// <summary>
@@ -535,6 +540,10 @@ namespace SnailPet
             SteamHub.Note += s => Say("      [스팀] " + s);
             SteamHub.Changed += RefreshMulti;
 
+            // 방에 들어가면 내 달팽이가 어떻게 생겼는지 올린다. 남들은 이걸 받아 그린다.
+            SteamHub.Entered += PublishMySnail;
+            _ui.LeaveRoom += ClearGuests;
+
             _ui.MultiTabChanged += lobby =>
             {
                 // 로비 탭으로 옮기는 순간 목록을 새로 받아 온다. 결과는 Changed 로 돌아온다.
@@ -549,9 +558,23 @@ namespace SnailPet
             _ui.LeaveRoom    += () => SteamHub.Leave();
             _ui.JoinById     += () => _ui.ShowLobbyId();
             _ui.LobbyIdEntered += text => SteamHub.JoinById(text);
-            _ui.ViewMember   += i => Say("      [UI] 참가자 상세: " + (i + 1));
+            _ui.ViewMember   += ShowGuestCard;
 
             RefreshMulti();
+        }
+
+        /// <summary>
+        /// 지금 화면에 있는 달팽이의 모습을 방에 올린다.
+        /// 위치는 안 맞추므로 이 글자 하나가 멀티에서 오가는 전부다.
+        /// </summary>
+        private void PublishMySnail()
+        {
+            var active = _player.Active;
+            if (active == null) return;
+
+            string card = SnailShare.WriteCard(active.Name, active.Rarity, active.Dressed());
+            SteamHub.PublishSnail(card);
+            Say("      [스팀] 내 달팽이를 올렸습니다 (" + card.Length + "자)");
         }
 
         /// <summary>멀티 화면을 지금 상태로 다시 그린다. 목록·방·참가자가 한 번에 맞춰진다.</summary>
@@ -562,6 +585,9 @@ namespace SnailPet
             _ui.SetMultiRows(_ui.OnLobbyTab ? LobbyNames() : FriendNames());
             _ui.SetRoom(SteamHub.InLobby, SteamHub.LobbyName);
             if (SteamHub.InLobby) _ui.SetMembers(MemberRows());
+
+            // 목록만이 아니라 화면에서도 같이 논다
+            SyncGuests();
         }
 
         /// <summary>친구 목록. 스팀에 붙었으면 진짜 친구, 아니면 더미.</summary>
@@ -585,17 +611,118 @@ namespace SnailPet
         /// 방에 있는 사람들. 남의 달팽이 그림은 아직 못 받아 오므로 이름만 채우고
         /// 내 달팽이만 그림을 넣는다 — 외형 교환은 다음 차례다.
         /// </summary>
+        /// <summary>
+        /// 방에 있는 사람들. 남이 올린 외형 글자를 그대로 세워 얼굴을 찍는다.
+        /// 아직 안 올린 사람은 그림 없이 이름만 나온다 — 잠깐 뒤에 콜백이 와서 채워진다.
+        /// </summary>
         private (string, UnityEngine.Texture)[] MemberRows()
         {
-            var names = SteamHub.Members();
-            var rows = new (string, UnityEngine.Texture)[names.Length];
+            var members = SteamHub.MemberLooks();
+            var rows = new (string, UnityEngine.Texture)[members.Length];
 
-            for (int i = 0; i < names.Length; i++)
+            for (int i = 0; i < members.Length; i++)
             {
-                bool me = names[i] == SteamHub.MyName;
-                rows[i] = (names[i], me && _player.Active != null ? ThumbOf(_player.Active) : null);
+                var (name, look, me) = members[i];
+
+                // 내 것은 이미 찍어 둔 썸네일을 쓴다. 남의 것만 새로 세운다.
+                Texture face = me && _player.Active != null ? ThumbOf(_player.Active) : GuestFace(name, look);
+                rows[i] = (name, face);
             }
             return rows;
+        }
+
+        /// <summary>
+        /// 남의 달팽이 얼굴. 받은 글자가 그대로면 다시 찍지 않고 들고 있던 것을 준다 —
+        /// 목록은 자주 다시 그려지는데 찍는 것은 비싸다.
+        /// </summary>
+        private Texture GuestFace(string name, string look)
+        {
+            if (string.IsNullOrEmpty(look)) return null;
+
+            if (_guests.TryGetValue(name, out var had) && had.look == look && had.view.Texture != null)
+                return had.view.Texture;
+
+            var appearance = SnailShare.Read(look);
+            if (appearance == null) return null;
+
+            had.view?.Dispose();
+
+            var size = SnailUi.RowThumbSize;
+            var view = new SnailPortrait(transform, appearance, SnailMetrics.Measure(appearance),
+                                         size.x, size.y, headOnly: true);
+
+            _guests[name] = (look, view);
+            return view.Texture;
+        }
+
+        /// <summary>
+        /// 방 목록의 돋보기를 눌렀다. 그 사람이 올린 한 장을 펼쳐 보여 준다.
+        /// 파츠 이름·등급은 받은 파츠 Id 로 데이터에서 읽는다 — 그것까지 보내지 않아도 된다.
+        /// </summary>
+        private void ShowGuestCard(int index)
+        {
+            var members = SteamHub.MemberLooks();
+            if (index < 0 || index >= members.Length) return;
+
+            var (steamName, card, me) = members[index];
+            var (snailName, rarity, look) = SnailShare.ReadCard(card);
+
+            // 내 줄이면 내 것으로 채운다. 남의 것은 받은 글자가 전부다.
+            if (me && _player.Active != null)
+            {
+                var mine = _player.Active;
+                snailName = mine.Name;
+                rarity = mine.Rarity;
+                look = mine.Dressed();
+            }
+
+            if (look == null)
+            {
+                _ui.ShowGuestCard(steamName, "", rarity, null, new (PartsType, RarityType, string)[0]);
+                Say("      [UI] 참가자 상세: " + steamName + " (아직 달팽이를 안 올렸습니다)");
+                return;
+            }
+
+            var parts = new List<(PartsType, RarityType, string)>();
+            foreach (var p in look.Parts)
+            {
+                if (!GameData.PartsDataById.TryGetValue(p.PartsId, out var row)) continue;
+                parts.Add((row.PartsType, row.RarityType, Loc.ById(row.NameId)));
+            }
+
+            _ui.ShowGuestCard(steamName, snailName, rarity, GuestFace(steamName, card), parts.ToArray());
+            Say("      [UI] 참가자 상세: " + steamName + " / " + snailName);
+        }
+
+        /// <summary>남의 달팽이 얼굴 보관함. 이름 → (받은 글자, 찍어 둔 것).</summary>
+        private readonly Dictionary<string, (string look, SnailPortrait view)> _guests =
+            new Dictionary<string, (string, SnailPortrait)>();
+
+        /// <summary>방을 나가면 남의 것은 들고 있을 이유가 없다.</summary>
+        private void ClearGuests()
+        {
+            foreach (var g in _guests.Values) g.view?.Dispose();
+            _guests.Clear();
+            _guestField?.Clear();
+        }
+
+        /// <summary>화면을 같이 기어다니는 남의 달팽이들.</summary>
+        private GuestField _guestField;
+
+        /// <summary>
+        /// 방에 있는 사람들을 화면의 손님 달팽이에 맞춘다.
+        /// <b>나는 뺀다</b> — 내 달팽이는 본체가 이미 그리고 있다.
+        /// </summary>
+        private void SyncGuests()
+        {
+            if (_guestField == null) return;
+
+            var members = SteamHub.MemberLooks();
+            var others = new List<(string, string)>();
+            foreach (var (name, look, me) in members)
+                if (!me && !string.IsNullOrEmpty(look)) others.Add((name, look));
+
+            _guestField.Sync(others.ToArray());
         }
 
         /// <summary>최소화 창의 즐겨찾기 칸. 등록한 순서 그대로, 가진 개수와 함께 들어간다.</summary>
@@ -1643,6 +1770,20 @@ namespace SnailPet
             UpdateCrumbTransforms();
             _poops.Tick(Time.deltaTime);
 
+            // 손님 달팽이는 같은 벽을 따라 걷기만 한다. 자리는 여기서 월드로 옮긴다.
+            if (_guestField != null && _guestField.Count > 0)
+            {
+                _guestField.Tick(Time.deltaTime, _box, px);
+                foreach (var g in _guestField.Items)
+                {
+                    if (g.Root == null) continue;
+
+                    g.Root.position = VirtualToWorld(g.Screen.x, g.Screen.y);
+                    g.Root.localRotation = Quaternion.Euler(0f, 0f, g.RotationDeg);
+                    g.Root.localScale = new Vector3(g.Flip ? -g.Scale : g.Scale, g.Scale, 1f);
+                }
+            }
+
             StepDrag(footDepth, halfExtent);
 
             SnailPose pose;
@@ -2241,6 +2382,7 @@ namespace SnailPet
             SaveFile.Save(_player);
             Say("[8] 저장 ............. " + _player);
             Say("      [UI] 종료");
+            MouseWheelHook.Remove();
             WriteReport();
             Application.Quit();
         }

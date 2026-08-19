@@ -42,6 +42,9 @@ namespace SnailPet.Desktop
         /// <summary>무슨 일이 있었는지 한 줄로. 부르는 쪽이 로그에 적는다.</summary>
         public static event Action<string> Note;
 
+        /// <summary>방에 들어왔다. 받는 쪽이 자기 달팽이를 올린다.</summary>
+        public static event Action Entered;
+
 #if DISABLESTEAMWORKS
         public static bool InLobby => false;
         public static string LobbyName => "";
@@ -59,6 +62,8 @@ namespace SnailPet.Desktop
         public static void JoinRandom() { }
         public static void Leave() { }
         public static void Invite(int friendIndex) { }
+        public static void PublishSnail(string look) { }
+        public static (string name, string look, bool me)[] MemberLooks() => new (string, string, bool)[0];
 #else
         private static readonly List<CSteamID> _friendIds = new List<CSteamID>();
         private static readonly List<CSteamID> _lobbyIds = new List<CSteamID>();
@@ -71,6 +76,7 @@ namespace SnailPet.Desktop
         private static CallResult<LobbyMatchList_t> _onList;
         private static CallResult<LobbyEnter_t> _onEnter;
         private static Callback<LobbyChatUpdate_t> _onChat;
+        private static Callback<LobbyDataUpdate_t> _onData;
         private static Callback<GameLobbyJoinRequested_t> _onInvited;
 
         public static bool InLobby => _lobby.IsValid();
@@ -112,6 +118,9 @@ namespace SnailPet.Desktop
             _onList    = CallResult<LobbyMatchList_t>.Create(OnLobbyList);
             _onEnter   = CallResult<LobbyEnter_t>.Create(OnLobbyEnter);
             _onChat    = Callback<LobbyChatUpdate_t>.Create(_ => Changed?.Invoke());
+
+            // 남이 자기 달팽이를 올리면 이쪽으로 온다
+            _onData    = Callback<LobbyDataUpdate_t>.Create(_ => Changed?.Invoke());
 
             // 스팀 오버레이나 친구 초대로 들어오는 길
             _onInvited = Callback<GameLobbyJoinRequested_t>.Create(e => SteamMatchmaking.JoinLobby(e.m_steamIDLobby));
@@ -193,6 +202,7 @@ namespace SnailPet.Desktop
             SteamMatchmaking.SetLobbyData(_lobby, NameKey, MyName + "의 방");
 
             Note?.Invoke("방을 만들었습니다: " + LobbyName + " (" + _lobby.m_SteamID + ")");
+            Entered?.Invoke();
             Changed?.Invoke();
         }
 
@@ -280,6 +290,7 @@ namespace SnailPet.Desktop
 
             _lobby = new CSteamID(e.m_ulSteamIDLobby);
             Note?.Invoke("방에 들어왔습니다: " + LobbyName + " (" + _lobby.m_SteamID + ")");
+            Entered?.Invoke();
             Changed?.Invoke();
         }
 
@@ -303,6 +314,35 @@ namespace SnailPet.Desktop
                 names[i] = SteamFriends.GetFriendPersonaName(SteamMatchmaking.GetLobbyMemberByIndex(_lobby, i));
 
             return names;
+        }
+
+        /// <summary>
+        /// 내 달팽이가 어떻게 생겼는지 방에 올린다. 들어갈 때와 모습이 바뀔 때 부르면 된다.
+        /// 위치는 안 맞추기로 했으므로 오가는 것은 이 문자열 하나뿐이다.
+        /// </summary>
+        public static void PublishSnail(string look)
+        {
+            if (!Available || !InLobby) return;
+            SteamMatchmaking.SetLobbyMemberData(_lobby, SnailPet.Snail.SnailShare.Key, look ?? "");
+        }
+
+        /// <summary>방에 있는 사람들의 (이름, 달팽이 글자, 나인가). 아직 안 올린 사람은 글자가 빈다.</summary>
+        public static (string name, string look, bool me)[] MemberLooks()
+        {
+            if (!Available || !InLobby) return new (string, string, bool)[0];
+
+            var me = SteamUser.GetSteamID();
+            int n = SteamMatchmaking.GetNumLobbyMembers(_lobby);
+            var rows = new (string, string, bool)[n];
+
+            for (int i = 0; i < n; i++)
+            {
+                var id = SteamMatchmaking.GetLobbyMemberByIndex(_lobby, i);
+                rows[i] = (SteamFriends.GetFriendPersonaName(id),
+                           SteamMatchmaking.GetLobbyMemberData(_lobby, id, SnailPet.Snail.SnailShare.Key),
+                           id == me);
+            }
+            return rows;
         }
 #endif
     }

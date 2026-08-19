@@ -72,9 +72,6 @@ namespace SnailPet.Ui
             // 패널 밖에 걸치는 것들 (y 가 음수면 패널 위)
             public static readonly RectInt Settings = new RectInt(  9, -23, 28, 25);
 
-            /// <summary>멀티플레이어 진입. 설정 기어 오른쪽에 나란히 붙는다.</summary>
-            public static readonly RectInt Multi    = new RectInt( 41, -23, 28, 25);
-
             /// <summary>
             /// 코인 줄이 차지하는 띠. <b>이 값의 y 가 위젯 상자를 얼마나 위로 늘릴지를 정한다</b> —
             /// 패널 위치와 <see cref="Above"/> 의 기준이 전부 여기에 매여 있으므로 함부로 바꾸지 말 것.
@@ -134,16 +131,31 @@ namespace SnailPet.Ui
         public static class Multi
         {
             // ── 왼쪽: 탭 둘 + 목록 ──
-            public static readonly RectInt FriendTab = new RectInt(10, 19, 64, 23);
-            public static readonly RectInt LobbyTab  = new RectInt(79, 19, 64, 23);
+            // 둘을 붙여 놓고 패널 한가운데에 앉힌다: (173 - (64*2 + 5)) / 2 = 20
+            public static readonly RectInt FriendTab = new RectInt(20, 3, 64, 23);
+            public static readonly RectInt LobbyTab  = new RectInt(89, 3, 64, 23);
 
-            /// <summary>목록 줄. 6줄이 들어간다.</summary>
-            public static readonly RectInt Row = new RectInt(11, 48, 151, 26);
-            public const int RowStep = 30, RowCount = 6;
+            /// <summary>
+            /// 목록이 보이는 영역. 탭 줄 아래부터 패널 끝까지다.
+            /// 여기서 잘리고 넘치면 스크롤된다 — 줄 수가 6을 넘어도 밖으로 새지 않는다.
+            /// (좌표는 <see cref="Max.RowView"/> 안이므로 그 높이에서 뺀다)
+            /// </summary>
+            public static readonly RectInt View = new RectInt(0, 30, PanelW, Max.RowView.height - 30);
 
-            /// <summary>줄 오른쪽 끝의 작은 버튼(친구=초대, 로비=입장).</summary>
-            public static readonly RectInt RowButton = new RectInt(131, 51, 20, 20);
-            public static readonly RectInt RowName   = new RectInt(8, 51, 118, 20);
+            /// <summary>목록 줄. 자리는 <b>스크롤 내용 기준</b>이다.</summary>
+            public static readonly RectInt Row = new RectInt(11, 4, 151, 26);
+            public const int RowStep = 28;
+
+            /// <summary>
+            /// 미리 만들어 두는 줄 수. 한 번에 보이는 것은 다섯 남짓이고 나머지는 굴려서 본다.
+            /// <b>스크롤 범위는 이 수를 넘으면 안 된다</b> — 넘기면 줄이 없는 빈 곳까지 굴러가
+            /// 목록이 사라진 것처럼 보인다.
+            /// </summary>
+            public const int RowCount = 20;
+
+            // 아래 둘은 <b>줄 왼쪽 위가 원점</b>이다 (목록 행·유전정보 줄과 같은 규칙).
+            public static readonly RectInt RowName   = new RectInt(  8, 3, 112, 20);
+            public static readonly RectInt RowButton = new RectInt(126, 3,  20, 20);
 
             // ── 오른쪽: 「방」 ──
             public static readonly RectInt Title  = new RectInt(0, 8, PanelW, 21);
@@ -203,6 +215,7 @@ namespace SnailPet.Ui
                 new RectInt( 37, -22, 28, 25),
                 new RectInt( 69, -22, 28, 25),
                 new RectInt(100, -22, 28, 25),
+                new RectInt(132, -22, 28, 25),   // 파티(멀티플레이어)
             };
 
             /// <summary>
@@ -451,6 +464,24 @@ namespace SnailPet.Ui
             // ── 도감 완성 ── 판이 조금 더 크다 (목업 16쪽). 알 부화와 자리를 겹쳐 쓰되
             // 이름 뱃지가 하나 더 붙고 확인 버튼이 그만큼 내려간다.
             public const int GuideDoneH = 170;
+
+            // ── 남의 달팽이 한 장 (방 목록의 돋보기) ──
+            //
+            // 왼쪽에 초상·등급, 오른쪽에 파츠 넉 줄. 그래서 판이 기본보다 크다.
+            public const int GuestH = 160;
+
+            public static readonly RectInt GuestSteam  = new RectInt(  0,  10, W, 22);
+            public static readonly RectInt GuestName   = new RectInt( 66,  36, 110, 22);
+            public static readonly RectInt GuestFace   = new RectInt( 20,  66, 62, 62);
+            public static readonly RectInt GuestRarity = new RectInt( 34, 132, 35, 12);
+
+            /// <summary>파츠 넉 줄. 유전정보 줄과 같은 모양이다.</summary>
+            public static readonly RectInt GuestPartRow    = new RectInt( 96, 66, 123, 14);
+            public const int GuestPartStep = 18, GuestPartCount = 4;
+
+            public static readonly RectInt GuestPartIcon   = new RectInt( 86, 64, 16, 16);
+            public static readonly RectInt GuestPartRarity = new RectInt(103, 67, 30, 11);
+            public static readonly RectInt GuestPartName   = new RectInt(131, 65, 88, 17);
 
             public static readonly RectInt DoneName = new RectInt(57, 107, 131, 22);
             public static readonly RectInt DoneOk   = new RectInt(92, 137,  63, 22);

@@ -49,6 +49,12 @@ namespace SnailPet.Ui
 
         public override bool mousePresent => true;
 
+        /// <summary>
+        /// 휠. 포커스가 없어 WM_MOUSEWHEEL 이 안 오므로 저수준 훅이 모아 둔 값을 쓴다
+        /// (MouseWheelHook). 안 걸렸으면 0 이라 굴러가지 않을 뿐 나머지는 그대로 동작한다.
+        /// </summary>
+        public override Vector2 mouseScrollDelta => new Vector2(0f, MouseWheelHook.Take());
+
         public override bool GetMouseButton(int button)     { Poll(); return button == 0 && _down; }
         public override bool GetMouseButtonDown(int button) { Poll(); return button == 0 && _down && !_wasDown; }
         public override bool GetMouseButtonUp(int button)   { Poll(); return button == 0 && !_down && _wasDown; }
