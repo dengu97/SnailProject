@@ -85,6 +85,12 @@ namespace SnailPet.Ui
             public const string JoinById    = "[로비ID로진입]";
             public const string JoinRandom  = "[랜덤방으로진입]";
             public const string LobbyIdAsk  = "[안내_로비ID]";
+            public const string RoomMade    = "[안내_방생성]";
+            public const string RoomLeft    = "[안내_방이탈]";
+            public const string RoomJoined  = "[안내_방진입]";
+            public const string CodeCopied  = "[안내_코드복사]";
+            public const string RoomSwap    = "[안내_방교체]";
+            public const string SameRoom    = "[안내_중복방]";
 
             /// <summary>빈 즐겨찾기 칸을 눌렀을 때의 안내.</summary>
             public const string NoticeFavorite = "[안내_즐겨찾기]";
@@ -239,6 +245,7 @@ namespace SnailPet.Ui
             if (_doneGroup == null) BuildGuideDoneGroup();
             if (_rewardGroup == null) BuildRewardGroup();
             if (_guestGroup == null) BuildGuestGroup();
+            if (_askGroup == null) BuildAskGroup();
 
             // 상품 미리보기 뒤의 달팽이 실루엣. 상점 패널은 프리팹에 있으므로 여기서 붙인다.
             if (_pickShape == null) _pickShape = ShapeBehind(_pickIcon, "PickShape");
@@ -705,6 +712,16 @@ namespace SnailPet.Ui
             Hook(_joinIdBtn,      () => JoinById?.Invoke());
             Hook(_joinRandomBtn,  () => JoinRandom?.Invoke());
             Hook(_roomOutBtn,     () => LeaveRoom?.Invoke());
+            Hook(_roomCodeBtn,    CopyRoomCode);
+            Hook(_roomRenameBtn,  () => ShowRoomName(_roomName != null ? _roomName.text : ""));
+
+            Hook(_askNo, HidePopup);
+            Hook(_askYes, () =>
+            {
+                var done = _askDone;
+                HidePopup();
+                done?.Invoke();      // 닫은 뒤에 부른다. 그 안에서 또 팝업을 띄울 수 있다.
+            });
             for (int i = 0; i < Count(_multiRows); i++)
             {
                 int k = i;
@@ -773,12 +790,16 @@ namespace SnailPet.Ui
             Hook(_renameOk, () =>
             {
                 string text = _renameField != null ? _renameField.text : "";
-                bool lobby = _renameForLobby;
+                var mode = _renameMode;
                 HidePopup();
 
-                // 같은 팝업을 이름 변경과 로비ID 입력이 나눠 쓴다. 무엇으로 열었는지로 가른다.
-                if (lobby) LobbyIdEntered?.Invoke(text);
-                else       Renamed?.Invoke(text);
+                // 같은 팝업을 셋이 나눠 쓴다. 무엇으로 열었는지로 가른다.
+                switch (mode)
+                {
+                    case RenameMode.LobbyId: LobbyIdEntered?.Invoke(text); break;
+                    case RenameMode.Room:    RoomRenamed?.Invoke(text);    break;
+                    default:                 Renamed?.Invoke(text);        break;
+                }
             });
             Hook(_popupYes,   () =>
             {
@@ -1173,8 +1194,19 @@ namespace SnailPet.Ui
         /// <summary>재화가 모자란다고 알린다. 문구는 UI 가 들고 있다.</summary>
         public void NoticeNoCoins() => ShowNotice(SnailPet.Data.Loc.Text(Keys.NoticeNoCoins));
 
+        /// <summary>지금 있는 방으로 또 들어가려 했다고 알린다.</summary>
+        public void NoticeSameRoom() => ShowNotice(SnailPet.Data.Loc.Text(Keys.SameRoom));
+
+        /// <summary>방을 옮길지 묻는다. 「예」를 눌러야 지금 방에서 나온다.</summary>
+        public void AskRoomSwap(Action onYes) => ShowAsk(SnailPet.Data.Loc.Text(Keys.RoomSwap), onYes);
+
         /// <summary>구매가 끝났다고 알린다. 문구는 UI 가 들고 있다.</summary>
         public void NoticePurchased() => ShowNotice(SnailPet.Data.Loc.Text(Keys.NoticePurchased));
+
+        /// <summary>방을 만들었다 · 나왔다 · 들어왔다. 문구는 UI 가 들고 있다.</summary>
+        public void NoticeRoomMade()   => ShowNotice(SnailPet.Data.Loc.Text(Keys.RoomMade));
+        public void NoticeRoomLeft()   => ShowNotice(SnailPet.Data.Loc.Text(Keys.RoomLeft));
+        public void NoticeRoomJoined() => ShowNotice(SnailPet.Data.Loc.Text(Keys.RoomJoined));
 
         /// <summary>위젯 상자 기준 좌표로 옮긴다. 목업은 패널 왼쪽 위가 원점이라 코인 줄만큼 내려 준다.</summary>
         private static RectInt Above(RectInt r) => new RectInt(r.x, r.y - At.Coin.y, r.width, r.height);
@@ -2947,7 +2979,8 @@ namespace SnailPet.Ui
         {
             public RectTransform Root;
             public RawImage Face;
-            public Text Name;
+            public Text Steam;      // 스팀 닉네임 (위, 작게)
+            public Text Name;       // 달팽이 이름 (아래)
             public Button Zoom;
         }
 
@@ -2957,7 +2990,9 @@ namespace SnailPet.Ui
         [SerializeField] private MultiRow[] _multiRows;
         [SerializeField] private RectTransform _roomGroup, _lobbyGroup;
         [SerializeField] private Button _makeRoomBtn, _joinIdBtn, _joinRandomBtn, _roomOutBtn;
-        [SerializeField] private Text _roomName;
+        [SerializeField] private Text _roomName, _roomCode;
+        [SerializeField] private Button _roomCodeBtn;
+        [SerializeField] private Button _roomRenameBtn;
         [SerializeField] private MultiMember[] _members;
 
         private bool _inMulti;
@@ -3053,6 +3088,23 @@ namespace SnailPet.Ui
             _roomName = Label(_roomGroup, UiTheme.Multi.RoomName, "", 10, UiTheme.Ink);
             _roomOutBtn = IconButton(_roomGroup, UiTheme.Multi.RoomOut, "btn_out", "RoomOut", tint: Color.white);
 
+            // 방 이름 고치기. 달팽이 이름칸과 같은 꼴로 이름칸 안에 얹는다.
+            // 방 데이터는 방장만 고칠 수 있으므로 방장일 때만 나온다 (SetRoom 이 정한다).
+            _roomRenameBtn = IconButton(_roomGroup, UiTheme.Multi.RoomRename, "icon_rename", "RoomRename");
+
+            // 방 코드. 눌러서 복사할 수 있어야 하므로 글자만 두지 않고 버튼으로 만든다.
+            var codeBg = Backdrop(NewRect("RoomCode", _roomGroup).gameObject,
+                                  UiSprites.Shape.SlotCount, UiTheme.BadgeDark);
+            Place((RectTransform)codeBg.transform, UiTheme.Multi.RoomCode);
+            codeBg.raycastTarget = true;
+
+            _roomCode = Label((RectTransform)codeBg.transform,
+                              new RectInt(0, 0, UiTheme.Multi.RoomCode.width, UiTheme.Multi.RoomCode.height),
+                              "", 9, UiTheme.OnBadge);
+
+            _roomCodeBtn = codeBg.gameObject.AddComponent<Button>();
+            _roomCodeBtn.targetGraphic = codeBg;
+
             _members = new MultiMember[UiTheme.Multi.MemberCount];
             for (int i = 0; i < _members.Length; i++)
             {
@@ -3064,9 +3116,18 @@ namespace SnailPet.Ui
                 Backdrop(root.gameObject, UiSprites.Shape.Slot, UiTheme.Slot);
 
                 var member = new MultiMember { Root = root };
+
+                // 초상 뒤에 칸을 깐다. 없으면 달팽이가 줄 위에 떠 있는 것처럼 보인다.
+                Box(root, UiTheme.Multi.MemberFace, UiTheme.RowSlot, UiSprites.Shape.Slot2, "FaceBox");
                 member.Face = FaceView(root, UiTheme.Multi.MemberFace);
+
+                // 두 줄. 스팀 닉네임이 위에 작게, 달팽이 이름이 아래에 온다.
+                member.Steam = Label(root, UiTheme.Multi.MemberSteam, "", 7, UiTheme.Ink);
+                member.Steam.alignment = TextAnchor.MiddleLeft;
+
                 member.Name = Label(root, UiTheme.Multi.MemberName, "", 9, UiTheme.Ink);
                 member.Name.alignment = TextAnchor.MiddleLeft;
+
                 member.Zoom = IconButton(root, UiTheme.Multi.MemberZoom, "icon_detail", "Zoom");
 
                 root.gameObject.SetActive(false);
@@ -3123,15 +3184,34 @@ namespace SnailPet.Ui
         }
 
         /// <summary>방에 들어갔는지. 오른쪽이 「방」 버튼과 참가자 목록 사이를 오간다.</summary>
-        public void SetRoom(bool inRoom, string name)
+        /// <param name="host">내가 방장인가. 방 이름은 방장만 고칠 수 있다.</param>
+        public void SetRoom(bool inRoom, string name, string code = "", bool host = false)
         {
+            if (_roomRenameBtn != null) _roomRenameBtn.gameObject.SetActive(inRoom && host);
+
             if (_lobbyGroup != null) _lobbyGroup.gameObject.SetActive(!inRoom);
             if (_roomGroup != null)  _roomGroup.gameObject.SetActive(inRoom);
             if (_roomName != null)   _roomName.text = name ?? "";
+
+            if (_roomCode != null) _roomCode.text = code ?? "";
+
+            // 코드가 없는 방(옛 방 등)에서는 누를 것도 없다
+            if (_roomCodeBtn != null) _roomCodeBtn.gameObject.SetActive(!string.IsNullOrEmpty(code));
         }
 
-        /// <summary>방에 있는 달팽이들. (이름, 그림) 이고 최대 5.</summary>
-        public void SetMembers((string name, Texture face)[] members)
+        /// <summary>
+        /// 방 코드를 눌렀다. 클립보드에 넣고 알린다 — 친구에게 불러 주는 대신 붙여넣게 하려는 것이다.
+        /// </summary>
+        private void CopyRoomCode()
+        {
+            if (_roomCode == null || string.IsNullOrEmpty(_roomCode.text)) return;
+
+            GUIUtility.systemCopyBuffer = _roomCode.text;
+            ShowNotice(SnailPet.Data.Loc.Text(Keys.CodeCopied));
+        }
+
+        /// <summary>방에 있는 달팽이들. (스팀 닉네임, 달팽이 이름, 그림) 이고 최대 5.</summary>
+        public void SetMembers((string steam, string snail, Texture face)[] members)
         {
             int count = members?.Length ?? 0;
             for (int i = 0; i < Count(_members); i++)
@@ -3140,7 +3220,12 @@ namespace SnailPet.Ui
                 _members[i].Root.gameObject.SetActive(has);
                 if (!has) continue;
 
-                _members[i].Name.text = members[i].name;
+                _members[i].Steam.text = members[i].steam;
+
+                // 아직 달팽이를 안 올린 사람은 이름칸이 빈다. 「이름 없음」을 쓰면
+                // 이름을 안 지은 것과 구분이 안 된다.
+                _members[i].Name.text = members[i].snail ?? "";
+
                 _members[i].Face.texture = members[i].face;
                 _members[i].Face.enabled = members[i].face != null;
             }
@@ -4157,10 +4242,20 @@ namespace SnailPet.Ui
         public void ShowLobbyId()
         {
             ShowRename("");
-            _renameForLobby = true;      // ShowRename 이 이름 변경으로 돌려놓으므로 그 뒤에 세운다
+            _renameMode = RenameMode.LobbyId;   // ShowRename 이 달팽이 쪽으로 돌려놓으므로 그 뒤에 세운다
 
             if (_renameTitle != null)  _renameTitle.text  = SnailPet.Data.Loc.Text(Keys.LobbyIdAsk);
             if (_renameOkText != null) _renameOkText.text = SnailPet.Data.Loc.Text(Keys.Confirm);
+        }
+
+        /// <summary>
+        /// 방 이름을 받는다. 달팽이 이름 변경과 묻는 것이 같아 글자도 그대로 쓴다 —
+        /// 무엇을 고치는지는 어디서 눌렀는지로 이미 분명하다.
+        /// </summary>
+        public void ShowRoomName(string current)
+        {
+            ShowRename(current);
+            _renameMode = RenameMode.Room;
         }
 
         [SerializeField] private Text _renameTitle, _renameOkText;
@@ -4189,11 +4284,17 @@ namespace SnailPet.Ui
         /// <summary>로비 ID 를 넣고 확인을 눌렀다.</summary>
         public event Action<string> LobbyIdEntered;
 
-        private bool _renameForLobby;
+        /// <summary>방 이름을 고치고 확인을 눌렀다.</summary>
+        public event Action<string> RoomRenamed;
+
+        /// <summary>이름 변경 팝업을 무엇으로 열었는가. 확인에서 갈 길이 갈린다.</summary>
+        private enum RenameMode { Snail, LobbyId, Room }
+
+        private RenameMode _renameMode;
 
         public void ShowRename(string current)
         {
-            _renameForLobby = false;
+            _renameMode = RenameMode.Snail;
 
             // 로비ID 로 열었던 글자가 남아 있을 수 있다. 이름 변경 쪽으로 되돌린다.
             if (_renameTitle != null)  _renameTitle.text  = SnailPet.Data.Loc.Text(Keys.AskRename);
@@ -4514,6 +4615,7 @@ namespace SnailPet.Ui
             if (_doneGroup != null)   _doneGroup.gameObject.SetActive(false);
             if (_rewardGroup != null) _rewardGroup.gameObject.SetActive(false);
             if (_guestGroup != null)  _guestGroup.gameObject.SetActive(false);
+            if (_askGroup != null)    _askGroup.gameObject.SetActive(false);
             ResetHatch();
 
             if (_popup != null) _popup.sizeDelta = new Vector2(Pop.W, Pop.H);
@@ -4888,6 +4990,48 @@ namespace SnailPet.Ui
             // 더 못 올리거나 못 내리면 눌러도 소용없다는 것을 보인다
             if (_popupMinus != null) _popupMinus.interactable = _popupQty > 1;
             if (_popupPlus != null)  _popupPlus.interactable  = _popupQty < _popupMax;
+        }
+
+        // ── 예/아니오 묻기 ──
+        //
+        // 구매 팝업과 판이 같고 수량·값만 빠진 꼴이다. 물어볼 일이 늘어날 것이므로
+        // 「글자와 할 일을 넘기면 뜬다」 하나로 만들어 둔다.
+
+        [SerializeField] private RectTransform _askGroup;
+        [SerializeField] private Text _askText;
+        [SerializeField] private Button _askYes, _askNo;
+
+        /// <summary>「예」를 눌렀을 때 할 일. 팝업을 닫은 뒤에 부른다.</summary>
+        private Action _askDone;
+
+        private void BuildAskGroup()
+        {
+            _askGroup = Fill(NewRect("AskGroup", _popup));
+            _askGroup.gameObject.SetActive(false);
+
+            _askText = Label(_askGroup, Pop.Title, "", 11, UiTheme.Ink);
+            _askText.horizontalOverflow = HorizontalWrapMode.Wrap;
+
+            // 자리는 구매 팝업의 예/아니오와 같다
+            _askNo  = TextButton(_askGroup, Pop.No,  Keys.No,  "AskNo");
+            _askYes = TextButton(_askGroup, Pop.Yes, Keys.Yes, "AskYes");
+        }
+
+        /// <summary>
+        /// 예/아니오를 묻는다. 「예」를 누르면 <paramref name="onYes"/> 가 불린다.
+        /// X 나 「아니오」로 닫으면 아무 일도 안 일어난다.
+        /// </summary>
+        public void ShowAsk(string message, Action onYes)
+        {
+            if (_askGroup == null) return;
+
+            HidePopupGroups();
+            _askGroup.gameObject.SetActive(true);
+
+            _askText.text = message ?? "";
+            _askDone = onYes;
+
+            OpenBlocker();
         }
 
         /// <summary>

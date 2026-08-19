@@ -541,7 +541,16 @@ namespace SnailPet
             SteamHub.Changed += RefreshMulti;
 
             // 방에 들어가면 내 달팽이가 어떻게 생겼는지 올린다. 남들은 이걸 받아 그린다.
-            SteamHub.Entered += PublishMySnail;
+            SteamHub.Entered += made =>
+            {
+                PublishMySnail();
+
+                // 만든 것과 들어간 것은 문구가 다르다
+                if (made) _ui.NoticeRoomMade();
+                else      _ui.NoticeRoomJoined();
+            };
+
+            SteamHub.Left += () => _ui.NoticeRoomLeft();
             _ui.LeaveRoom += ClearGuests;
 
             _ui.MultiTabChanged += lobby =>
@@ -552,12 +561,32 @@ namespace SnailPet
             };
 
             _ui.InviteFriend += i => SteamHub.Invite(i);
-            _ui.EnterLobby   += i => SteamHub.JoinLobby(i);
+            SteamHub.SameRoom += () => _ui.NoticeSameRoom();
+
+            // 이미 방에 있으면 옮길지 먼저 묻는다. 「예」를 눌러야 지금 방에서 나온다.
+            _ui.EnterLobby   += i =>
+            {
+                if (SteamHub.IsCurrent(i)) { _ui.NoticeSameRoom(); return; }
+
+                if (SteamHub.InLobby) _ui.AskRoomSwap(() => SteamHub.JoinLobby(i));
+                else                  SteamHub.JoinLobby(i);
+            };
             _ui.MakeRoom     += () => SteamHub.CreateLobby();
-            _ui.JoinRandom   += () => SteamHub.JoinRandom();
+            // 랜덤·로비ID 도 옮기는 것은 마찬가지라 같이 묻는다.
+            _ui.JoinRandom   += () =>
+            {
+                if (SteamHub.InLobby) _ui.AskRoomSwap(() => SteamHub.JoinRandom());
+                else                  SteamHub.JoinRandom();
+            };
             _ui.LeaveRoom    += () => SteamHub.Leave();
             _ui.JoinById     += () => _ui.ShowLobbyId();
-            _ui.LobbyIdEntered += text => SteamHub.JoinById(text);
+            _ui.LobbyIdEntered += text =>
+            {
+                // 여기서는 어느 방인지 아직 모른다. 같은 방인지는 찾아낸 뒤 SteamHub 가 가린다.
+                if (SteamHub.InLobby) _ui.AskRoomSwap(() => SteamHub.JoinById(text));
+                else                  SteamHub.JoinById(text);
+            };
+            _ui.RoomRenamed    += name => SteamHub.RenameLobby(name);
             _ui.ViewMember   += ShowGuestCard;
 
             RefreshMulti();
@@ -583,7 +612,7 @@ namespace SnailPet
             if (_ui == null) return;
 
             _ui.SetMultiRows(_ui.OnLobbyTab ? LobbyNames() : FriendNames());
-            _ui.SetRoom(SteamHub.InLobby, SteamHub.LobbyName);
+            _ui.SetRoom(SteamHub.InLobby, SteamHub.LobbyName, SteamHub.LobbyCode, SteamHub.IsHost);
             if (SteamHub.InLobby) _ui.SetMembers(MemberRows());
 
             // 목록만이 아니라 화면에서도 같이 논다
@@ -615,18 +644,24 @@ namespace SnailPet
         /// 방에 있는 사람들. 남이 올린 외형 글자를 그대로 세워 얼굴을 찍는다.
         /// 아직 안 올린 사람은 그림 없이 이름만 나온다 — 잠깐 뒤에 콜백이 와서 채워진다.
         /// </summary>
-        private (string, UnityEngine.Texture)[] MemberRows()
+        private (string, string, UnityEngine.Texture)[] MemberRows()
         {
             var members = SteamHub.MemberLooks();
-            var rows = new (string, UnityEngine.Texture)[members.Length];
+            var rows = new (string, string, UnityEngine.Texture)[members.Length];
 
             for (int i = 0; i < members.Length; i++)
             {
-                var (name, look, me) = members[i];
+                var (steam, card, me) = members[i];
 
-                // 내 것은 이미 찍어 둔 썸네일을 쓴다. 남의 것만 새로 세운다.
-                Texture face = me && _player.Active != null ? ThumbOf(_player.Active) : GuestFace(name, look);
-                rows[i] = (name, face);
+                // 내 것은 이미 찍어 둔 썸네일과 내 데이터를 쓴다. 남의 것은 받은 글자가 전부다.
+                if (me && _player.Active != null)
+                {
+                    rows[i] = (steam, _player.Active.Name, ThumbOf(_player.Active));
+                    continue;
+                }
+
+                var (snailName, _, _) = SnailShare.ReadCard(card);
+                rows[i] = (steam, snailName, GuestFace(steam, card));
             }
             return rows;
         }

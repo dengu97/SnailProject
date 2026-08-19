@@ -29,6 +29,15 @@ namespace SnailPet.Desktop
         private const string GameKey = "game", GameValue = "snailpet";
         private const string NameKey = "name";
 
+        /// <summary>
+        /// 방 코드. 스팀의 로비 ID 는 17자리 숫자라 사람이 불러 주기 어렵다.
+        /// 그래서 짧은 코드를 따로 붙이고, 들어갈 때는 그 코드로 목록을 걸러 찾는다.
+        /// 헷갈리는 글자(0/O, 1/I)는 뺀다 — 불러 주고 받아 적는 물건이다.
+        /// </summary>
+        private const string CodeKey = "code";
+        private const string CodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        private const int CodeLength = 6;
+
         /// <summary>한 방에 들어갈 수 있는 인원. 목업의 max 5 다.</summary>
         public const int MaxMembers = 5;
 
@@ -42,12 +51,28 @@ namespace SnailPet.Desktop
         /// <summary>무슨 일이 있었는지 한 줄로. 부르는 쪽이 로그에 적는다.</summary>
         public static event Action<string> Note;
 
-        /// <summary>방에 들어왔다. 받는 쪽이 자기 달팽이를 올린다.</summary>
-        public static event Action Entered;
+        /// <summary>
+        /// 방에 들어왔다. 인자는 <b>내가 만든 방인가</b>다 — 받는 쪽이 문구를 가른다.
+        /// 만들었든 들어왔든 자기 달팽이를 올리는 것은 똑같다.
+        /// </summary>
+        public static event Action<bool> Entered;
+
+        /// <summary>지금 있는 방으로 또 들어가려 했다. 받는 쪽이 안내를 띄운다.</summary>
+        public static event Action SameRoom;
+
+        /// <summary>
+        /// 방을 나왔다. <b>유저가 스스로 나온 때만</b> 온다 —
+        /// 다른 방으로 옮기느라 내부에서 먼저 나가는 것은 알릴 일이 아니다.
+        /// </summary>
+        public static event Action Left;
 
 #if DISABLESTEAMWORKS
         public static bool InLobby => false;
         public static string LobbyName => "";
+        public static string LobbyCode => "";
+        public static bool IsHost => false;
+        public static bool IsCurrent(int index) => false;
+        public static void RenameLobby(string name) { }
         public static string[] Friends() => new string[0];
         public static string[] Lobbies() => new string[0];
         public static string[] Members() => new string[0];
@@ -60,7 +85,7 @@ namespace SnailPet.Desktop
         public static void JoinLobby(int index) { }
         public static void JoinById(string text) { }
         public static void JoinRandom() { }
-        public static void Leave() { }
+        public static void Leave(bool quiet = false) { }
         public static void Invite(int friendIndex) { }
         public static void PublishSnail(string look) { }
         public static (string name, string look, bool me)[] MemberLooks() => new (string, string, bool)[0];
@@ -83,6 +108,34 @@ namespace SnailPet.Desktop
 
         public static string LobbyName =>
             InLobby ? SteamMatchmaking.GetLobbyData(_lobby, NameKey) : "";
+
+        /// <summary>지금 방의 코드. 방이 없으면 빈 문자열.</summary>
+        public static string LobbyCode =>
+            InLobby ? SteamMatchmaking.GetLobbyData(_lobby, CodeKey) : "";
+
+        /// <summary>
+        /// 내가 방장인가. <b>방 데이터는 방장만 고칠 수 있다</b> —
+        /// 남이 고치려 하면 스팀이 조용히 무시하므로, 부르는 쪽이 미리 가려야 한다.
+        /// </summary>
+        public static bool IsHost =>
+            InLobby && SteamMatchmaking.GetLobbyOwner(_lobby) == SteamUser.GetSteamID();
+
+        /// <summary>목록의 그 줄이 <b>지금 있는 방</b>인가. 같은 방에 또 들어가지 않게 가릴 때 쓴다.</summary>
+        public static bool IsCurrent(int index) =>
+            InLobby && index >= 0 && index < _lobbyIds.Count && _lobbyIds[index] == _lobby;
+
+        /// <summary>방 이름을 고친다. 방장이 아니면 아무 일도 안 한다.</summary>
+        public static void RenameLobby(string name)
+        {
+            if (!IsHost) return;
+
+            string want = (name ?? "").Trim();
+            if (want.Length == 0) return;
+
+            SteamMatchmaking.SetLobbyData(_lobby, NameKey, want);
+            Note?.Invoke("방 이름을 바꿨습니다: " + want);
+            Changed?.Invoke();
+        }
 
         public static bool Init()
         {
@@ -137,7 +190,7 @@ namespace SnailPet.Desktop
         {
             if (!Available) return;
 
-            Leave();
+            Leave(quiet: true);
             SteamAPI.Shutdown();
             Available = false;
             MyName = "";
@@ -183,7 +236,7 @@ namespace SnailPet.Desktop
         {
             if (!Available) return;
 
-            Leave();
+            Leave(quiet: true);
             _onCreated.Set(SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypePublic, MaxMembers));
         }
 
@@ -200,9 +253,10 @@ namespace SnailPet.Desktop
             // 480 을 같이 쓰는 남의 방과 섞이지 않게 표시를 박는다
             SteamMatchmaking.SetLobbyData(_lobby, GameKey, GameValue);
             SteamMatchmaking.SetLobbyData(_lobby, NameKey, MyName + "의 방");
+            SteamMatchmaking.SetLobbyData(_lobby, CodeKey, MakeCode());
 
             Note?.Invoke("방을 만들었습니다: " + LobbyName + " (" + _lobby.m_SteamID + ")");
-            Entered?.Invoke();
+            Entered?.Invoke(true);
             Changed?.Invoke();
         }
 
@@ -233,6 +287,29 @@ namespace SnailPet.Desktop
                 }
             }
 
+            // 코드로 찾던 중이면 그 목록은 「그 코드짜리 방」뿐이다. 화면의 목록으로 쓰지 않는다.
+            if (!string.IsNullOrEmpty(_joinCode))
+            {
+                string code = _joinCode;
+                _joinCode = null;
+
+                if (_lobbyIds.Count > 0)
+                {
+                    // 지금 있는 방의 코드를 넣었을 수 있다. 그건 들어갈 것이 아니라 알릴 일이다.
+                    if (IsCurrent(0)) SameRoom?.Invoke();
+                    else
+                    {
+                        Note?.Invoke("코드로 찾았습니다: " + code);
+                        JoinLobby(0);
+                    }
+                }
+                else Note?.Invoke("그런 방이 없습니다: " + code);
+
+                _lobbyIds.Clear();
+                _lobbyNames.Clear();
+                return;
+            }
+
             Note?.Invoke("로비 목록: " + _lobbyIds.Count + "개");
 
             // 랜덤 진입을 기다리고 있었으면 여기서 아무 방이나 골라 들어간다
@@ -252,23 +329,50 @@ namespace SnailPet.Desktop
         {
             if (!Available || index < 0 || index >= _lobbyIds.Count) return;
 
-            Leave();
+            Leave(quiet: true);
             _onEnter.Set(SteamMatchmaking.JoinLobby(_lobbyIds[index]));
         }
 
-        /// <summary>로비 ID 를 직접 받아 들어간다. 숫자가 아니면 아무 일도 안 한다.</summary>
+        private static string MakeCode()
+        {
+            var sb = new System.Text.StringBuilder(CodeLength);
+            for (int i = 0; i < CodeLength; i++)
+                sb.Append(CodeAlphabet[UnityEngine.Random.Range(0, CodeAlphabet.Length)]);
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// 받아 적은 것으로 들어간다. <b>방 코드와 로비 ID 를 둘 다 받는다</b> —
+        /// 유저에게 보여 주는 것은 짧은 코드지만, 예전처럼 17자리 ID 를 넣어도 통해야 한다.
+        /// 코드는 목록을 그 코드로 걸러서 찾는다.
+        /// </summary>
         public static void JoinById(string text)
         {
             if (!Available) return;
-            if (!ulong.TryParse((text ?? "").Trim(), out ulong id))
+
+            string want = (text ?? "").Trim();
+            if (want.Length == 0) return;
+
+            // 17자리쯤 되는 숫자는 로비 ID 로 본다. 코드는 그보다 훨씬 짧다.
+            if (want.Length > CodeLength && ulong.TryParse(want, out ulong id))
             {
-                Note?.Invoke("로비ID: 숫자가 아닙니다 — " + text);
+                Leave(quiet: true);
+                _onEnter.Set(SteamMatchmaking.JoinLobby(new CSteamID(id)));
                 return;
             }
 
-            Leave();
-            _onEnter.Set(SteamMatchmaking.JoinLobby(new CSteamID(id)));
+            _joinCode = want.ToUpperInvariant();
+            SteamMatchmaking.AddRequestLobbyListStringFilter(
+                GameKey, GameValue, ELobbyComparison.k_ELobbyComparisonEqual);
+            SteamMatchmaking.AddRequestLobbyListStringFilter(
+                CodeKey, _joinCode, ELobbyComparison.k_ELobbyComparisonEqual);
+
+            _onList.Set(SteamMatchmaking.RequestLobbyList());
         }
+
+        /// <summary>코드로 찾는 중이면 그 코드. 목록이 오면 여기에 걸린 방으로 들어간다.</summary>
+        private static string _joinCode;
 
         /// <summary>목록을 새로 받아 그중 아무 방으로 들어간다.</summary>
         public static void JoinRandom()
@@ -290,16 +394,23 @@ namespace SnailPet.Desktop
 
             _lobby = new CSteamID(e.m_ulSteamIDLobby);
             Note?.Invoke("방에 들어왔습니다: " + LobbyName + " (" + _lobby.m_SteamID + ")");
-            Entered?.Invoke();
+            Entered?.Invoke(false);
             Changed?.Invoke();
         }
 
-        public static void Leave()
+        /// <param name="quiet">
+        /// 참이면 <see cref="Left"/> 를 내지 않는다. 다른 방으로 옮기려고 먼저 나가는 것은
+        /// 유저가 「나간」 것이 아니므로 알리면 안 된다 — 방을 만들 때마다 「방을 나왔습니다」가
+        /// 먼저 떠 버린다.
+        /// </param>
+        public static void Leave(bool quiet = false)
         {
             if (!Available || !InLobby) return;
 
             SteamMatchmaking.LeaveLobby(_lobby);
             _lobby = CSteamID.Nil;
+
+            if (!quiet) Left?.Invoke();
             Changed?.Invoke();
         }
 

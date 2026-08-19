@@ -167,13 +167,28 @@ namespace SnailPet.Ui
             public static readonly RectInt RoomName = new RectInt(14, 8, 118, 23);
             public static readonly RectInt RoomOut  = new RectInt(136, 8, 23, 23);
 
-            /// <summary>참가자 줄. 달팽이 그림 + 이름 + 돋보기. max 5.</summary>
-            public static readonly RectInt Member     = new RectInt(14, 40, 145, 36);
-            public const int MemberStep = 40, MemberCount = 5;
+            /// <summary>방 이름을 고치는 연필. 이름칸 안 왼쪽에 얹는다 (달팽이 이름칸과 같은 꼴).</summary>
+            public static readonly RectInt RoomRename = new RectInt(17, 11, 16, 16);
 
-            public static readonly RectInt MemberFace = new RectInt(4, 2, 32, 32);
-            public static readonly RectInt MemberName = new RectInt(40, 9, 78, 18);
-            public static readonly RectInt MemberZoom = new RectInt(120, 8, 20, 20);
+            /// <summary>
+            /// 방 코드. 이름 바로 밑에 가운데로 놓는다. 누르면 복사되므로 손가락이 닿을 만큼은 둔다.
+            /// </summary>
+            public static readonly RectInt RoomCode = new RectInt(51, 33, 70, 17);
+
+            /// <summary>
+            /// 참가자 줄. 달팽이 그림 + 이름 + 돋보기. max 5.
+            /// <b>방 코드(RoomCode) 아래에서 시작해야 한다</b> — 예전에는 코드 위로 올라와 가렸다.
+            /// 다섯 줄이 패널 안에 들어오도록 간격도 같이 좁혔다.
+            /// </summary>
+            public static readonly RectInt Member     = new RectInt(14, 54, 145, 32);
+            public const int MemberStep = 33, MemberCount = 5;
+
+            // 아래는 줄 왼쪽 위가 원점이다.
+            // 이름은 두 줄이다 — 위가 스팀 닉네임(작게), 아래가 달팽이 이름.
+            public static readonly RectInt MemberFace  = new RectInt(  4, 2, 28, 28);
+            public static readonly RectInt MemberSteam = new RectInt( 38, 3, 78, 13);
+            public static readonly RectInt MemberName  = new RectInt( 38, 15, 78, 15);
+            public static readonly RectInt MemberZoom  = new RectInt(120, 6, 20, 20);
         }
 
         /// <summary>

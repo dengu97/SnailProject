@@ -972,9 +972,16 @@ namespace SnailPet.Data
             new LanguageDataRow(268, "로비 목록"),
             new LanguageDataRow(269, "방"),
             new LanguageDataRow(270, "방 만들기"),
-            new LanguageDataRow(271, "로비ID로 진입"),
+            new LanguageDataRow(271, "방ID로 진입"),
             new LanguageDataRow(272, "랜덤 방으로 진입"),
-            new LanguageDataRow(273, "로비ID를 입력하세요."),
+            new LanguageDataRow(273, "방ID를 입력하세요."),
+            new LanguageDataRow(274, "방을 나왔습니다."),
+            new LanguageDataRow(275, "선택한 방으로 들어왔습니다."),
+            new LanguageDataRow(276, "방을 생성했습니다."),
+            new LanguageDataRow(277, "방ID를 복사했습니다."),
+            new LanguageDataRow(278, "달팽이를 교체했습니다."),
+            new LanguageDataRow(279, "선택한 방으로 이동할까요?"),
+            new LanguageDataRow(280, "지금 있는 방입니다."),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -1359,6 +1366,13 @@ namespace SnailPet.Data
             { "[로비ID로진입]", 271 },
             { "[랜덤방으로진입]", 272 },
             { "[안내_로비ID]", 273 },
+            { "[안내_방이탈]", 274 },
+            { "[안내_방진입]", 275 },
+            { "[안내_방생성]", 276 },
+            { "[안내_코드복사]", 277 },
+            { "[안내_달팽이교체]", 278 },
+            { "[안내_방교체]", 279 },
+            { "[안내_중복방]", 280 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();
