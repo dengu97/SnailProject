@@ -147,8 +147,9 @@ namespace SnailPet.Data
         public readonly string PoopResourceKey;
         public readonly int PoopCount;
         public readonly double PoopTime;
+        public readonly double ResourceSize;
 
-        public FoodDataRow(int id, FoodType foodType, int nameId, RarityType rarityType, double fullPoint, double happyPoint, double eatTime, int buffId, int infoId, string resourceKey, string partsResourceKey, string poopResourceKey, int poopCount, double poopTime)
+        public FoodDataRow(int id, FoodType foodType, int nameId, RarityType rarityType, double fullPoint, double happyPoint, double eatTime, int buffId, int infoId, string resourceKey, string partsResourceKey, string poopResourceKey, int poopCount, double poopTime, double resourceSize)
         {
             Id = id;
             FoodType = foodType;
@@ -164,6 +165,7 @@ namespace SnailPet.Data
             PoopResourceKey = poopResourceKey;
             PoopCount = poopCount;
             PoopTime = poopTime;
+            ResourceSize = resourceSize;
         }
     }
 
@@ -272,8 +274,9 @@ namespace SnailPet.Data
         public readonly string ResourceKey;
         public readonly int InfoId;
         public readonly int[] PartsGroupIds;
+        public readonly double ResourceSize;
 
-        public EggDataRow(int id, int nameId, int hatchTime, RarityType rarityType, string resourceKey, int infoId, int[] partsGroupIds)
+        public EggDataRow(int id, int nameId, int hatchTime, RarityType rarityType, string resourceKey, int infoId, int[] partsGroupIds, double resourceSize)
         {
             Id = id;
             NameId = nameId;
@@ -282,6 +285,7 @@ namespace SnailPet.Data
             ResourceKey = resourceKey;
             InfoId = infoId;
             PartsGroupIds = partsGroupIds;
+            ResourceSize = resourceSize;
         }
     }
 
@@ -455,9 +459,13 @@ namespace SnailPet.Data
         public readonly double PixelsPerSpeed;
         public readonly double PixelsPerSize;
         public readonly double FoodGravity;
+        public readonly double CreateEggCooltime;
+        public readonly double CreateEggPercent;
+        public readonly double CreateEggPlusPercent;
+        public readonly double CreateEggCount;
         public readonly string Info;
 
-        public GameConfigRow(int mutationWeight, double fullDecayPerTick, double happyDecayPerTick, double pixelsPerSpeed, double pixelsPerSize, double foodGravity, string info)
+        public GameConfigRow(int mutationWeight, double fullDecayPerTick, double happyDecayPerTick, double pixelsPerSpeed, double pixelsPerSize, double foodGravity, double createEggCooltime, double createEggPercent, double createEggPlusPercent, double createEggCount, string info)
         {
             MutationWeight = mutationWeight;
             FullDecayPerTick = fullDecayPerTick;
@@ -465,6 +473,10 @@ namespace SnailPet.Data
             PixelsPerSpeed = pixelsPerSpeed;
             PixelsPerSize = pixelsPerSize;
             FoodGravity = foodGravity;
+            CreateEggCooltime = createEggCooltime;
+            CreateEggPercent = createEggPercent;
+            CreateEggPlusPercent = createEggPlusPercent;
+            CreateEggCount = createEggCount;
             Info = info;
         }
     }
@@ -609,18 +621,18 @@ namespace SnailPet.Data
 
         public static readonly FoodDataRow[] FoodData = new FoodDataRow[]
         {
-            new FoodDataRow(31, FoodType.vegetable, 31, RarityType.Common, 5d, 3d, 2d, 0, 124, "food_lettuce", "food_parts", "poop_green", 1, 20d),
-            new FoodDataRow(32, FoodType.vegetable, 32, RarityType.Common, 7d, 5d, 2.5d, 0, 125, "food_tomato", "food_parts_red", "poop_red", 1, 20d),
-            new FoodDataRow(33, FoodType.vegetable, 33, RarityType.Common, 7d, 5d, 5d, 0, 126, "food_zucchini", "food_parts", "poop_green", 1, 20d),
-            new FoodDataRow(34, FoodType.bean, 34, RarityType.Common, 15d, 10d, 5d, 35, 127, "food_tofu", "food_parts_white", "poop_brown", 2, 20d),
-            new FoodDataRow(232, FoodType.vegetable, 232, RarityType.Rare, 10d, 20d, 4d, 0, 233, "food_clover", "food_parts", "poop_green", 3, 30d),
-            new FoodDataRow(234, FoodType.vegetable, 234, RarityType.Common, 4d, 2d, 2d, 0, 235, "food_cucumber", "food_parts", "poop_green", 1, 10d),
-            new FoodDataRow(236, FoodType.vegetable, 236, RarityType.Common, 6d, 2d, 3d, 0, 237, "food_carrot", "food_parts_red", "poop_red", 1, 20d),
-            new FoodDataRow(238, FoodType.vegetable, 238, RarityType.Common, 3d, 5d, 3d, 0, 239, "food_blueberry", "food_parts_red", "poop_red", 1, 10d),
-            new FoodDataRow(240, FoodType.vegetable, 240, RarityType.Rare, 13d, 17d, 4d, 0, 241, "food_watermellon", "food_parts", "poop_green", 3, 30d),
-            new FoodDataRow(242, FoodType.vegetable, 242, RarityType.Rare, 11d, 19d, 4d, 0, 243, "food_apple", "food_parts_red", "poop_red", 3, 30d),
-            new FoodDataRow(244, FoodType.vegetable, 244, RarityType.Rare, 15d, 15d, 4d, 0, 245, "food_radish", "food_parts_white", "poop_brown", 3, 30d),
-            new FoodDataRow(246, FoodType.vegetable, 246, RarityType.Rare, 12d, 18d, 4d, 0, 247, "food_bro", "food_parts", "poop_green", 3, 30d),
+            new FoodDataRow(31, FoodType.vegetable, 31, RarityType.Common, 5d, 3d, 2d, 0, 124, "food_lettuce", "food_parts", "poop_green", 1, 20d, 1d),
+            new FoodDataRow(32, FoodType.vegetable, 32, RarityType.Common, 7d, 5d, 2.5d, 0, 125, "food_tomato", "food_parts_red", "poop_red", 1, 20d, 1d),
+            new FoodDataRow(33, FoodType.vegetable, 33, RarityType.Common, 7d, 5d, 5d, 0, 126, "food_zucchini", "food_parts", "poop_green", 1, 20d, 1d),
+            new FoodDataRow(34, FoodType.bean, 34, RarityType.Common, 15d, 10d, 5d, 35, 127, "food_tofu", "food_parts_white", "poop_brown", 2, 20d, 1d),
+            new FoodDataRow(232, FoodType.vegetable, 232, RarityType.Rare, 10d, 20d, 4d, 0, 233, "food_clover", "food_parts", "poop_green", 3, 30d, 1d),
+            new FoodDataRow(234, FoodType.vegetable, 234, RarityType.Common, 4d, 2d, 2d, 0, 235, "food_cucumber", "food_parts", "poop_green", 1, 10d, 1d),
+            new FoodDataRow(236, FoodType.vegetable, 236, RarityType.Common, 6d, 2d, 3d, 0, 237, "food_carrot", "food_parts_red", "poop_red", 1, 20d, 1d),
+            new FoodDataRow(238, FoodType.vegetable, 238, RarityType.Common, 3d, 5d, 3d, 0, 239, "food_blueberry", "food_parts_red", "poop_red", 1, 10d, 1d),
+            new FoodDataRow(240, FoodType.vegetable, 240, RarityType.Rare, 13d, 17d, 4d, 0, 241, "food_watermellon", "food_parts", "poop_green", 3, 30d, 1d),
+            new FoodDataRow(242, FoodType.vegetable, 242, RarityType.Rare, 11d, 19d, 4d, 0, 243, "food_apple", "food_parts_red", "poop_red", 3, 30d, 1d),
+            new FoodDataRow(244, FoodType.vegetable, 244, RarityType.Rare, 15d, 15d, 4d, 0, 245, "food_radish", "food_parts_white", "poop_brown", 3, 30d, 1d),
+            new FoodDataRow(246, FoodType.vegetable, 246, RarityType.Rare, 12d, 18d, 4d, 0, 247, "food_bro", "food_parts", "poop_green", 3, 30d, 1d),
         };
 
         public static readonly LevelDataRow[] LevelData = new LevelDataRow[]
@@ -671,9 +683,9 @@ namespace SnailPet.Data
 
         public static readonly EggDataRow[] EggData = new EggDataRow[]
         {
-            new EggDataRow(37, 37, 180, RarityType.Common, "egg_common", 89, new int[] { 2 }),
-            new EggDataRow(38, 38, 300, RarityType.Rare, "egg_rare", 90, new int[] { 2, 17 }),
-            new EggDataRow(188, 188, 600, RarityType.Epic, "egg_epic", 189, new int[] { 2, 17, 169 }),
+            new EggDataRow(37, 37, 180, RarityType.Common, "egg_common", 89, new int[] { 2 }, 1d),
+            new EggDataRow(38, 38, 300, RarityType.Rare, "egg_rare", 90, new int[] { 2, 17 }, 1d),
+            new EggDataRow(188, 188, 600, RarityType.Epic, "egg_epic", 189, new int[] { 2, 17, 169 }, 1d),
         };
 
         public static readonly AccessoriesDataRow[] AccessoriesData = new AccessoriesDataRow[]
@@ -982,6 +994,9 @@ namespace SnailPet.Data
             new LanguageDataRow(278, "달팽이를 교체했습니다."),
             new LanguageDataRow(279, "선택한 방으로 이동할까요?"),
             new LanguageDataRow(280, "지금 있는 방입니다."),
+            new LanguageDataRow(281, "존재하지 않는 방입니다."),
+            new LanguageDataRow(282, "알 목록에서 부화시킬 알을 선택해주세요."),
+            new LanguageDataRow(283, "알을 얻었어요!"),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -991,7 +1006,7 @@ namespace SnailPet.Data
 
         public static readonly GameConfigRow[] GameConfig = new GameConfigRow[]
         {
-            new GameConfigRow(5, 1d, 1d, 16d, 10d, 1600d, null),
+            new GameConfigRow(5, 1d, 1d, 16d, 10d, 1600d, 1800d, 0.5d, 0.1d, 3d, null),
         };
 
         public static readonly Dictionary<int, PartsDataRow> PartsDataById = BuildPartsDataById();
@@ -1373,6 +1388,9 @@ namespace SnailPet.Data
             { "[안내_달팽이교체]", 278 },
             { "[안내_방교체]", 279 },
             { "[안내_중복방]", 280 },
+            { "[안내_없는방]", 281 },
+            { "[안내_알배치]", 282 },
+            { "[안내_알생성]", 283 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

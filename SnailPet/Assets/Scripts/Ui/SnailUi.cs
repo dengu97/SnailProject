@@ -91,6 +91,11 @@ namespace SnailPet.Ui
             public const string CodeCopied  = "[안내_코드복사]";
             public const string RoomSwap    = "[안내_방교체]";
             public const string SameRoom    = "[안내_중복방]";
+            public const string NoSuchRoom  = "[안내_없는방]";
+            public const string EggPut      = "[안내_알배치]";
+
+            /// <summary>구석에 놓인 알을 주웠을 때.</summary>
+            public const string EggGot      = "[안내_알생성]";
 
             /// <summary>빈 즐겨찾기 칸을 눌렀을 때의 안내.</summary>
             public const string NoticeFavorite = "[안내_즐겨찾기]";
@@ -1196,6 +1201,15 @@ namespace SnailPet.Ui
 
         /// <summary>지금 있는 방으로 또 들어가려 했다고 알린다.</summary>
         public void NoticeSameRoom() => ShowNotice(SnailPet.Data.Loc.Text(Keys.SameRoom));
+
+        /// <summary>없는 방에 들어가려 했다고 알린다.</summary>
+        public void NoticeNoSuchRoom() => ShowNotice(SnailPet.Data.Loc.Text(Keys.NoSuchRoom));
+
+        /// <summary>부화기 빈 칸을 눌렀다. 알을 어디서 넣는지 알려 준다.</summary>
+        public void NoticeEggPut() => ShowNotice(SnailPet.Data.Loc.Text(Keys.EggPut));
+
+        /// <summary>구석에 놓인 알을 주웠다고 알린다.</summary>
+        public void NoticeEggGot() => ShowNotice(SnailPet.Data.Loc.Text(Keys.EggGot));
 
         /// <summary>방을 옮길지 묻는다. 「예」를 눌러야 지금 방에서 나온다.</summary>
         public void AskRoomSwap(Action onYes) => ShowAsk(SnailPet.Data.Loc.Text(Keys.RoomSwap), onYes);

@@ -60,6 +60,9 @@ namespace SnailPet.Desktop
         /// <summary>지금 있는 방으로 또 들어가려 했다. 받는 쪽이 안내를 띄운다.</summary>
         public static event Action SameRoom;
 
+        /// <summary>없는 방에 들어가려 했다 (코드가 틀렸거나 그 방이 사라졌다).</summary>
+        public static event Action NoSuchRoom;
+
         /// <summary>
         /// 방을 나왔다. <b>유저가 스스로 나온 때만</b> 온다 —
         /// 다른 방으로 옮기느라 내부에서 먼저 나가는 것은 알릴 일이 아니다.
@@ -120,6 +123,34 @@ namespace SnailPet.Desktop
         public static bool IsHost =>
             InLobby && SteamMatchmaking.GetLobbyOwner(_lobby) == SteamUser.GetSteamID();
 
+        /// <summary>
+        /// 방 안에서 사람이 드나들었다.
+        ///
+        /// <b>내가 빠진 경우</b>도 여기로 온다 — 연결이 끊기거나 내보내진 때다. 그때 화면을
+        /// 그대로 두면 방에 있는 것처럼 보이므로 방을 놓아 준다.
+        /// (방장이 나가는 것은 로비가 죽는 것이 아니다. 스팀이 남은 사람 중 하나를 방장으로
+        ///  올리고, 그러면 새 방장에게 이름 변경이 열린다 — 아래 Changed 가 그것도 반영한다.)
+        /// </summary>
+        private static void OnLobbyChat(LobbyChatUpdate_t e)
+        {
+            const uint OutMask = (uint)EChatMemberStateChange.k_EChatMemberStateChangeLeft
+                               | (uint)EChatMemberStateChange.k_EChatMemberStateChangeDisconnected
+                               | (uint)EChatMemberStateChange.k_EChatMemberStateChangeKicked
+                               | (uint)EChatMemberStateChange.k_EChatMemberStateChangeBanned;
+
+            if (InLobby
+                && e.m_ulSteamIDLobby == _lobby.m_SteamID
+                && e.m_ulSteamIDUserChanged == SteamUser.GetSteamID().m_SteamID
+                && (e.m_rgfChatMemberStateChange & OutMask) != 0)
+            {
+                _lobby = CSteamID.Nil;
+                Note?.Invoke("방에서 나가졌습니다 (끊김 또는 강퇴)");
+                Left?.Invoke();
+            }
+
+            Changed?.Invoke();
+        }
+
         /// <summary>목록의 그 줄이 <b>지금 있는 방</b>인가. 같은 방에 또 들어가지 않게 가릴 때 쓴다.</summary>
         public static bool IsCurrent(int index) =>
             InLobby && index >= 0 && index < _lobbyIds.Count && _lobbyIds[index] == _lobby;
@@ -170,7 +201,7 @@ namespace SnailPet.Desktop
             _onCreated = CallResult<LobbyCreated_t>.Create(OnLobbyCreated);
             _onList    = CallResult<LobbyMatchList_t>.Create(OnLobbyList);
             _onEnter   = CallResult<LobbyEnter_t>.Create(OnLobbyEnter);
-            _onChat    = Callback<LobbyChatUpdate_t>.Create(_ => Changed?.Invoke());
+            _onChat    = Callback<LobbyChatUpdate_t>.Create(OnLobbyChat);
 
             // 남이 자기 달팽이를 올리면 이쪽으로 온다
             _onData    = Callback<LobbyDataUpdate_t>.Create(_ => Changed?.Invoke());
@@ -303,7 +334,11 @@ namespace SnailPet.Desktop
                         JoinLobby(0);
                     }
                 }
-                else Note?.Invoke("그런 방이 없습니다: " + code);
+                else
+                {
+                    Note?.Invoke("그런 방이 없습니다: " + code);
+                    NoSuchRoom?.Invoke();
+                }
 
                 _lobbyIds.Clear();
                 _lobbyNames.Clear();
@@ -387,7 +422,9 @@ namespace SnailPet.Desktop
         {
             if (failed || e.m_EChatRoomEnterResponse != (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
             {
+                // 사라진 방·틀린 ID 로 들어가려 한 경우가 대부분이다. 유저에게는 하나로 보인다.
                 Note?.Invoke("방 진입 실패: " + e.m_EChatRoomEnterResponse);
+                NoSuchRoom?.Invoke();
                 Changed?.Invoke();
                 return;
             }

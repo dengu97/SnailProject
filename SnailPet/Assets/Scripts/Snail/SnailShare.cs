@@ -27,27 +27,38 @@ namespace SnailPet.Snail
         private const char HeadSep = '\n';
 
         /// <summary>
-        /// 남에게 보여 줄 한 장. 이름·등급·외형을 한 문자열에 담는다.
+        /// 남에게 보여 줄 한 장. 이름·등급·레벨·외형을 한 문자열에 담는다.
         /// 스팀 닉네임은 스팀이 이미 들고 있으므로 여기 넣지 않는다.
+        ///
+        /// 레벨이 필요한 것은 <b>남의 달팽이도 제 크기와 속도로 걷게</b> 하기 위해서다.
+        /// 크기·속도는 LevelData 가 정하므로 레벨 하나만 오면 나머지는 각자 데이터에서 읽는다.
         /// </summary>
-        public static string WriteCard(string name, RarityType rarity, SnailAppearance look) =>
-            (name ?? "") + HeadSep + rarity + HeadSep + Write(look);
+        public static string WriteCard(string name, RarityType rarity, int level, SnailAppearance look) =>
+            (name ?? "") + HeadSep + rarity + HeadSep + level + HeadSep + Write(look);
 
-        /// <summary>받은 한 장을 되돌린다. 외형을 못 읽으면 appearance 가 null 이다.</summary>
-        public static (string name, RarityType rarity, SnailAppearance look) ReadCard(string text)
+        /// <summary>
+        /// 받은 한 장을 되돌린다. 외형을 못 읽으면 look 이 null 이다.
+        /// 레벨을 안 실어 보내던 때의 글자도 읽히며, 그때는 level 이 0(모름) 이다.
+        /// </summary>
+        public static (string name, RarityType rarity, int level, SnailAppearance look) ReadCard(string text)
         {
-            if (string.IsNullOrEmpty(text)) return ("", RarityType.Common, null);
+            if (string.IsNullOrEmpty(text)) return ("", RarityType.Common, 0, null);
 
             var parts = text.Split(HeadSep);
 
-            // 머리말이 없으면 옛 형식(외형만)이다. 그건 그대로 외형으로 읽는다.
-            if (parts.Length < 3) return ("", RarityType.Common, Read(text));
+            // 머리말이 없으면 맨 처음 형식(외형만)이다. 그건 그대로 외형으로 읽는다.
+            if (parts.Length < 3) return ("", RarityType.Common, 0, Read(text));
 
             System.Enum.TryParse(parts[1], out RarityType rarity);
-            return (parts[0], rarity, Read(parts[2]));
+
+            // 레벨 칸이 붙기 전의 글자는 세 칸이고 마지막이 외형이다
+            if (parts.Length < 4) return (parts[0], rarity, 0, Read(parts[2]));
+
+            int.TryParse(parts[2], out int level);
+            return (parts[0], rarity, level, Read(parts[3]));
         }
 
-        public static string Write(SnailAppearance look)
+        private static string Write(SnailAppearance look)
         {
             if (look == null || look.Parts.Count == 0) return "";
 
@@ -60,8 +71,13 @@ namespace SnailPet.Snail
             return sb.ToString();
         }
 
-        /// <summary>받은 글자를 외형으로 되돌린다. 못 읽으면 null — 부르는 쪽이 실루엣을 쓰면 된다.</summary>
-        public static SnailAppearance Read(string text)
+        /// <summary>
+        /// 외형 부분만 되돌린다. 못 읽으면 null — 부르는 쪽이 실루엣을 쓰면 된다.
+        ///
+        /// <b>한 장(카드) 전체를 여기 넣으면 안 된다.</b> 머리말이 첫 파츠에 붙어 그 부위가
+        /// 통째로 빠진다(껍질 없는 달팽이). 밖에서는 <see cref="ReadCard"/> 만 쓰도록 감춰 둔다.
+        /// </summary>
+        private static SnailAppearance Read(string text)
         {
             if (string.IsNullOrEmpty(text)) return null;
 

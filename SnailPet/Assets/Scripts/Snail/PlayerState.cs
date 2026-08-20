@@ -20,6 +20,32 @@ namespace SnailPet.Snail
 
         public SnailGrowth Growth;
 
+        // ── 알 낳기 ──
+        //
+        // 이 셋은 개체에 딸린 값이다. 달팽이를 바꾸면 각자 제 몫을 따로 센다.
+
+        /// <summary>다음으로 재볼 때까지 남은 초. 방에 있는 동안만 줄어든다.</summary>
+        public double EggCooldown;
+
+        /// <summary>낳지 못한 횟수. 다음 확률이 그만큼 올라가고, 낳으면 0 으로 돌아간다.</summary>
+        public int EggFails;
+
+        /// <summary>오늘 낳은 개수와 그 「오늘」이 언제인지(yyyyMMdd). 날이 바뀌면 다시 0 이다.</summary>
+        public int EggsToday;
+        public string EggDay;
+
+        /// <summary>
+        /// 오늘 더 낳을 수 있는가. 날이 바뀌었으면 세던 것을 여기서 접는다 —
+        /// 자정에 맞춰 깨워 줄 사람이 없으므로 물어볼 때 확인하는 편이 맞다.
+        /// </summary>
+        public bool CanLayToday()
+        {
+            string today = SnailBreeding.Today;
+            if (EggDay != today) { EggDay = today; EggsToday = 0; }
+
+            return EggsToday < Config.CreateEggCount;
+        }
+
         /// <summary>
         /// 장착한 악세서리의 AccessoriesData.Id. 부위마다 하나만 낄 수 있다.
         ///
@@ -72,6 +98,19 @@ namespace SnailPet.Snail
             Equipped.Add(accessoryId);
             return true;
         }
+    }
+
+    /// <summary>
+    /// 가지고 있는 알 하나.
+    ///
+    /// 상점에서 산 알은 <see cref="Gene"/> 가 없다 — 부화할 때 그 알의 그룹에서 뽑는다.
+    /// 방에서 낳은 알은 부모를 섞은 결과를 여기 싣고 다닌다. 부화할 때쯤이면 그 부모가
+    /// 방에 없을 수 있으므로, 낳는 순간에 정해 두지 않으면 되찾을 길이 없다.
+    /// </summary>
+    public sealed class OwnedEgg
+    {
+        public int EggId;
+        public SnailAppearance Gene;
     }
 
     /// <summary>
@@ -133,7 +172,49 @@ namespace SnailPet.Snail
         public readonly List<OwnedSnail> Snails = new List<OwnedSnail>();
 
         /// <summary>보유 알. 같은 등급이어도 낱개로 들고 있는다.</summary>
-        public readonly List<int> Eggs = new List<int>();
+        public readonly List<OwnedEgg> Eggs = new List<OwnedEgg>();
+
+        /// <summary>
+        /// 화면 구석에 놓인 채 아직 회수 안 한 알.
+        ///
+        /// 눌러야 <see cref="Eggs"/> 로 들어가는데, 그때까지 30분짜리 결과를 들고 있는
+        /// 것이므로 나갔다 오면 없어지면 곤란하다. 화면에 있는 것은 게임 쪽이 그리고,
+        /// 여기는 나갈 때와 들어올 때만 오간다.
+        /// </summary>
+        public readonly List<OwnedEgg> LooseEggs = new List<OwnedEgg>();
+
+        /// <summary>목록에 그릴 알의 행 Id 만. UI 는 그림과 등급만 있으면 된다.</summary>
+        public int[] EggIds()
+        {
+            var ids = new int[Eggs.Count];
+            for (int i = 0; i < ids.Length; i++) ids[i] = Eggs[i].EggId;
+            return ids;
+        }
+
+        public void AddEgg(int eggId, SnailAppearance gene = null) =>
+            Eggs.Add(new OwnedEgg { EggId = eggId, Gene = gene });
+
+        public int CountEggs(int eggId)
+        {
+            int n = 0;
+            foreach (var e in Eggs) if (e.EggId == eggId) n++;
+            return n;
+        }
+
+        /// <summary>
+        /// 그 종류의 알 하나를 뺀다. <b>물려받은 것이 없는 알부터</b> 뺀다 —
+        /// 같은 값이면 낳은 알보다 산 알을 먼저 내보내는 편이 손해가 적다.
+        /// </summary>
+        public bool RemoveEgg(int eggId)
+        {
+            for (int i = 0; i < Eggs.Count; i++)
+                if (Eggs[i].EggId == eggId && Eggs[i].Gene == null) { Eggs.RemoveAt(i); return true; }
+
+            for (int i = 0; i < Eggs.Count; i++)
+                if (Eggs[i].EggId == eggId) { Eggs.RemoveAt(i); return true; }
+
+            return false;
+        }
 
         /// <summary>코인과 음식. 아이템 Id 로 개수를 센다.</summary>
         public readonly Inventory Items = new Inventory();
@@ -165,6 +246,12 @@ namespace SnailPet.Snail
 
         /// <summary>부화 중인 칸. eggId 가 0 이면 빈 칸이다.</summary>
         public readonly (int eggId, double remain)[] Incubator = new (int, double)[IncubatorSlots];
+
+        /// <summary>
+        /// 칸에 들어 있는 알이 물려받은 모습. 칸 번호로 나란히 놓는다 —
+        /// 칸은 자리가 고정이라 목록처럼 밀리지 않는다.
+        /// </summary>
+        public readonly SnailAppearance[] IncubatorGenes = new SnailAppearance[IncubatorSlots];
 
         /// <summary>화면에 나와 있는 개체의 <see cref="OwnedSnail.Id"/>.</summary>
         public int ActiveId;
@@ -276,23 +363,30 @@ namespace SnailPet.Snail
             int slot = System.Array.FindIndex(Incubator, h => h.eggId == 0);
             if (slot < 0) return -1;
 
-            int eggId = Eggs[listIndex];
-            if (!GameData.EggDataById.TryGetValue(eggId, out var row)) return -1;
+            var egg = Eggs[listIndex];
+            if (!GameData.EggDataById.TryGetValue(egg.EggId, out var row)) return -1;
 
             Eggs.RemoveAt(listIndex);
-            Incubator[slot] = (eggId, row.HatchTime);
+            Incubator[slot] = (egg.EggId, row.HatchTime);
+            IncubatorGenes[slot] = egg.Gene;
             return slot;
         }
 
-        /// <summary>다 된 칸을 비우고 그 알의 Id 를 돌려준다. 아직이면 0.</summary>
-        public int TakeHatched(int slot)
+        /// <summary>
+        /// 다 된 칸을 비우고 그 알을 돌려준다. 아직이면 eggId 가 0.
+        /// 물려받은 모습이 있으면 같이 나온다 — 부화는 그걸 그대로 쓴다.
+        /// </summary>
+        public (int eggId, SnailAppearance gene) TakeHatched(int slot)
         {
-            if (slot < 0 || slot >= Incubator.Length) return 0;
-            if (Incubator[slot].eggId == 0 || Incubator[slot].remain > 0) return 0;
+            if (slot < 0 || slot >= Incubator.Length) return (0, null);
+            if (Incubator[slot].eggId == 0 || Incubator[slot].remain > 0) return (0, null);
 
             int eggId = Incubator[slot].eggId;
+            var gene = IncubatorGenes[slot];
+
             Incubator[slot] = (0, 0);
-            return eggId;
+            IncubatorGenes[slot] = null;
+            return (eggId, gene);
         }
 
         public override string ToString() =>

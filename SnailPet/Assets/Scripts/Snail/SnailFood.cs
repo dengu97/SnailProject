@@ -53,8 +53,15 @@ namespace SnailPet.Snail
         /// <summary>낙하 가속도(px/s^2). GameConfig 시트가 소유한다.</summary>
         public static float Gravity => SnailPet.Data.Config.FoodGravity;
 
-        /// <summary>화면에 보일 먹이 가로 크기(px).</summary>
+        /// <summary>
+        /// <c>FoodData.ResourceSize</c> 1 일 때 화면에 보일 먹이 가로 크기(px).
+        /// 지금 크기를 1 로 잡았으므로, 시트에서 2 를 주면 두 배로 커진다.
+        /// </summary>
         public const float FoodPixels = 64f;
+
+        /// <summary>시트의 크기 배수. 안 적혔으면(0) 1 로 본다 — 먹이가 사라지는 것보다 낫다.</summary>
+        private static float SizeOf(FoodDataRow data) =>
+            data != null && data.ResourceSize > 0 ? (float)data.ResourceSize : 1f;
 
         private readonly List<FoodItem> _items = new List<FoodItem>();
         private readonly Transform _parent;
@@ -84,10 +91,12 @@ namespace SnailPet.Snail
             sr.sortingOrder = -100;                   // 달팽이 뒤에 깔린다
 
             // 보이는 부분 기준으로 크기를 맞추고, 바닥면이 ScreenY 에 오도록 배치할 값을 구한다
-            float scale = 1f, bottomOffset = 0f, halfWidth = FoodPixels * 0.5f;
+            float pixels = FoodPixels * SizeOf(data);
+
+            float scale = 1f, bottomOffset = 0f, halfWidth = pixels * 0.5f;
             if (SnailMetrics.TryMeasure(sprite, out var e) && e.Width > 0.01f)
             {
-                scale = FoodPixels / e.Width;
+                scale = pixels / e.Width;
                 bottomOffset = e.Bottom * scale;      // 음수: 루트에서 바닥까지
                 halfWidth = e.Width * scale * 0.5f;
             }
@@ -100,7 +109,7 @@ namespace SnailPet.Snail
                 ScreenX = screenX,
                 ScreenY = screenY,
                 HalfWidth = halfWidth,
-                Height = (SnailMetrics.TryMeasure(sprite, out var e2) ? e2.Height * scale : FoodPixels),
+                Height = (SnailMetrics.TryMeasure(sprite, out var e2) ? e2.Height * scale : pixels),
                 BaseScale = scale,
             };
             item.Root.SetSiblingIndex(0);

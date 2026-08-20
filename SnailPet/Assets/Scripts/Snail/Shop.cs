@@ -161,7 +161,7 @@ namespace SnailPet.Snail
             if (OwnedCount(player, row) < qty) return Result.NotEnough;
 
             if (row.CategoryType == CategoryType.Egg)
-                for (int i = 0; i < qty; i++) player.Eggs.Remove(row.Id);
+                for (int i = 0; i < qty; i++) player.RemoveEgg(row.Id);
             else if (!player.Items.TrySpend(row.Id, qty))
                 return Result.NotEnough;
 
@@ -175,9 +175,7 @@ namespace SnailPet.Snail
             if (player == null || row == null) return 0;
             if (row.CategoryType != CategoryType.Egg) return (int)player.Items.CountOf(row.Id);
 
-            int n = 0;
-            foreach (int id in player.Eggs) if (id == row.Id) n++;
-            return n;
+            return player.CountEggs(row.Id);
         }
 
         /// <summary>
@@ -252,7 +250,7 @@ namespace SnailPet.Snail
         private static void Grant(PlayerState player, ShopDataRow row, int count)
         {
             if (row.CategoryType == CategoryType.Egg)
-                for (int i = 0; i < count; i++) player.Eggs.Add(row.Id);
+                for (int i = 0; i < count; i++) player.AddEgg(row.Id);
             else
                 player.Items.Add(row.Id, count);
         }

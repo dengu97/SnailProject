@@ -19,12 +19,6 @@ namespace SnailPet.Snail
     /// </summary>
     public sealed class GuestField
     {
-        /// <summary>손님이 걷는 속도(px/s). 레벨을 모르므로 눈에 자연스러운 값 하나로 둔다.</summary>
-        private const float WalkSpeed = 26f;
-
-        /// <summary>화면에 보일 몸 크기(px). 내 달팽이의 낮은 레벨쯤으로 잡았다.</summary>
-        private const float BodyPixels = 46f;
-
         public sealed class Guest
         {
             public string Name;
@@ -33,6 +27,9 @@ namespace SnailPet.Snail
             public BoxAnchor Anchor;
             public SnailBounds Bounds;
             public float Scale;
+
+            /// <summary>이 손님이 걷는 속도(px/s). 제 레벨의 LevelData 에서 나온다.</summary>
+            public float Speed;
             public Vector2 Screen;       // 발이 놓인 화면 좌표
             public float RotationDeg;
             public bool Flip;
@@ -50,24 +47,24 @@ namespace SnailPet.Snail
         /// 방에 있는 사람들에 맞춘다. 새로 온 사람은 세우고, 나간 사람은 치우고,
         /// 모습이 바뀐 사람은 다시 세운다. <b>나는 빼고</b> 넘겨야 한다 — 내 달팽이는 본체가 그린다.
         /// </summary>
-        public void Sync((string name, string look)[] members)
+        public void Sync((string name, string card)[] members)
         {
             var alive = new HashSet<string>();
 
             if (members != null)
-                foreach (var (name, look) in members)
+                foreach (var (name, card) in members)
                 {
-                    if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(look)) continue;
+                    if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(card)) continue;
                     alive.Add(name);
 
                     if (_guests.TryGetValue(name, out var had))
                     {
-                        if (had.Look == look) continue;    // 그대로면 둔다
+                        if (had.Look == card) continue;    // 그대로면 둔다
                         Destroy(had);
                         _guests.Remove(name);
                     }
 
-                    var guest = Make(name, look);
+                    var guest = Make(name, card);
                     if (guest != null) _guests[name] = guest;
                 }
 
@@ -82,24 +79,30 @@ namespace SnailPet.Snail
             }
         }
 
-        private Guest Make(string name, string look)
+        private Guest Make(string name, string card)
         {
-            var appearance = SnailShare.Read(look);
+            // 받은 것은 「한 장」이라 머리말(이름·등급·레벨)이 붙어 있다. 외형만 떼어 읽으면
+            // 첫 파츠가 머리말에 묻혀 사라진다 — 껍질 없는 달팽이가 걸어다니게 된다.
+            var (_, _, level, appearance) = SnailShare.ReadCard(card);
             if (appearance == null) return null;
 
             var composed = SnailComposer.Build(appearance, "Guest_" + name);
             composed.Root.transform.SetParent(_parent, false);
 
             var bounds = SnailMetrics.Measure(appearance);
-            float body = Mathf.Max(1f, bounds.Top - bounds.Foot);
+            float width = Mathf.Max(0.01f, bounds.Right - bounds.Left);
+
+            // 크기·속도는 내 달팽이와 같은 규칙이다. 레벨만 알면 나머지는 데이터에서 나온다.
+            var row = SnailGrowth.At(level);
 
             return new Guest
             {
                 Name = name,
-                Look = look,
+                Look = card,
                 Root = composed.Root.transform,
                 Bounds = bounds,
-                Scale = BodyPixels / body,
+                Scale = (float)(row.Size * SnailGrowth.PixelsPerSizeUnit) / width,
+                Speed = (float)(row.Speed * SnailGrowth.PixelsPerSpeedUnit),
 
                 // 시작 자리는 아무 데나. 남과 겹쳐 서 있지 않게 벽과 진행도를 흩어 놓는다.
                 Anchor = new BoxAnchor
@@ -119,7 +122,7 @@ namespace SnailPet.Snail
                 float halfExtent = (g.Bounds.Right - g.Bounds.Left) * 0.5f * g.Scale * pixelsPerWorld;
                 float footDepth = 0f;   // 발이 벽에 붙는다. 손님은 늘어나지 않으므로 0 이면 된다
 
-                g.Anchor = BoxWalk.Advance(box, g.Anchor, WalkSpeed, deltaSeconds, halfExtent);
+                g.Anchor = BoxWalk.Advance(box, g.Anchor, g.Speed, deltaSeconds, halfExtent);
 
                 var pose = BoxWalk.Evaluate(box, g.Anchor, footDepth, halfExtent);
                 if (!pose.Valid) continue;

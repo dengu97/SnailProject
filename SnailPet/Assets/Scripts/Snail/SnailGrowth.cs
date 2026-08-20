@@ -64,6 +64,16 @@ namespace SnailPet.Snail
 
         public static int MaxLevel { get { EnsureIndex(); return _maxLevel; } }
 
+        /// <summary>
+        /// 그 레벨의 데이터. 손님 달팽이처럼 성장 상태 없이 레벨 숫자만 아는 쪽이 쓴다.
+        /// 범위를 벗어나거나 모르는 레벨(0)이면 1 레벨로 본다.
+        /// </summary>
+        public static LevelDataRow At(int level)
+        {
+            EnsureIndex();
+            return _byLevel.TryGetValue(level, out var r) ? r : GameData.LevelData[0];
+        }
+
         public LevelDataRow Current => _byLevel.TryGetValue(Level, out var r) ? r : GameData.LevelData[0];
         public LevelDataRow Next    => _byLevel.TryGetValue(Level + 1, out var r) ? r : null;
 

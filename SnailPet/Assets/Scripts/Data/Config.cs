@@ -45,5 +45,17 @@ namespace SnailPet.Data
 
         /// <summary>먹이 낙하 가속도(px/s^2).</summary>
         public static float FoodGravity => (float)Of(Row?.FoodGravity ?? 0, 1600.0, nameof(FoodGravity));
+
+        /// <summary>알을 낳을 수 있는지 재보는 주기(초). 방에 있는 동안만 흐른다.</summary>
+        public static double CreateEggCooltime => Of(Row?.CreateEggCooltime ?? 0, 1800.0, nameof(CreateEggCooltime));
+
+        /// <summary>한 번 재볼 때의 확률(0~1).</summary>
+        public static double CreateEggPercent => Of(Row?.CreateEggPercent ?? 0, 0.5, nameof(CreateEggPercent));
+
+        /// <summary>실패 한 번마다 다음 확률에 더해지는 몫. 낳으면 다시 0 부터다.</summary>
+        public static double CreateEggPlusPercent => Of(Row?.CreateEggPlusPercent ?? 0, 0.1, nameof(CreateEggPlusPercent));
+
+        /// <summary>달팽이 한 마리가 하루에 낳을 수 있는 알 개수.</summary>
+        public static int CreateEggCount => (int)Of(Row?.CreateEggCount ?? 0, 3.0, nameof(CreateEggCount));
     }
 }

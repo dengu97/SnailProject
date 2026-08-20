@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-19 16:41:11",
+  "generatedAt": "2026-08-20 08:39:28",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -290,7 +290,10 @@
     "[안내_코드복사]": 277,
     "[안내_달팽이교체]": 278,
     "[안내_방교체]": 279,
-    "[안내_중복방]": 280
+    "[안내_중복방]": 280,
+    "[안내_없는방]": 281,
+    "[안내_알배치]": 282,
+    "[안내_알생성]": 283
   },
   "tables": {
     "EnumData": [
@@ -424,18 +427,18 @@
       {"Id": 264, "NameId": 264, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Shell", "ResourceKey": "ballshell02", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 265, "SellItem": 36, "SellCount": 5}
     ],
     "FoodData": [
-      {"Id": 31, "FoodType": "vegetable", "NameId": 31, "RarityType": "Common", "FullPoint": 5, "HappyPoint": 3, "EatTime": 2, "BuffId": 0, "InfoId": 124, "ResourceKey": "food_lettuce", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 1, "PoopTime": 20},
-      {"Id": 32, "FoodType": "vegetable", "NameId": 32, "RarityType": "Common", "FullPoint": 7, "HappyPoint": 5, "EatTime": 2.5, "BuffId": 0, "InfoId": 125, "ResourceKey": "food_tomato", "PartsResourceKey": "food_parts_red", "PoopResourceKey": "poop_red", "PoopCount": 1, "PoopTime": 20},
-      {"Id": 33, "FoodType": "vegetable", "NameId": 33, "RarityType": "Common", "FullPoint": 7, "HappyPoint": 5, "EatTime": 5, "BuffId": 0, "InfoId": 126, "ResourceKey": "food_zucchini", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 1, "PoopTime": 20},
-      {"Id": 34, "FoodType": "bean", "NameId": 34, "RarityType": "Common", "FullPoint": 15, "HappyPoint": 10, "EatTime": 5, "BuffId": 35, "InfoId": 127, "ResourceKey": "food_tofu", "PartsResourceKey": "food_parts_white", "PoopResourceKey": "poop_brown", "PoopCount": 2, "PoopTime": 20},
-      {"Id": 232, "FoodType": "vegetable", "NameId": 232, "RarityType": "Rare", "FullPoint": 10, "HappyPoint": 20, "EatTime": 4, "BuffId": 0, "InfoId": 233, "ResourceKey": "food_clover", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 3, "PoopTime": 30},
-      {"Id": 234, "FoodType": "vegetable", "NameId": 234, "RarityType": "Common", "FullPoint": 4, "HappyPoint": 2, "EatTime": 2, "BuffId": 0, "InfoId": 235, "ResourceKey": "food_cucumber", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 1, "PoopTime": 10},
-      {"Id": 236, "FoodType": "vegetable", "NameId": 236, "RarityType": "Common", "FullPoint": 6, "HappyPoint": 2, "EatTime": 3, "BuffId": 0, "InfoId": 237, "ResourceKey": "food_carrot", "PartsResourceKey": "food_parts_red", "PoopResourceKey": "poop_red", "PoopCount": 1, "PoopTime": 20},
-      {"Id": 238, "FoodType": "vegetable", "NameId": 238, "RarityType": "Common", "FullPoint": 3, "HappyPoint": 5, "EatTime": 3, "BuffId": 0, "InfoId": 239, "ResourceKey": "food_blueberry", "PartsResourceKey": "food_parts_red", "PoopResourceKey": "poop_red", "PoopCount": 1, "PoopTime": 10},
-      {"Id": 240, "FoodType": "vegetable", "NameId": 240, "RarityType": "Rare", "FullPoint": 13, "HappyPoint": 17, "EatTime": 4, "BuffId": 0, "InfoId": 241, "ResourceKey": "food_watermellon", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 3, "PoopTime": 30},
-      {"Id": 242, "FoodType": "vegetable", "NameId": 242, "RarityType": "Rare", "FullPoint": 11, "HappyPoint": 19, "EatTime": 4, "BuffId": 0, "InfoId": 243, "ResourceKey": "food_apple", "PartsResourceKey": "food_parts_red", "PoopResourceKey": "poop_red", "PoopCount": 3, "PoopTime": 30},
-      {"Id": 244, "FoodType": "vegetable", "NameId": 244, "RarityType": "Rare", "FullPoint": 15, "HappyPoint": 15, "EatTime": 4, "BuffId": 0, "InfoId": 245, "ResourceKey": "food_radish", "PartsResourceKey": "food_parts_white", "PoopResourceKey": "poop_brown", "PoopCount": 3, "PoopTime": 30},
-      {"Id": 246, "FoodType": "vegetable", "NameId": 246, "RarityType": "Rare", "FullPoint": 12, "HappyPoint": 18, "EatTime": 4, "BuffId": 0, "InfoId": 247, "ResourceKey": "food_bro", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 3, "PoopTime": 30}
+      {"Id": 31, "FoodType": "vegetable", "NameId": 31, "RarityType": "Common", "FullPoint": 5, "HappyPoint": 3, "EatTime": 2, "BuffId": 0, "InfoId": 124, "ResourceKey": "food_lettuce", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 1, "PoopTime": 20, "ResourceSize": 1},
+      {"Id": 32, "FoodType": "vegetable", "NameId": 32, "RarityType": "Common", "FullPoint": 7, "HappyPoint": 5, "EatTime": 2.5, "BuffId": 0, "InfoId": 125, "ResourceKey": "food_tomato", "PartsResourceKey": "food_parts_red", "PoopResourceKey": "poop_red", "PoopCount": 1, "PoopTime": 20, "ResourceSize": 1},
+      {"Id": 33, "FoodType": "vegetable", "NameId": 33, "RarityType": "Common", "FullPoint": 7, "HappyPoint": 5, "EatTime": 5, "BuffId": 0, "InfoId": 126, "ResourceKey": "food_zucchini", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 1, "PoopTime": 20, "ResourceSize": 1},
+      {"Id": 34, "FoodType": "bean", "NameId": 34, "RarityType": "Common", "FullPoint": 15, "HappyPoint": 10, "EatTime": 5, "BuffId": 35, "InfoId": 127, "ResourceKey": "food_tofu", "PartsResourceKey": "food_parts_white", "PoopResourceKey": "poop_brown", "PoopCount": 2, "PoopTime": 20, "ResourceSize": 1},
+      {"Id": 232, "FoodType": "vegetable", "NameId": 232, "RarityType": "Rare", "FullPoint": 10, "HappyPoint": 20, "EatTime": 4, "BuffId": 0, "InfoId": 233, "ResourceKey": "food_clover", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 3, "PoopTime": 30, "ResourceSize": 1},
+      {"Id": 234, "FoodType": "vegetable", "NameId": 234, "RarityType": "Common", "FullPoint": 4, "HappyPoint": 2, "EatTime": 2, "BuffId": 0, "InfoId": 235, "ResourceKey": "food_cucumber", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 1, "PoopTime": 10, "ResourceSize": 1},
+      {"Id": 236, "FoodType": "vegetable", "NameId": 236, "RarityType": "Common", "FullPoint": 6, "HappyPoint": 2, "EatTime": 3, "BuffId": 0, "InfoId": 237, "ResourceKey": "food_carrot", "PartsResourceKey": "food_parts_red", "PoopResourceKey": "poop_red", "PoopCount": 1, "PoopTime": 20, "ResourceSize": 1},
+      {"Id": 238, "FoodType": "vegetable", "NameId": 238, "RarityType": "Common", "FullPoint": 3, "HappyPoint": 5, "EatTime": 3, "BuffId": 0, "InfoId": 239, "ResourceKey": "food_blueberry", "PartsResourceKey": "food_parts_red", "PoopResourceKey": "poop_red", "PoopCount": 1, "PoopTime": 10, "ResourceSize": 1},
+      {"Id": 240, "FoodType": "vegetable", "NameId": 240, "RarityType": "Rare", "FullPoint": 13, "HappyPoint": 17, "EatTime": 4, "BuffId": 0, "InfoId": 241, "ResourceKey": "food_watermellon", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 3, "PoopTime": 30, "ResourceSize": 1},
+      {"Id": 242, "FoodType": "vegetable", "NameId": 242, "RarityType": "Rare", "FullPoint": 11, "HappyPoint": 19, "EatTime": 4, "BuffId": 0, "InfoId": 243, "ResourceKey": "food_apple", "PartsResourceKey": "food_parts_red", "PoopResourceKey": "poop_red", "PoopCount": 3, "PoopTime": 30, "ResourceSize": 1},
+      {"Id": 244, "FoodType": "vegetable", "NameId": 244, "RarityType": "Rare", "FullPoint": 15, "HappyPoint": 15, "EatTime": 4, "BuffId": 0, "InfoId": 245, "ResourceKey": "food_radish", "PartsResourceKey": "food_parts_white", "PoopResourceKey": "poop_brown", "PoopCount": 3, "PoopTime": 30, "ResourceSize": 1},
+      {"Id": 246, "FoodType": "vegetable", "NameId": 246, "RarityType": "Rare", "FullPoint": 12, "HappyPoint": 18, "EatTime": 4, "BuffId": 0, "InfoId": 247, "ResourceKey": "food_bro", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 3, "PoopTime": 30, "ResourceSize": 1}
     ],
     "LevelData": [
       {"Level": 1, "LevelUpTime": 0, "NeedFullPoint": 10, "NeedHappyPoint": 10, "UseFullPointTime": 60, "UseHappyPointTime": 60, "Speed": 1, "Size": 4, "CoinCoolTime": 120, "ItemId": 36, "ItemCount": 10, "SellAdvantage": 1},
@@ -474,9 +477,9 @@
       {"Id": 36, "NameId": 36, "InfoId": 88, "ResourceKey": "item_coin"}
     ],
     "EggData": [
-      {"Id": 37, "NameId": 37, "HatchTime": 180, "RarityType": "Common", "ResourceKey": "egg_common", "InfoId": 89, "PartsGroupIds": [2]},
-      {"Id": 38, "NameId": 38, "HatchTime": 300, "RarityType": "Rare", "ResourceKey": "egg_rare", "InfoId": 90, "PartsGroupIds": [2, 17]},
-      {"Id": 188, "NameId": 188, "HatchTime": 600, "RarityType": "Epic", "ResourceKey": "egg_epic", "InfoId": 189, "PartsGroupIds": [2, 17, 169]}
+      {"Id": 37, "NameId": 37, "HatchTime": 180, "RarityType": "Common", "ResourceKey": "egg_common", "InfoId": 89, "PartsGroupIds": [2], "ResourceSize": 1},
+      {"Id": 38, "NameId": 38, "HatchTime": 300, "RarityType": "Rare", "ResourceKey": "egg_rare", "InfoId": 90, "PartsGroupIds": [2, 17], "ResourceSize": 1},
+      {"Id": 188, "NameId": 188, "HatchTime": 600, "RarityType": "Epic", "ResourceKey": "egg_epic", "InfoId": 189, "PartsGroupIds": [2, 17, 169], "ResourceSize": 1}
     ],
     "AccessoriesData": [
       {"Id": 39, "NameId": 39, "AccessoriesType": "Hat", "ResourceKey": "hat01", "InfoId": 91},
@@ -772,13 +775,16 @@
       {"Id": 277, "Kr": "방ID를 복사했습니다."},
       {"Id": 278, "Kr": "달팽이를 교체했습니다."},
       {"Id": 279, "Kr": "선택한 방으로 이동할까요?"},
-      {"Id": 280, "Kr": "지금 있는 방입니다."}
+      {"Id": 280, "Kr": "지금 있는 방입니다."},
+      {"Id": 281, "Kr": "존재하지 않는 방입니다."},
+      {"Id": 282, "Kr": "알 목록에서 부화시킬 알을 선택해주세요."},
+      {"Id": 283, "Kr": "알을 얻었어요!"}
     ],
     "UnlockData": [
       {"Id": 101, "ConditionType": "SnailLevel", "NeedConditionValue": 2, "CostItem": null, "CostCount": null}
     ],
     "GameConfig": [
-      {"MutationWeight": 5, "FullDecayPerTick": 1, "HappyDecayPerTick": 1, "PixelsPerSpeed": 16, "PixelsPerSize": 10, "FoodGravity": 1600, "Info": null}
+      {"MutationWeight": 5, "FullDecayPerTick": 1, "HappyDecayPerTick": 1, "PixelsPerSpeed": 16, "PixelsPerSize": 10, "FoodGravity": 1600, "CreateEggCooltime": 1800, "CreateEggPercent": 0.5, "CreateEggPlusPercent": 0.1, "CreateEggCount": 3, "Info": null}
     ]
   }
 }

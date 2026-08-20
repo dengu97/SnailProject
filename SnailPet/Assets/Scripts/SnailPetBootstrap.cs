@@ -270,7 +270,7 @@ namespace SnailPet
             _status = "달팽이·먹이를 끌어 옮길 수 있습니다. 놓으면 아래로 떨어집니다.";
             Say("");
             Say("→ 끄려면 설정 화면의 「종료」를 누르세요. (에디터에서는 ESC)");
-            Say("→ 확인용 치트: F9 = 선물 바로 준비 · F10 = 포만도 0 (배고프게)");
+            Say("→ 확인용 치트: F7 = 가짜 손님 · F8 = 알 낳기(가짜 짝) · F9 = 선물 바로 준비 · F10 = 포만도 0");
             WriteReport();
         }
 
@@ -316,6 +316,7 @@ namespace SnailPet
             _food = new FoodField(transform);
             _crumbs = new CrumbField(transform);
             _poops = new PoopField(transform);
+            _eggs = new EggField(transform);
             _guestField = new GuestField(transform);
             _coins = new CoinPop(transform);
             _present = new SnailPresent(transform);
@@ -344,6 +345,7 @@ namespace SnailPet
         /// </summary>
         private void OnApplicationQuit()
         {
+            KeepLooseEggs();
             SaveFile.Save(_player);
             SteamHub.Shutdown();
             MouseWheelHook.Remove();
@@ -355,7 +357,7 @@ namespace SnailPet
         /// </summary>
         private void GiveStartingBelongings()
         {
-            foreach (var e in GameData.EggData) { _player.Eggs.Add(e.Id); _player.Eggs.Add(e.Id); }
+            foreach (var e in GameData.EggData) { _player.AddEgg(e.Id); _player.AddEgg(e.Id); }
 
             // 아트가 없는 음식은 화면에 떨어뜨릴 수 없어 줘도 쓸 수가 없다
             int n = 1;
@@ -509,6 +511,11 @@ namespace SnailPet
             // 넣자마자 다시 저장이 도는 일이 없다.
             _ui.SetOptions(_player.Options);
 
+            // 지난번에 못 주운 알은 다시 구석에 내놓는다. 자리는 첫 프레임에 정해진다.
+            _eggDue.AddRange(_player.LooseEggs);
+            _player.LooseEggs.Clear();
+            if (_eggDue.Count > 0) Say("      화면에 남아 있던 알 " + _eggDue.Count + "개를 다시 놓습니다");
+
             RefreshEggs();
             RefreshFoods();      // 즐겨찾기 칸도 여기서 같이 채워진다
             RefreshSnail();
@@ -550,8 +557,13 @@ namespace SnailPet
                 else      _ui.NoticeRoomJoined();
             };
 
-            SteamHub.Left += () => _ui.NoticeRoomLeft();
-            _ui.LeaveRoom += ClearGuests;
+            SteamHub.Left += () =>
+            {
+                _ui.NoticeRoomLeft();
+
+                // 나가기 버튼이 아니라 끊겨서 나온 경우도 여기로 온다. 손님도 같이 치운다.
+                ClearGuests();
+            };
 
             _ui.MultiTabChanged += lobby =>
             {
@@ -562,6 +574,7 @@ namespace SnailPet
 
             _ui.InviteFriend += i => SteamHub.Invite(i);
             SteamHub.SameRoom += () => _ui.NoticeSameRoom();
+            SteamHub.NoSuchRoom += () => _ui.NoticeNoSuchRoom();
 
             // 이미 방에 있으면 옮길지 먼저 묻는다. 「예」를 눌러야 지금 방에서 나온다.
             _ui.EnterLobby   += i =>
@@ -601,7 +614,8 @@ namespace SnailPet
             var active = _player.Active;
             if (active == null) return;
 
-            string card = SnailShare.WriteCard(active.Name, active.Rarity, active.Dressed());
+            // 레벨도 같이 올린다. 남의 화면에서 제 크기·속도로 걷는 데 쓰인다.
+            string card = SnailShare.WriteCard(active.Name, active.Rarity, _growth.Level, active.Dressed());
             SteamHub.PublishSnail(card);
             Say("      [스팀] 내 달팽이를 올렸습니다 (" + card.Length + "자)");
         }
@@ -660,7 +674,7 @@ namespace SnailPet
                     continue;
                 }
 
-                var (snailName, _, _) = SnailShare.ReadCard(card);
+                var (snailName, _, _, _) = SnailShare.ReadCard(card);
                 rows[i] = (steam, snailName, GuestFace(steam, card));
             }
             return rows;
@@ -670,14 +684,15 @@ namespace SnailPet
         /// 남의 달팽이 얼굴. 받은 글자가 그대로면 다시 찍지 않고 들고 있던 것을 준다 —
         /// 목록은 자주 다시 그려지는데 찍는 것은 비싸다.
         /// </summary>
-        private Texture GuestFace(string name, string look)
+        private Texture GuestFace(string name, string card)
         {
-            if (string.IsNullOrEmpty(look)) return null;
+            if (string.IsNullOrEmpty(card)) return null;
 
-            if (_guests.TryGetValue(name, out var had) && had.look == look && had.view.Texture != null)
+            if (_guests.TryGetValue(name, out var had) && had.look == card && had.view.Texture != null)
                 return had.view.Texture;
 
-            var appearance = SnailShare.Read(look);
+            // 머리말이 붙은 한 장이다. 외형만 떼어 읽어야 첫 파츠가 안 사라진다.
+            var (_, _, _, appearance) = SnailShare.ReadCard(card);
             if (appearance == null) return null;
 
             had.view?.Dispose();
@@ -686,7 +701,7 @@ namespace SnailPet
             var view = new SnailPortrait(transform, appearance, SnailMetrics.Measure(appearance),
                                          size.x, size.y, headOnly: true);
 
-            _guests[name] = (look, view);
+            _guests[name] = (card, view);
             return view.Texture;
         }
 
@@ -700,7 +715,7 @@ namespace SnailPet
             if (index < 0 || index >= members.Length) return;
 
             var (steamName, card, me) = members[index];
-            var (snailName, rarity, look) = SnailShare.ReadCard(card);
+            var (snailName, rarity, _, look) = SnailShare.ReadCard(card);
 
             // 내 줄이면 내 것으로 채운다. 남의 것은 받은 글자가 전부다.
             if (me && _player.Active != null)
@@ -1804,6 +1819,7 @@ namespace SnailPet
             _coins.Tick(Time.deltaTime);
             UpdateCrumbTransforms();
             _poops.Tick(Time.deltaTime);
+            _eggs.Tick(Time.deltaTime);
 
             // 손님 달팽이는 같은 벽을 따라 걷기만 한다. 자리는 여기서 월드로 옮긴다.
             if (_guestField != null && _guestField.Count > 0)
@@ -1850,6 +1866,8 @@ namespace SnailPet
             }
 
             TickIncubator(Time.deltaTime);
+            TickBreeding(Time.deltaTime);
+            StepEggDrops(px);      // 낳은 알을 구석에 내놓는다. 박스가 정해진 뒤라야 한다.
 
             // 벽에 붙어 실제로 나아가고 있을 때만 발바닥에 물결이 지나간다
             StepFootWave(!SnailFree && !_peeling && !Hiding, Time.deltaTime);
@@ -2264,9 +2282,9 @@ namespace SnailPet
         // 열쇠를 둔다. 창이 포커스를 갖지 않아 Unity 의 Input 이 안 되므로 마우스와 같이
         // 전역 키 상태를 읽는다 — 다른 창을 쓰는 중에도 눌리니 흔치 않은 키를 골랐다.
 
-        private const int VK_F9 = 0x78, VK_F10 = 0x79, VK_F11 = 0x7A;
+        private const int VK_F7 = 0x76, VK_F8 = 0x77, VK_F9 = 0x78, VK_F10 = 0x79, VK_F11 = 0x7A;
 
-        private bool _f9Was, _f10Was, _f11Was;
+        private bool _f7Was, _f8Was, _f9Was, _f10Was, _f11Was;
 
         /// <summary>
         /// 확인용. 아직 안 채운 첫 도감 칸을 지금 화면의 달팽이 모습으로 채운다.
@@ -2321,10 +2339,102 @@ namespace SnailPet
             bool f11 = TransparentWindow.IsKeyDown(VK_F11);
             if (f11 && !_f11Was) FillGuideCheat();
 
+            // 알 낳기는 방에 남이 있어야 해서 혼자서는 볼 수가 없다.
+            // 가짜 짝을 하나 세워 섞은 결과만이라도 확인한다.
+            bool f8 = TransparentWindow.IsKeyDown(VK_F8);
+            if (f8 && !_f8Was) LayEggCheat();
+
+            // 남의 달팽이도 혼자서는 볼 수가 없다. 내 것을 한 장 복사해 손님으로 세운다.
+            bool f7 = TransparentWindow.IsKeyDown(VK_F7);
+            if (f7 && !_f7Was) FakeGuestCheat();
+
+            _f7Was = f7;
+            _f8Was = f8;
             _f9Was = f9;
             _f10Was = f10;
             _f11Was = f11;
 #endif
+        }
+
+        // ── 화면에 놓인 알 ──
+        //
+        // 낳은 알은 바로 보유가 되지 않는다. 화면 구석에 놓이고, 똥처럼 눌러야 주워진다.
+        // 자리는 그때그때 정하므로 세이브에는 알만 적는다 (PlayerState.LooseEggs).
+
+        private EggField _eggs;
+
+        /// <summary>내놓기로 했지만 아직 자리를 못 잡은 알. 박스를 알아야 놓을 수 있다.</summary>
+        private readonly List<OwnedEgg> _eggDue = new List<OwnedEgg>();
+
+        /// <summary>
+        /// 구석에서 띄우는 여백(px)과 몸 높이에 대한 크기 비율·최소 크기.
+        /// 여기서 나온 크기가 <c>EggData.ResourceSize</c> 1 일 때의 크기다.
+        /// </summary>
+        private const float EggMargin = 8f, EggFraction = 0.55f, EggMinPixels = 20f;
+
+        /// <summary>기다리던 알을 구석에 내놓는다. 박스가 정해진 뒤라야 하므로 프레임 안에서 부른다.</summary>
+        private void StepEggDrops(float px)
+        {
+            if (_eggs == null || _eggDue.Count == 0) return;
+
+            foreach (var due in _eggDue) DropEgg(due, px);
+            _eggDue.Clear();
+        }
+
+        /// <summary>
+        /// 구석에 하나 놓는다. 좌우 중 한 곳을 골라 바닥에 붙이고,
+        /// 이미 놓인 것이 있으면 그만큼 안쪽으로 밀어 겹치지 않게 한다.
+        /// </summary>
+        private void DropEgg(OwnedEgg due, float px)
+        {
+            if (!GameData.EggDataById.TryGetValue(due.EggId, out var row)) return;
+
+            float bodyPx = (_bounds.Top - _bounds.Foot) * _scale * px;
+
+            // 시트의 크기 배수를 곱한다. 안 적혔으면(0) 1 로 본다 — 알이 사라지는 것보다 낫다.
+            float size = row.ResourceSize > 0 ? (float)row.ResourceSize : 1f;
+            float pixels = Mathf.Max(EggMinPixels, bodyPx * EggFraction) * size;
+
+            // 반지름을 알아야 자리를 정할 수 있어서, 놓고 나서 민다
+            var egg = _eggs.Spawn(due.EggId, row.ResourceKey, due.Gene, Vector2.zero, pixels);
+            if (egg == null) return;
+
+            bool left = _rng.Next(2) == 0;
+            float step = (egg.Half.x * 2f + 4f) * (_eggs.Count - 1);
+            float x = left ? _box.Left + EggMargin + egg.Half.x + step
+                           : _box.Right - EggMargin - egg.Half.x - step;
+
+            egg.Screen = new Vector2(x, _box.Bottom - EggMargin - egg.Half.y);
+            Say($"      [알] 화면에 놓았습니다: {GameData.TokenById[due.EggId]} " +
+                $"@({egg.Screen.x:0},{egg.Screen.y:0}) 크기 {pixels:0}px (ResourceSize {size:0.##})");
+        }
+
+        /// <summary>
+        /// 놓인 알을 눌렀다. 스르륵 사라지면서 보유 알이 되고 문구가 뜬다.
+        /// 물려받은 모습은 알에 실린 채로 그대로 목록으로 넘어간다.
+        /// </summary>
+        private void ClaimEgg(EggField.Egg egg)
+        {
+            _eggs.Remove(egg);
+            _player.AddEgg(egg.EggId, egg.Gene);
+
+            RefreshEggs();
+            _ui.NoticeEggGot();
+
+            Say($"      [알] 회수: {GameData.TokenById[egg.EggId]} → 보유 알 {_player.Eggs.Count}개");
+        }
+
+        /// <summary>나갈 때 화면에 남은 알을 세이브 쪽으로 옮긴다. 켜면 다시 구석에 놓인다.</summary>
+        private void KeepLooseEggs()
+        {
+            _player.LooseEggs.Clear();
+
+            // 아직 못 놓은 것도 있다. 놓였든 안 놓였든 「가진 적 없는 알」이라는 점은 같다.
+            _player.LooseEggs.AddRange(_eggDue);
+
+            if (_eggs != null)
+                foreach (var e in _eggs.Pending())
+                    _player.LooseEggs.Add(new OwnedEgg { EggId = e.EggId, Gene = e.Gene });
         }
 
         /// <summary>부스러기와 코인을 화면 좌표에서 월드로 옮긴다. 먹이와 같은 방식이다.</summary>
@@ -2337,6 +2447,11 @@ namespace SnailPet
             if (_coins != null)
                 foreach (var c in _coins.Items)
                     if (c.Root != null) c.Root.position = VirtualToWorld(c.Screen.x, c.Screen.y);
+
+            // 놓인 알은 세워 둔 것이라 자리만 옮기면 된다
+            if (_eggs != null)
+                foreach (var e in _eggs.Items)
+                    if (e.Root != null) e.Root.position = VirtualToWorld(e.Screen.x, e.Screen.y);
 
             // 똥은 자세까지 그대로 두고 자리만 옮긴다 — 창이 움직여도 벽에 붙어 있어야 한다.
             if (_poops != null)
@@ -2364,7 +2479,7 @@ namespace SnailPet
 
         private void RefreshEggs()
         {
-            _ui.SetEggs(_player.Eggs.ToArray());
+            _ui.SetEggs(_player.EggIds());
             _ui.SetIncubator(_player.Incubator);
         }
 
@@ -2372,7 +2487,7 @@ namespace SnailPet
         private void PutEggInIncubator(int listIndex)
         {
             if (listIndex < 0 || listIndex >= _player.Eggs.Count) return;
-            int eggId = _player.Eggs[listIndex];
+            int eggId = _player.Eggs[listIndex].EggId;
 
             int slot = _player.PutEggInIncubator(listIndex);
             if (slot < 0) { Say("      [UI] 부화기가 가득 찼습니다"); return; }
@@ -2396,8 +2511,8 @@ namespace SnailPet
         /// <summary>
         /// 설정이 바뀌었다. 값을 상태에 넣고 지금 걸 수 있는 것만 건다.
         ///
-        /// 알 생성 금지와 배고픔·관심 알림은 아직 그 기능 자체가 없어 값만 들고 있는다.
-        /// (지금 말풍선은 선물 하나뿐이고, 달팽이끼리 만나 알을 낳는 것도 없다)
+        /// 알 생성 금지는 <see cref="TickBreeding"/> 가 매번 이 값을 보므로 여기서 할 일이 없다.
+        /// 관심 알림은 아직 그 말풍선 자체가 없어 값만 들고 있는다.
         /// </summary>
         private void ApplyOptions(PlayerOptions options)
         {
@@ -2414,6 +2529,7 @@ namespace SnailPet
         /// </summary>
         private void QuitFromUi()
         {
+            KeepLooseEggs();
             SaveFile.Save(_player);
             Say("[8] 저장 ............. " + _player);
             Say("      [UI] 종료");
@@ -2427,17 +2543,23 @@ namespace SnailPet
 
         private void ClaimHatched(int slot)
         {
-            int eggId = _player.TakeHatched(slot);
+            var (eggId, gene) = _player.TakeHatched(slot);
             if (eggId == 0)
             {
-                if (slot >= 0 && slot < _player.Incubator.Length && _player.Incubator[slot].eggId != 0)
-                    Say($"      [UI] {slot}번 칸은 아직 {_player.Incubator[slot].remain:0}초 남았습니다");
+                bool busy = slot >= 0 && slot < _player.Incubator.Length
+                         && _player.Incubator[slot].eggId != 0;
+
+                if (busy) Say($"      [UI] {slot}번 칸은 아직 {_player.Incubator[slot].remain:0}초 남았습니다");
+                else _ui.NoticeEggPut();      // 빈 칸을 눌렀다. 알을 어디서 넣는지 알려 준다.
+
                 return;
             }
 
             if (!GameData.EggDataById.TryGetValue(eggId, out var egg)) return;
 
-            var born = _player.AddSnail(SnailHatchery.Hatch(egg.Id, new System.Random()), egg.RarityType);
+            // 방에서 낳은 알은 태어날 모습이 이미 정해져 있다. 산 알만 그 자리에서 뽑는다.
+            var look = gene ?? SnailHatchery.Hatch(egg.Id, new System.Random());
+            var born = _player.AddSnail(look, egg.RarityType);
             RefreshEggs();
             RefreshSnail(reshoot: false);   // 화면에 나와 있는 개체는 그대로다
             ScanGuides();                  // 새로 얻은 개체가 도감을 채웠을 수 있다
@@ -2459,6 +2581,123 @@ namespace SnailPet
         {
             if (_player.TickIncubator(deltaTime))
                 _ui.SetIncubator(_player.Incubator);
+        }
+
+        // ── 알 낳기 ──
+
+        /// <summary>
+        /// 방에서 알이 생기는 시계.
+        ///
+        /// <b>방에 손님이 있는 동안에만</b> 흐른다 — 짝이 없으면 낳을 수가 없으니 시간만
+        /// 흘려 두면 방에 들어가자마자 알이 쏟아진다. 주기가 다 되면 확률을 한 번 재보고,
+        /// 못 낳으면 실패 횟수만큼 다음 확률이 올라간다.
+        /// </summary>
+        private void TickBreeding(float deltaTime)
+        {
+            var mine = _player.Active;
+            if (mine == null || _player.Options.NoEggs) return;
+            if (!SteamHub.InLobby || _guestField == null || _guestField.Count == 0) return;
+            if (!mine.CanLayToday()) return;
+
+            // 시계가 서 있었으면(갓 태어났거나 알 낳기가 없던 시절의 세이브) 여기서 건다.
+            // 안 걸면 방에 들어서자마자 한 번 재보게 된다.
+            if (mine.EggCooldown <= 0) { mine.EggCooldown = Config.CreateEggCooltime; return; }
+
+            mine.EggCooldown -= deltaTime;
+            if (mine.EggCooldown > 0) return;
+
+            mine.EggCooldown = Config.CreateEggCooltime;
+
+            double chance = SnailBreeding.ChanceAfter(mine.EggFails);
+            if (_rng.NextDouble() >= chance)
+            {
+                mine.EggFails++;
+                Say($"      [알] 이번엔 못 낳았습니다 (확률 {chance * 100:0.#}% → 다음 " +
+                    $"{SnailBreeding.ChanceAfter(mine.EggFails) * 100:0.#}%)");
+                return;
+            }
+
+            mine.EggFails = 0;
+            LayEgg(mine);
+        }
+
+        /// <summary>
+        /// 방에 있는 달팽이 하나를 짝으로 골라 알을 낳는다.
+        /// 태어날 모습은 지금 정해서 알에 실어 둔다 — 부화할 때는 그 짝이 없을 수 있다.
+        /// </summary>
+        private void LayEgg(OwnedSnail mine)
+        {
+            var mates = new List<(string steam, SnailAppearance look, RarityType rarity)>();
+            foreach (var (steam, card, me) in SteamHub.MemberLooks())
+            {
+                if (me) continue;
+
+                var (_, rarity, _, look) = SnailShare.ReadCard(card);
+                if (look != null) mates.Add((steam, look, rarity));
+            }
+            if (mates.Count == 0) return;      // 아직 아무도 자기 달팽이를 안 올렸다
+
+            var mate = mates[_rng.Next(mates.Count)];
+            LayEggWith(mine, mate.look, mate.rarity, mate.steam);
+        }
+
+        /// <summary>
+        /// 짝이 정해진 다음. 섞은 결과를 알에 실어 <b>화면 구석에 내놓는다</b>.
+        /// 보유 알이 되는 것은 유저가 그걸 주웠을 때다.
+        /// </summary>
+        private void LayEggWith(OwnedSnail mine, SnailAppearance mateLook, RarityType mateRarity, string who)
+        {
+            var egg = SnailBreeding.EggFor(mine.Rarity, mateRarity);
+            if (egg == null) return;           // EggData 가 비었다. 낳을 그릇이 없다.
+
+            var gene = SnailBreeding.Cross(mine.Appearance, mateLook, _rng);
+            _eggDue.Add(new OwnedEgg { EggId = egg.Id, Gene = gene });
+            mine.EggsToday++;
+
+            Say($"      [알] {who} 의 달팽이와 알을 낳았습니다 — {Loc.ById(egg.NameId)} " +
+                $"(오늘 {mine.EggsToday}/{Config.CreateEggCount})");
+            Say("      [알] 물려받은 모습: " + gene);
+        }
+
+        /// <summary>알 낳기 추첨에 쓰는 주사위. 매번 새로 만들면 같은 눈이 나온다.</summary>
+        private readonly System.Random _rng = new System.Random();
+
+        /// <summary>
+        /// 치트(F7). 방에 사람이 없어도 손님 달팽이를 한 마리 세운다.
+        /// 내 달팽이와 <b>같은 한 장</b>을 넘기므로, 크기·속도가 내 것과 같아 보여야 맞다.
+        /// (다음 목록 갱신에서 진짜 참가자로 덮인다. 확인용이다)
+        /// </summary>
+        private void FakeGuestCheat()
+        {
+            var active = _player.Active;
+            if (active == null || _guestField == null) return;
+
+            string card = SnailShare.WriteCard(active.Name, active.Rarity, _growth.Level, active.Dressed());
+            _guestField.Sync(new[] { ("가짜 손님", card) });
+
+            Say($"      [치트] 가짜 손님 (F7): 레벨 {_growth.Level} · 내 달팽이 {_growth.SizePixels:0}px, " +
+                $"{_growth.PixelsPerSecond:0}px/s");
+
+            foreach (var g in _guestField.Items)
+                Say($"      [치트] 손님 {g.Name}: {(g.Bounds.Right - g.Bounds.Left) * g.Scale * _pxPerWorld:0}px, " +
+                    $"{g.Speed:0}px/s");
+        }
+
+        /// <summary>
+        /// 치트(F8). 방에 아무도 없어도 알을 하나 낳아 본다.
+        /// 짝은 레어 알에서 갓 뽑은 가짜 달팽이다 — 확인용이라 방과는 상관이 없다.
+        /// </summary>
+        private void LayEggCheat()
+        {
+            var mine = _player.Active;
+            if (mine == null || GameData.EggData.Length == 0) return;
+
+            var from = GameData.EggData[GameData.EggData.Length - 1];
+            var mate = SnailHatchery.Hatch(from.Id, _rng);
+
+            Say("      [치트] 가짜 짝 (F8): " + mate);
+            Say("      [치트] 내 달팽이: " + mine.Appearance);
+            LayEggWith(mine, mate, from.RarityType, "가짜 짝");
         }
 
         /// <summary>
@@ -2521,7 +2760,8 @@ namespace SnailPet
             float x = UnityEngine.Random.Range(_box.Left + 120f, _box.Right - 120f);
             float y = _box.Top + UnityEngine.Random.Range(60f, 260f);          // 공중에서 떨어뜨린다
             var dropped = _food.Drop(data, x, y);
-            if (dropped != null) Say($"      먹이 투하: {Loc.ById(data.NameId)} @ x={x:0}");
+            if (dropped != null)
+                Say($"      먹이 투하: {Loc.ById(data.NameId)} @ x={x:0} 가로 {dropped.HalfWidth * 2f:0}px");
         }
 
         /// <summary>먹이의 화면 좌표를 월드로 옮긴다. 바닥면이 ScreenY 에 오도록 보정한다.</summary>
@@ -2599,6 +2839,12 @@ namespace SnailPet
                         // 먹이도 달팽이도 아니면 똥일 수 있다. 누르면 치워지고 코인이 나온다.
                         var poop = _poops?.FindAt(VirtualToWorld(cx, cy));
                         if (poop != null) ClaimPoop(poop, _pxPerWorld);
+                        else
+                        {
+                            // 구석에 놓인 알. 누르는 것이 곧 회수다.
+                            var egg = _eggs?.FindAt(VirtualToWorld(cx, cy));
+                            if (egg != null) ClaimEgg(egg);
+                        }
                     }
                 }
             }
@@ -2843,6 +3089,7 @@ namespace SnailPet
             bool hasCursor = TransparentWindow.TryGetCursor(out int cx, out int cy);
             bool onFood = hasCursor && _food.FindAt(cx, cy) != null;
             bool onPoop = hasCursor && _poops != null && _poops.FindAt(VirtualToWorld(cx, cy)) != null;
+            bool onEgg  = hasCursor && _eggs  != null && _eggs.FindAt(VirtualToWorld(cx, cy)) != null;
             bool onBubble = CursorOnBubble();      // 말풍선도 눌러서 받을 수 있으므로 클릭을 받아야 한다
             bool onReturn = CursorOnReturn();      // 도로 넣기 버튼도 마찬가지다
 
@@ -2851,7 +3098,7 @@ namespace SnailPet
             // 키보드 포커스까지 같이 잃는다.
             // _cursorOnUi 는 StepDrag 에서 이미 이번 프레임 값으로 갱신됐다
             TransparentWindow.SetClickThrough(
-                !(_cursorOnSnail || onBubble || onReturn || onFood || onPoop || _cursorOnUi || _ui.PopupOpen || _drag != DragTarget.None));
+                !(_cursorOnSnail || onBubble || onReturn || onFood || onPoop || onEgg || _cursorOnUi || _ui.PopupOpen || _drag != DragTarget.None));
         }
 
         /// <summary>

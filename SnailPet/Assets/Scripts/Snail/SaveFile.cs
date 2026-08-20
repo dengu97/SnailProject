@@ -59,6 +59,21 @@ namespace SnailPet.Snail
             /// JsonUtility 가 없는 필드를 빈 배열로 두므로 형식 번호를 올릴 필요가 없다.
             /// </summary>
             public int[] equipped;
+
+            /// <summary>알 낳기의 시계. 역시 나중에 더한 칸이라 옛 세이브에는 없다(전부 0).</summary>
+            public double eggCooldown;
+            public int eggFails, eggsToday;
+            public string eggDay;
+        }
+
+        /// <summary>
+        /// 알이 물려받은 모습. JsonUtility 는 배열의 배열을 못 다뤄서 한 겹 감싼다.
+        /// parts 가 비어 있으면 물려받은 것이 없는 알(상점에서 산 것)이다.
+        /// </summary>
+        [Serializable]
+        private sealed class GeneDto
+        {
+            public PartDto[] parts;
         }
 
         [Serializable]
@@ -73,6 +88,7 @@ namespace SnailPet.Snail
         {
             public int eggId;
             public double remain;
+            public GeneDto gene;
         }
 
         [Serializable]
@@ -82,6 +98,17 @@ namespace SnailPet.Snail
             public int activeId;
             public SnailDto[] snails;
             public int[] eggs;
+
+            /// <summary>
+            /// 알이 물려받은 모습. <see cref="eggs"/> 와 <b>같은 자리끼리</b> 짝이다.
+            /// 옛 세이브에는 없는데, 그러면 전부 그냥 산 알로 읽힌다.
+            /// </summary>
+            public GeneDto[] eggGenes;
+
+            /// <summary>화면에 놓인 채 아직 안 주운 알. 자리는 안 적는다 — 켤 때 다시 정한다.</summary>
+            public int[] looseEggs;
+            public GeneDto[] looseGenes;
+
             public ItemDto[] items;
             public SlotDto[] incubator;
 
@@ -97,6 +124,68 @@ namespace SnailPet.Snail
 
             /// <summary>채운 도감. 없으면 아직 아무것도 안 채운 것이다.</summary>
             public GuideDto[] guides;
+        }
+
+        /// <summary>물려받은 모습을 적을 꼴로. 없으면 null 이라 세이브에도 안 남는다.</summary>
+        private static GeneDto ToGene(SnailAppearance look)
+        {
+            if (look == null || look.Parts.Count == 0) return null;
+
+            var parts = new PartDto[look.Parts.Count];
+            for (int i = 0; i < parts.Length; i++)
+                parts[i] = new PartDto { parts = look.Parts[i].PartsId, color = look.Parts[i].ColorKey };
+
+            return new GeneDto { parts = parts };
+        }
+
+        /// <summary>
+        /// 적어 둔 모습을 되살린다. 데이터에서 빠진 파츠는 그 부위만 빼고 되살린다 —
+        /// 달팽이를 되살릴 때와 같은 규칙이다.
+        /// </summary>
+        private static SnailAppearance FromGene(GeneDto gene)
+        {
+            if (gene == null || gene.parts == null || gene.parts.Length == 0) return null;
+
+            var look = new SnailAppearance();
+            foreach (var p in gene.parts)
+            {
+                if (!GameData.PartsDataById.TryGetValue(p.parts, out var row)) continue;
+                look.Parts.Add(new SnailPartRef
+                {
+                    PartsId = row.Id,
+                    Type = row.PartsType,
+                    ResourceKey = row.ResourceKey,
+                    ColorKey = string.IsNullOrEmpty(p.color) ? null : p.color,
+                });
+            }
+            return look.Parts.Count > 0 ? look : null;
+        }
+
+        private static GeneDto[] ToGenes(List<OwnedEgg> eggs)
+        {
+            var genes = new GeneDto[eggs.Count];
+            for (int i = 0; i < genes.Length; i++) genes[i] = ToGene(eggs[i].Gene);
+            return genes;
+        }
+
+        private static int[] IdsOf(List<OwnedEgg> eggs)
+        {
+            var ids = new int[eggs.Count];
+            for (int i = 0; i < ids.Length; i++) ids[i] = eggs[i].EggId;
+            return ids;
+        }
+
+        /// <summary>적어 둔 알 목록을 되살린다. 짝이 없는 자리는 그냥 산 알이다.</summary>
+        private static void RestoreEggs(List<OwnedEgg> into, int[] ids, GeneDto[] genes)
+        {
+            if (ids == null) return;
+
+            for (int i = 0; i < ids.Length; i++)
+                into.Add(new OwnedEgg
+                {
+                    EggId = ids[i],
+                    Gene = genes != null && i < genes.Length ? FromGene(genes[i]) : null,
+                });
         }
 
         private static GuideDto[] ToGuideDtos(PlayerState player)
@@ -152,7 +241,10 @@ namespace SnailPet.Snail
             {
                 version = Version,
                 activeId = player.ActiveId,
-                eggs = player.Eggs.ToArray(),
+                eggs = player.EggIds(),
+                eggGenes = ToGenes(player.Eggs),
+                looseEggs = IdsOf(player.LooseEggs),
+                looseGenes = ToGenes(player.LooseEggs),
                 favorites = player.Favorites.ToArray(),
                 options = player.Options,
                 hasOptions = true,
@@ -183,6 +275,10 @@ namespace SnailPet.Snail
                     progress = s.Growth.LevelUpProgress,
                     parts = parts,
                     equipped = s.Equipped.ToArray(),
+                    eggCooldown = s.EggCooldown,
+                    eggFails = s.EggFails,
+                    eggsToday = s.EggsToday,
+                    eggDay = s.EggDay,
                 };
             }
 
@@ -191,6 +287,7 @@ namespace SnailPet.Snail
                 {
                     eggId = player.Incubator[i].eggId,
                     remain = player.Incubator[i].remain,
+                    gene = ToGene(player.IncubatorGenes[i]),
                 };
 
             var items = new List<ItemDto>();
@@ -260,11 +357,18 @@ namespace SnailPet.Snail
                         foreach (int id in s.equipped)
                             if (GameData.AccessoriesDataById.ContainsKey(id)) snail.Equipped.Add(id);
 
+                    snail.EggCooldown = s.eggCooldown;
+                    snail.EggFails = s.eggFails;
+                    snail.EggsToday = s.eggsToday;
+                    snail.EggDay = string.IsNullOrEmpty(s.eggDay) ? null : s.eggDay;
+
                     snail.Growth.Restore(s.level, s.full, s.happy, s.progress);
                     player.RestoreSnail(snail);
                 }
 
-            if (root.eggs != null) player.Eggs.AddRange(root.eggs);
+            // 물려받은 모습이 붙기 전의 세이브에는 gene 쪽이 없다. 그러면 전부 산 알로 읽힌다.
+            RestoreEggs(player.Eggs, root.eggs, root.eggGenes);
+            RestoreEggs(player.LooseEggs, root.looseEggs, root.looseGenes);
             if (root.favorites != null) player.Favorites.AddRange(root.favorites);
             RestoreGuides(player, root.guides);
 
@@ -275,7 +379,10 @@ namespace SnailPet.Snail
 
             if (root.incubator != null)
                 for (int i = 0; i < player.Incubator.Length && i < root.incubator.Length; i++)
+                {
                     player.Incubator[i] = (root.incubator[i].eggId, root.incubator[i].remain);
+                    player.IncubatorGenes[i] = FromGene(root.incubator[i].gene);
+                }
 
             player.ActiveId = root.activeId;
 
