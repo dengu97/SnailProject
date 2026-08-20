@@ -45,7 +45,7 @@ namespace SnailPet.Snail
             foreach (var p in appearance.Parts)
             {
                 // 가로·위쪽은 색상 레이어까지 포함해도 선화와 실루엣이 같으므로 선화만 보면 된다
-                var sprite = SnailComposer.Load(SnailComposer.LinePath(p.Type, p.ResourceKey));
+                var sprite = SnailComposer.LoadFrame(SnailComposer.LinePath(p.Type, p.ResourceKey));
                 if (sprite == null) continue;
                 if (!TryGetExtents(sprite, out var e)) continue;
 
@@ -66,7 +66,7 @@ namespace SnailPet.Snail
                 float lowest = float.MaxValue;
                 foreach (var p in appearance.Parts)
                 {
-                    var sprite = SnailComposer.Load(SnailComposer.LinePath(p.Type, p.ResourceKey));
+                    var sprite = SnailComposer.LoadFrame(SnailComposer.LinePath(p.Type, p.ResourceKey));
                     if (sprite != null && TryGetExtents(sprite, out var e) && e.Bottom < lowest) lowest = e.Bottom;
                 }
                 result.Foot = lowest == float.MaxValue ? 0f : lowest;
@@ -97,7 +97,13 @@ namespace SnailPet.Snail
             Color32[] px;
             try { px = tex.GetPixels32(); } catch (UnityException) { return false; }
 
-            int w = tex.width, h = tex.height;
+            // 경계와 마찬가지로 이 스프라이트가 쓰는 칸 안에서만 훑는다
+            var rect = sprite.rect;
+            int x0 = Mathf.Clamp(Mathf.RoundToInt(rect.x), 0, tex.width);
+            int y0 = Mathf.Clamp(Mathf.RoundToInt(rect.y), 0, tex.height);
+            int w = Mathf.Clamp(Mathf.RoundToInt(rect.width), 0, tex.width - x0);
+            int h = Mathf.Clamp(Mathf.RoundToInt(rect.height), 0, tex.height - y0);
+
             float ppu = sprite.pixelsPerUnit;
             Vector2 pivot = sprite.pivot;
 
@@ -116,7 +122,7 @@ namespace SnailPet.Snail
                 int lowest = -1;
                 for (int y = 0; y < h && lowest < 0; y++)
                 {
-                    int row = y * w;
+                    int row = (y + y0) * tex.width + x0;
                     for (int x = px0; x <= px1; x++)
                         if (px[row + x].a > 8) { lowest = y; break; }
                 }
@@ -144,16 +150,30 @@ namespace SnailPet.Snail
         public static bool TryGetTightRect(Sprite sprite, out Rect rect)
         {
             rect = default;
-            if (sprite == null || !TryScan(sprite.texture, out int minX, out int maxX, out int minY, out int maxY))
-                return false;
+            if (sprite == null) return false;
 
-            rect = new Rect(minX, minY, maxX - minX + 1, maxY - minY + 1);
+            // 시트면 첫 칸만 잘라 낸다. 통째로 재면 아이콘에 옆 칸까지 들어간다.
+            var frame = SnailComposer.FrameZero(sprite);
+            if (!TryScan(frame, out int minX, out int maxX, out int minY, out int maxY)) return false;
+
+            // 훑은 좌표는 그 칸 안에서의 것이다. 텍스처 좌표로 되돌려 준다 —
+            // 부르는 쪽이 이 값으로 텍스처를 직접 자른다.
+            var r = frame.rect;
+            rect = new Rect(r.x + minX, r.y + minY, maxX - minX + 1, maxY - minY + 1);
             return true;
         }
 
-        private static bool TryScan(Texture2D tex, out int minX, out int maxX, out int minY, out int maxY)
+        /// <summary>
+        /// 스프라이트가 텍스처의 어느 칸을 쓰는가. 결과는 <b>그 칸 안에서의</b> 픽셀 좌표다.
+        ///
+        /// 애니메이션 시트는 한 텍스처에 여러 칸이 이어 붙어 있어, 텍스처 전체를 훑으면
+        /// 옆 칸까지 재게 된다 — 눈 하나가 가로로 세 배가 되어 달팽이가 그만큼 작아진다.
+        /// </summary>
+        private static bool TryScan(Sprite sprite, out int minX, out int maxX, out int minY, out int maxY)
         {
             minX = maxX = minY = maxY = 0;
+
+            var tex = sprite.texture;
             if (tex == null) return false;
 
             Color32[] px;
@@ -165,12 +185,17 @@ namespace SnailPet.Snail
                 return false;
             }
 
-            int w = tex.width, h = tex.height;
+            var r = sprite.rect;
+            int x0 = Mathf.Clamp(Mathf.RoundToInt(r.x), 0, tex.width);
+            int y0 = Mathf.Clamp(Mathf.RoundToInt(r.y), 0, tex.height);
+            int w = Mathf.Clamp(Mathf.RoundToInt(r.width), 0, tex.width - x0);
+            int h = Mathf.Clamp(Mathf.RoundToInt(r.height), 0, tex.height - y0);
+
             minX = w; maxX = -1; minY = h; maxY = -1;
 
             for (int y = 0; y < h; y++)
             {
-                int row = y * w;
+                int row = (y + y0) * tex.width + x0;
                 for (int x = 0; x < w; x++)
                 {
                     if (px[row + x].a <= 8) continue;       // 거의 투명한 픽셀은 몸이 아니다
@@ -193,7 +218,7 @@ namespace SnailPet.Snail
 
             // Read/Write 가 꺼져 있으면 여기서 막힌다. SnailArtImporter 가 켜 주지만
             // 임포트 설정이 어긋나면 조용히 틀린 값을 쓰는 것보다 알리는 게 낫다.
-            if (!TryScan(tex, out int minX, out int maxX, out int minY, out int maxY)) return false;
+            if (!TryScan(sprite, out int minX, out int maxX, out int minY, out int maxY)) return false;
 
             // 피벗 기준 오프셋. 피벗 설정이 무엇이든 맞도록 sprite.pivot 을 직접 쓴다.
             float ppu = sprite.pixelsPerUnit;

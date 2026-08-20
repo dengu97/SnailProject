@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20 08:39:28",
+  "generatedAt": "2026-08-20 11:07:58",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -293,7 +293,20 @@
     "[안내_중복방]": 280,
     "[안내_없는방]": 281,
     "[안내_알배치]": 282,
-    "[안내_알생성]": 283
+    "[안내_알생성]": 283,
+    "[레어_천조각몸]": 284,
+    "[레어_천조각몸정보]": 285,
+    "[레어_슬라임몸]": 286,
+    "[레어_슬라임몸정보]": 287,
+    "[일반_나뭇잎더듬이]": 288,
+    "[일반_나뭇잎더듬이정보]": 289,
+    "[일반달팽이_눈10]": 290,
+    "[일반달팽이_눈10정보]": 291,
+    "[일반_버섯껍질01]": 292,
+    "[일반_버섯껍질정보]": 293,
+    "[일반_버섯껍질02]": 294,
+    "[일반달팽이_눈11]": 295,
+    "[일반달팽이_눈11정보]": 296
   },
   "tables": {
     "EnumData": [
@@ -424,7 +437,14 @@
       {"Id": 257, "NameId": 257, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Shell", "ResourceKey": "dragonfruitshell", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 258, "SellItem": 36, "SellCount": 6},
       {"Id": 259, "NameId": 259, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Shell", "ResourceKey": "fishshell", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 260, "SellItem": 36, "SellCount": 6},
       {"Id": 261, "NameId": 261, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Shell", "ResourceKey": "ballshell01", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 262, "SellItem": 36, "SellCount": 5},
-      {"Id": 264, "NameId": 264, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Shell", "ResourceKey": "ballshell02", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 265, "SellItem": 36, "SellCount": 5}
+      {"Id": 264, "NameId": 264, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Shell", "ResourceKey": "ballshell02", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 265, "SellItem": 36, "SellCount": 5},
+      {"Id": 284, "NameId": 284, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Body", "ResourceKey": "epicbody02", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 285, "SellItem": 36, "SellCount": 6},
+      {"Id": 286, "NameId": 286, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Body", "ResourceKey": "commonbody01", "IsUseColor": true, "Colors": ["slimebody"], "AppearWeight": 7, "InfoId": 287, "SellItem": 36, "SellCount": 6},
+      {"Id": 288, "NameId": 288, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "leaffeeler", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 289, "SellItem": 36, "SellCount": 5},
+      {"Id": 290, "NameId": 290, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "commoneyes10", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 291, "SellItem": 36, "SellCount": 5},
+      {"Id": 292, "NameId": 292, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Shell", "ResourceKey": "mushroomshell01", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 293, "SellItem": 36, "SellCount": 5},
+      {"Id": 294, "NameId": 294, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Shell", "ResourceKey": "mushroomshell02", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 293, "SellItem": 36, "SellCount": 5},
+      {"Id": 295, "NameId": 295, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "commoneyes11", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 296, "SellItem": 36, "SellCount": 5}
     ],
     "FoodData": [
       {"Id": 31, "FoodType": "vegetable", "NameId": 31, "RarityType": "Common", "FullPoint": 5, "HappyPoint": 3, "EatTime": 2, "BuffId": 0, "InfoId": 124, "ResourceKey": "food_lettuce", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 1, "PoopTime": 20, "ResourceSize": 1},
@@ -778,7 +798,20 @@
       {"Id": 280, "Kr": "지금 있는 방입니다."},
       {"Id": 281, "Kr": "존재하지 않는 방입니다."},
       {"Id": 282, "Kr": "알 목록에서 부화시킬 알을 선택해주세요."},
-      {"Id": 283, "Kr": "알을 얻었어요!"}
+      {"Id": 283, "Kr": "알을 얻었어요!"},
+      {"Id": 284, "Kr": "천 조각 몸"},
+      {"Id": 285, "Kr": "천 조각을 열심히 꼬매서 만든 몸이에요."},
+      {"Id": 286, "Kr": "슬라임 몸(파란색)"},
+      {"Id": 287, "Kr": "말랑거리고 살짝 투명한 슬라임같습니다."},
+      {"Id": 288, "Kr": "나뭇잎 더듬이"},
+      {"Id": 289, "Kr": "나뭇잎 형태로 변한 더듬이입니다."},
+      {"Id": 290, "Kr": "심술난 얼굴"},
+      {"Id": 291, "Kr": "심술이 잔뜩난 얼굴이네요."},
+      {"Id": 292, "Kr": "거대버섯 껍질(빨간색)"},
+      {"Id": 294, "Kr": "거대버섯 껍질(보라색)"},
+      {"Id": 293, "Kr": "거대한 버섯이 등에 자라났습니다!"},
+      {"Id": 295, "Kr": "웃는 얼굴"},
+      {"Id": 296, "Kr": "살짝 웃음기를 띤 얼굴입니다."}
     ],
     "UnlockData": [
       {"Id": 101, "ConditionType": "SnailLevel", "NeedConditionValue": 2, "CostItem": null, "CostCount": null}

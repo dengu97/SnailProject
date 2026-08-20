@@ -617,6 +617,13 @@ namespace SnailPet.Data
             new PartsDataRow(259, 259, 17, RarityType.Rare, PartsType.Shell, "fishshell", false, System.Array.Empty<string>(), 7, 260, 36, 6d),
             new PartsDataRow(261, 261, 2, RarityType.Common, PartsType.Shell, "ballshell01", false, System.Array.Empty<string>(), 10, 262, 36, 5d),
             new PartsDataRow(264, 264, 2, RarityType.Common, PartsType.Shell, "ballshell02", false, System.Array.Empty<string>(), 10, 265, 36, 5d),
+            new PartsDataRow(284, 284, 17, RarityType.Rare, PartsType.Body, "epicbody02", false, System.Array.Empty<string>(), 7, 285, 36, 6d),
+            new PartsDataRow(286, 286, 17, RarityType.Rare, PartsType.Body, "commonbody01", true, new string[] { "slimebody" }, 7, 287, 36, 6d),
+            new PartsDataRow(288, 288, 2, RarityType.Common, PartsType.Feeler, "leaffeeler", false, System.Array.Empty<string>(), 10, 289, 36, 5d),
+            new PartsDataRow(290, 290, 2, RarityType.Common, PartsType.Eyes, "commoneyes10", false, System.Array.Empty<string>(), 10, 291, 36, 5d),
+            new PartsDataRow(292, 292, 2, RarityType.Common, PartsType.Shell, "mushroomshell01", false, System.Array.Empty<string>(), 10, 293, 36, 5d),
+            new PartsDataRow(294, 294, 2, RarityType.Common, PartsType.Shell, "mushroomshell02", false, System.Array.Empty<string>(), 10, 293, 36, 5d),
+            new PartsDataRow(295, 295, 2, RarityType.Common, PartsType.Eyes, "commoneyes11", false, System.Array.Empty<string>(), 10, 296, 36, 5d),
         };
 
         public static readonly FoodDataRow[] FoodData = new FoodDataRow[]
@@ -997,6 +1004,19 @@ namespace SnailPet.Data
             new LanguageDataRow(281, "존재하지 않는 방입니다."),
             new LanguageDataRow(282, "알 목록에서 부화시킬 알을 선택해주세요."),
             new LanguageDataRow(283, "알을 얻었어요!"),
+            new LanguageDataRow(284, "천 조각 몸"),
+            new LanguageDataRow(285, "천 조각을 열심히 꼬매서 만든 몸이에요."),
+            new LanguageDataRow(286, "슬라임 몸(파란색)"),
+            new LanguageDataRow(287, "말랑거리고 살짝 투명한 슬라임같습니다."),
+            new LanguageDataRow(288, "나뭇잎 더듬이"),
+            new LanguageDataRow(289, "나뭇잎 형태로 변한 더듬이입니다."),
+            new LanguageDataRow(290, "심술난 얼굴"),
+            new LanguageDataRow(291, "심술이 잔뜩난 얼굴이네요."),
+            new LanguageDataRow(292, "거대버섯 껍질(빨간색)"),
+            new LanguageDataRow(294, "거대버섯 껍질(보라색)"),
+            new LanguageDataRow(293, "거대한 버섯이 등에 자라났습니다!"),
+            new LanguageDataRow(295, "웃는 얼굴"),
+            new LanguageDataRow(296, "살짝 웃음기를 띤 얼굴입니다."),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -1391,6 +1411,19 @@ namespace SnailPet.Data
             { "[안내_없는방]", 281 },
             { "[안내_알배치]", 282 },
             { "[안내_알생성]", 283 },
+            { "[레어_천조각몸]", 284 },
+            { "[레어_천조각몸정보]", 285 },
+            { "[레어_슬라임몸]", 286 },
+            { "[레어_슬라임몸정보]", 287 },
+            { "[일반_나뭇잎더듬이]", 288 },
+            { "[일반_나뭇잎더듬이정보]", 289 },
+            { "[일반달팽이_눈10]", 290 },
+            { "[일반달팽이_눈10정보]", 291 },
+            { "[일반_버섯껍질01]", 292 },
+            { "[일반_버섯껍질정보]", 293 },
+            { "[일반_버섯껍질02]", 294 },
+            { "[일반달팽이_눈11]", 295 },
+            { "[일반달팽이_눈11정보]", 296 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

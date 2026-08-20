@@ -27,6 +27,7 @@ namespace SnailPet.Snail
         private Mesh _mesh;
         private Vector3[] _rest;      // 변형 전 로컬 좌표
         private Vector3[] _work;      // 매 프레임 여기에 써서 넘긴다
+        private Vector2[] _uv;        // 애니메이션 파츠는 칸이 바뀔 때 여기만 다시 쓴다
 
         /// <summary>이 파츠가 발바닥 변형을 받는가. 껍질처럼 단단한 것은 false.</summary>
         public bool Soft = true;
@@ -59,7 +60,7 @@ namespace SnailPet.Snail
 
             _rest = new Vector3[vx * vy];
             _work = new Vector3[vx * vy];
-            var uv = new Vector2[vx * vy];
+            var uv = _uv = new Vector2[vx * vy];
 
             for (int j = 0; j < vy; j++)
             {
@@ -101,6 +102,34 @@ namespace SnailPet.Snail
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             mr.receiveShadows = false;
             mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+        }
+
+        /// <summary>
+        /// 애니메이션 시트의 다른 칸으로 갈아 끼운다.
+        ///
+        /// 칸끼리 크기·피벗이 같으므로 정점은 그대로 두고 UV 만 옮긴다 — 변형 중이어도
+        /// 그림만 바뀌고 모양은 안 흔들린다. 같은 텍스처라 머티리얼도 안 건드린다.
+        /// </summary>
+        public void SetFrame(Sprite frame)
+        {
+            if (_mesh == null || _uv == null || frame == null) return;
+
+            var r = frame.rect;
+            var tex = frame.texture;
+            if (tex == null) return;
+
+            int vx = Cols + 1, vy = Rows + 1;
+            for (int j = 0; j < vy; j++)
+            {
+                float fv = j / (float)Rows;
+                for (int i = 0; i < vx; i++)
+                {
+                    float fu = i / (float)Cols;
+                    _uv[j * vx + i] = new Vector2((r.x + r.width * fu) / tex.width,
+                                                  (r.y + r.height * fv) / tex.height);
+                }
+            }
+            _mesh.uv = _uv;
         }
 
         /// <summary>텍스처가 같으면 머티리얼을 공유한다. 그리는 순서는 Renderer 쪽에 있으므로 안전하다.</summary>

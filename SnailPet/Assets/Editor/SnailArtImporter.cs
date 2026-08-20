@@ -77,6 +77,67 @@ namespace SnailPet.EditorTools
             return new Vector4(m, m, m, m);
         }
 
+        /// <summary>
+        /// 애니메이션 시트는 칸이 이어 붙어 있어 그만큼 넉넉히 잡아야 한 칸의 해상도가 남는다.
+        /// 칸 수는 가로÷세로다 — 캔버스가 정사각이라 파일만 보면 알 수 있다.
+        ///
+        /// 최대 크기는 2의 거듭제곱만 쓸 수 있으므로 <c>MaxTextureSize×칸수</c> 이상인 가장 작은
+        /// 값을 고른다. 칸 폭이 정확히 나누어떨어지지 않아도 자를 때 정수로 맞추므로 상관없다.
+        /// </summary>
+        private static int MaxTextureSizeFor(string path)
+        {
+            int frames = FrameCountOf(path);
+            if (frames < 2) return MaxTextureSize;
+
+            int want = MaxTextureSize * frames;
+            int size = MaxTextureSize;
+            while (size < want && size < 4096) size *= 2;
+
+            return size;
+        }
+
+        /// <summary>
+        /// 이 그림이 몇 칸짜리인가. 정사각이면 1, 가로가 세로의 정수배면 그 배수다.
+        /// 어중간한 비율이면 시트로 볼 수 없으므로 알리고 한 장으로 둔다.
+        /// </summary>
+        private static int FrameCountOf(string path)
+        {
+            if (!TryReadPngSize(path, out int width, out int height)) return 1;
+            if (width <= height) return 1;
+
+            int frames = Mathf.RoundToInt(width / (float)height);
+            if (frames >= 2 && width == frames * height) return frames;
+
+            Debug.LogWarning($"[SnailPet] {Path.GetFileName(path)} 은 가로가 세로의 정수배가 아닙니다 " +
+                             $"({width}x{height}). 애니메이션 시트라면 칸이 어긋납니다.");
+            return 1;
+        }
+
+        /// <summary>
+        /// PNG 머리(IHDR)에서 원본 크기를 읽는다.
+        ///
+        /// 임포트 전이라 텍스처 에셋이 아직 없고, 원본 크기를 주는 API 는 버전을 탄다.
+        /// 파일 앞 24바이트만 보면 확실하다.
+        /// </summary>
+        private static bool TryReadPngSize(string assetPath, out int width, out int height)
+        {
+            width = height = 0;
+
+            string full = Path.GetFullPath(Path.Combine(Application.dataPath, "..", assetPath));
+            if (!File.Exists(full)) return false;
+
+            var head = new byte[24];
+            using (var f = File.OpenRead(full))
+                if (f.Read(head, 0, head.Length) < head.Length) return false;
+
+            // 89 50 4E 47 = \x89PNG. 8바이트 서명 + 길이·타입 8바이트 뒤에 가로·세로가 온다.
+            if (head[0] != 0x89 || head[1] != 0x50 || head[2] != 0x4E || head[3] != 0x47) return false;
+
+            width  = (head[16] << 24) | (head[17] << 16) | (head[18] << 8) | head[19];
+            height = (head[20] << 24) | (head[21] << 16) | (head[22] << 8) | head[23];
+            return width > 0 && height > 0;
+        }
+
         private void OnPreprocessTexture()
         {
             string path = assetPath.Replace('\\', '/');
@@ -111,7 +172,7 @@ namespace SnailPet.EditorTools
             importer.filterMode          = FilterMode.Bilinear;
             importer.wrapMode            = TextureWrapMode.Clamp;
             importer.spritePixelsPerUnit = PixelsPerUnit;
-            importer.maxTextureSize      = MaxTextureSize;
+            importer.maxTextureSize      = MaxTextureSizeFor(path);
             importer.textureCompression  = TextureImporterCompression.CompressedHQ;
 
             // 알파 스캔으로 발선을 재려면 CPU 에서 픽셀을 읽을 수 있어야 한다.

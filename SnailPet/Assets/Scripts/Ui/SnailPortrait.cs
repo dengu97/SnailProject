@@ -169,7 +169,7 @@ namespace SnailPet.Ui
             {
                 if (p.Type != SnailPet.Data.PartsType.Eyes) continue;
 
-                var sprite = SnailComposer.Load(SnailComposer.LinePath(p.Type, p.ResourceKey));
+                var sprite = SnailComposer.LoadFrame(SnailComposer.LinePath(p.Type, p.ResourceKey));
                 if (sprite != null && SnailMetrics.TryMeasure(sprite, out var e))
                 {
                     cx = (e.Left + e.Right) * 0.5f;

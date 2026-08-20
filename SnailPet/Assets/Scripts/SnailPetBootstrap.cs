@@ -1411,7 +1411,7 @@ namespace SnailPet
             {
                 if (p.Type != PartsType.Body) continue;
 
-                var sprite = SnailComposer.Load(SnailComposer.LinePath(p.Type, p.ResourceKey));
+                var sprite = SnailComposer.LoadFrame(SnailComposer.LinePath(p.Type, p.ResourceKey));
                 if (sprite == null) continue;
                 if (!SnailMetrics.TryMeasureSole(sprite, SoleSamples, out var sole,
                                                  out float minX, out float maxX)) continue;
@@ -1437,7 +1437,7 @@ namespace SnailPet
             foreach (var p in _appearance.Parts)
             {
                 if (p.Type != PartsType.Shell) continue;
-                var sprite = SnailComposer.Load(SnailComposer.LinePath(p.Type, p.ResourceKey));
+                var sprite = SnailComposer.LoadFrame(SnailComposer.LinePath(p.Type, p.ResourceKey));
                 if (sprite != null && SnailMetrics.TryMeasure(sprite, out var e))
                 {
                     _shellBottomLocalY = e.Bottom;
@@ -3154,6 +3154,23 @@ namespace SnailPet
         /// 화면 좌표에서 그 셋을 다시 계산하는 대신, 커서를 달팽이 로컬 좌표로 역변환해
         /// 실측 몸통 경계와 그대로 비교한다. 회전·반전·스케일이 자동으로 반영된다.
         /// </summary>
+        /// <summary>파츠 한 장이 몇 px 로 들어왔는가. 몸통을 기준으로 본다.</summary>
+        private string DescribeCanvas()
+        {
+            foreach (var p in _appearance.Parts)
+            {
+                if (p.Type != PartsType.Body) continue;
+
+                var sprite = SnailComposer.LoadFrame(SnailComposer.LinePath(p.Type, p.ResourceKey));
+                if (sprite == null) continue;
+
+                float units = sprite.rect.width / Mathf.Max(0.0001f, sprite.pixelsPerUnit);
+                return $"{p.ResourceKey} 텍스처 {sprite.rect.width:0}x{sprite.rect.height:0}px " +
+                       $"· PPU {sprite.pixelsPerUnit:0.###} → 월드 {units:0}";
+            }
+            return "몸통 없음";
+        }
+
         private bool CursorOnSnail()
         {
             if (_snail == null || !_bounds.Measured) return false;
@@ -3236,9 +3253,12 @@ namespace SnailPet
         {
             Say("");
             Say("[6] 렌더 진단");
+            // 파츠가 실제로 몇 px 로 들어왔는지. 애니메이션 시트의 칸을 이 크기에 맞춰 자르므로
+            // 여기가 어긋나면 그 파츠만 크기가 다르게 나온다.
             Say($"      Screen        : {Screen.width}x{Screen.height} (요청 {_vWidth}x{_vHeight})");
             Say($"      변형 그룹     : {DescribeGroups(_composed)}");
             Say($"      몸통 경계     : L{_bounds.Left:0} R{_bounds.Right:0} 발{_bounds.Foot:0} T{_bounds.Top:0} (스케일 전)");
+            Say($"      파츠 캔버스   : {DescribeCanvas()}");
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             Say($"      박스          : {BoxName}  {_box}");
             Say($"      앵커          : {_anchor.Edge} T={_anchor.T:0.00} 회전={BoxWalk.RotationOf(_anchor.Edge)}도");
