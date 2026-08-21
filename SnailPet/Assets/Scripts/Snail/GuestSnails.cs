@@ -30,6 +30,9 @@ namespace SnailPet.Snail
 
             /// <summary>이 손님이 걷는 속도(px/s). 제 레벨의 LevelData 에서 나온다.</summary>
             public float Speed;
+
+            /// <summary>이 손님의 파츠에 딸린 이펙트. 손님이 나가면 같이 치운다.</summary>
+            public List<SparkField.Attached> Effects;
             public Vector2 Screen;       // 발이 놓인 화면 좌표
             public float RotationDeg;
             public bool Flip;
@@ -38,7 +41,14 @@ namespace SnailPet.Snail
         private readonly Transform _parent;
         private readonly Dictionary<string, Guest> _guests = new Dictionary<string, Guest>();
 
-        public GuestField(Transform parent) { _parent = parent; }
+        /// <summary>파츠에 딸린 이펙트를 붙일 곳. 내 달팽이와 같은 것을 쓴다.</summary>
+        private readonly SparkField _sparks;
+
+        public GuestField(Transform parent, SparkField sparks = null)
+        {
+            _parent = parent;
+            _sparks = sparks;
+        }
 
         public IEnumerable<Guest> Items => _guests.Values;
         public int Count => _guests.Count;
@@ -95,8 +105,13 @@ namespace SnailPet.Snail
             // 크기·속도는 내 달팽이와 같은 규칙이다. 레벨만 알면 나머지는 데이터에서 나온다.
             var row = SnailGrowth.At(level);
 
+            // 남의 달팽이도 제 파츠에 딸린 이펙트를 달고 다닌다.
+            // 자리는 아래 Tick 에서 루트 자세가 정해진 뒤에 맞춘다.
+            var effects = _sparks?.AttachTo(appearance, composed.Root.transform);
+
             return new Guest
             {
+                Effects = effects,
                 Name = name,
                 Look = card,
                 Root = composed.Root.transform,
@@ -141,7 +156,12 @@ namespace SnailPet.Snail
 
         private static void Destroy(Guest g)
         {
-            if (g?.Root != null) Object.Destroy(g.Root.gameObject);
+            if (g == null) return;
+
+            // 이펙트는 루트의 자식이 아니라 따로 서 있다. 안 치우면 손님이 나가도 남는다.
+            SparkField.Detach(g.Effects);
+
+            if (g.Root != null) Object.Destroy(g.Root.gameObject);
         }
     }
 }

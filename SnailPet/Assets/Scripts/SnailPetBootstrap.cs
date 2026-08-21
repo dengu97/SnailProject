@@ -318,7 +318,11 @@ namespace SnailPet
             _poops = new PoopField(transform);
             _eggs = new EggField(transform);
             _sparks = new SparkField(transform);
-            _guestField = new GuestField(transform);
+
+            // 파츠에 딸린 이펙트는 담을 곳이 생긴 뒤라야 붙일 수 있다.
+            // (ActivateSnail 은 이 위에서 이미 한 번 지나갔다)
+            RebuildPartEffects();
+            _guestField = new GuestField(transform, _sparks);
             _coins = new CoinPop(transform);
             _present = new SnailPresent(transform);
 
@@ -403,9 +407,33 @@ namespace SnailPet
             MeasureSole();
 
             ApplyGrowth();
+            RebuildPartEffects();
 
             // 먹으러 가던 목표는 이 개체의 것이 아니다
             _target = null;
+        }
+
+        // ── 파츠에 딸린 이펙트 ──
+        //
+        // PartsData.EffectPath 에 이름이 적힌 파츠는 그 자리에서 이펙트가 계속 돈다.
+        // 프리팹이 looping 이라 스스로 끝나지 않으므로, 개체가 바뀌면 여기서 치운다.
+
+        /// <summary>내 달팽이에 붙어 도는 이펙트. 손님 것은 GuestField 가 따로 들고 있다.</summary>
+        private List<SparkField.Attached> _partEffects = new List<SparkField.Attached>();
+
+        /// <summary>확인용(F6)으로 붙여 본 이펙트. 파츠 것과 같은 길로 따라다닌다.</summary>
+        private readonly List<SparkField.Attached> _testEffect = new List<SparkField.Attached>();
+
+        private void RebuildPartEffects()
+        {
+            SparkField.Detach(_partEffects);
+
+            // 개체를 세우는 것이 이펙트 담을 곳보다 먼저다. 그때는 조용히 넘기고,
+            // 담을 곳이 생긴 뒤에 한 번 더 부른다.
+            if (_appearance == null || _sparks == null || _snail == null) return;
+
+            _partEffects = _sparks.AttachTo(_appearance, _snail);
+            if (_partEffects.Count > 0) Say($"      [이펙트] 내 달팽이에 {_partEffects.Count}개 붙었습니다");
         }
 
         /// <summary>
@@ -1867,6 +1895,9 @@ namespace SnailPet
                     g.Root.position = VirtualToWorld(g.Screen.x, g.Screen.y);
                     g.Root.localRotation = Quaternion.Euler(0f, 0f, g.RotationDeg);
                     g.Root.localScale = new Vector3(g.Flip ? -g.Scale : g.Scale, g.Scale, 1f);
+
+                    // 파츠에 딸린 이펙트도 같이 따라간다. 자세가 정해진 뒤라야 자리가 맞는다.
+                    SparkField.Place(g.Effects, g.Root);
                 }
             }
 
@@ -1918,6 +1949,8 @@ namespace SnailPet
 
                 StepPresent(pose, footDepth, px);
                 StepPoop(pose, footDepth, px);
+                SparkField.Place(_partEffects, _snail);   // 루트 자세가 정해진 뒤라야 자리가 맞는다
+                SparkField.Place(_testEffect, _snail);
             }
 
             // 반전 여부를 읽어야 하므로 루트 스케일이 정해진 뒤에 적용한다
@@ -2723,10 +2756,47 @@ namespace SnailPet
             float bodyPx = (_bounds.Top - _bounds.Foot) * _scale * _pxPerWorld;
             var at = _snail.position + new Vector3(0f, bodyPx * 0.5f, 0f);
 
+            // 붙어 도는 이펙트가 제자리에 있는지도 같이 본다
+            foreach (var fx in _testEffect)
+                if (fx.Root != null)
+                    Say($"      [이펙트] 확인용 @({fx.Root.position.x:0},{fx.Root.position.y:0}) " +
+                        $"· 달팽이 @({_snail.position.x:0},{_snail.position.y:0})");
+
+            foreach (var fx in _partEffects)
+                if (fx.Root != null)
+                    Say($"      [이펙트] 붙어 있음: {fx.Root.name} @({fx.Root.position.x:0},{fx.Root.position.y:0}) " +
+                        $"· 달팽이 @({_snail.position.x:0},{_snail.position.y:0})");
+
+            if (_guestField != null)
+                foreach (var g in _guestField.Items)
+                {
+                    if (g.Effects == null || g.Root == null) continue;
+                    foreach (var fx in g.Effects)
+                        if (fx.Root != null)
+                            Say($"      [이펙트] 손님 {g.Name} @({g.Root.position.x:0},{g.Root.position.y:0}) " +
+                                $"· 이펙트 @({fx.Root.position.x:0},{fx.Root.position.y:0})");
+                }
+
             // 구워 둔 프리팹이 있으면 그것이 이긴다. 값은 프리팹에서 조절한다.
-            if (_sparks.Play("spark", at) != null)
+            //
+            // 붙였다 뗐다 한다. 프리팹이 looping 이면 스스로 안 끝나므로, 한 번 더 누르면
+            // 치우는 편이 확인하기 좋다. 붙은 것은 파츠 이펙트와 같은 길로 달팽이를 따라간다.
+            if (_testEffect.Count > 0)
             {
-                Say($"      [이펙트] 프리팹 spark @({at.x:0},{at.y:0})");
+                SparkField.Detach(_testEffect);
+                Say("      [이펙트] 확인용 이펙트를 뗐습니다 (F6)");
+                return;
+            }
+
+            // 몸 한가운데(합성 로컬). 달팽이가 벽을 타고 돌아도 이 자리를 따라간다.
+            var local = new Vector3((_bounds.Left + _bounds.Right) * 0.5f,
+                                    (_bounds.Foot + _bounds.Top) * 0.5f, 0f);
+
+            var stuck = _sparks.Play("spark01", _snail.TransformPoint(local));
+            if (stuck != null)
+            {
+                _testEffect.Add(new SparkField.Attached { Root = stuck.transform, Local = local });
+                Say($"      [이펙트] 확인용 이펙트를 달팽이에 붙였습니다 (F6, 다시 누르면 뗌)");
                 return;
             }
 
@@ -2756,7 +2826,7 @@ namespace SnailPet
 
             foreach (var g in _guestField.Items)
                 Say($"      [치트] 손님 {g.Name}: {(g.Bounds.Right - g.Bounds.Left) * g.Scale * _pxPerWorld:0}px, " +
-                    $"{g.Speed:0}px/s");
+                    $"{g.Speed:0}px/s · 파츠 이펙트 {(g.Effects == null ? 0 : g.Effects.Count)}개");
         }
 
         /// <summary>

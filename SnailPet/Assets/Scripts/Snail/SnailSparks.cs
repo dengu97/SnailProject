@@ -172,5 +172,80 @@ namespace SnailPet.Snail
         }
 
         private readonly Dictionary<string, GameObject> _prefabs = new Dictionary<string, GameObject>();
+
+        // ── 파츠에 딸린 이펙트 ──
+        //
+        // PartsData.EffectPath 에 이름이 적힌 파츠는 그 자리에서 이펙트가 돈다.
+        // 내 달팽이와 손님 달팽이가 같은 길을 쓴다 — 두 벌이 되면 한쪽만 고치게 된다.
+
+        /// <summary>붙어 있는 이펙트 하나. <see cref="Local"/> 은 합성 안에서의 자리다.</summary>
+        public struct Attached
+        {
+            public Transform Root;
+            public Vector3 Local;
+        }
+
+        /// <summary>
+        /// 외형에서 <c>EffectPath</c> 가 적힌 파츠를 찾아 그 자리에 이펙트를 붙인다.
+        /// 자리는 파츠 그림의 한가운데다 — 파츠가 전부 같은 캔버스에 그려져 있어 그 값이
+        /// 곧 합성 안에서의 자리가 된다.
+        /// </summary>
+        public List<Attached> AttachTo(SnailAppearance look, Transform snailRoot)
+        {
+            var list = new List<Attached>();
+            if (look == null || snailRoot == null) return list;
+
+            foreach (var p in look.Parts)
+            {
+                if (p.Accessory.HasValue) continue;      // 악세서리에는 그 칸이 없다
+                if (!Data.GameData.PartsDataById.TryGetValue(p.PartsId, out var row)) continue;
+                if (string.IsNullOrEmpty(row.EffectPath)) continue;
+
+                var sprite = SnailComposer.LoadFrame(SnailComposer.LinePath(p.Type, p.ResourceKey));
+                if (sprite == null || !SnailMetrics.TryMeasure(sprite, out var e)) continue;
+
+                var local = new Vector3((e.Left + e.Right) * 0.5f, (e.Bottom + e.Top) * 0.5f, 0f);
+
+                var go = Play(row.EffectPath, snailRoot.TransformPoint(local));
+                if (go == null)
+                {
+                    Debug.LogWarning("[SnailPet] 이펙트 프리팹을 찾지 못했습니다: " +
+                                     p.ResourceKey + " → " + row.EffectPath);
+                    continue;
+                }
+
+                list.Add(new Attached { Root = go.transform, Local = local });
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// 붙어 있는 이펙트를 제자리에 둔다. <b>루트 자세가 정해진 뒤에</b> 불러야 한다.
+        /// 회전은 주지 않는다 — 벽을 타고 돌아도 반짝임은 똑바로 서는 편이 낫다.
+        /// </summary>
+        public static void Place(List<Attached> attached, Transform snailRoot)
+        {
+            if (attached == null || attached.Count == 0 || snailRoot == null) return;
+
+            for (int i = attached.Count - 1; i >= 0; i--)
+            {
+                if (attached[i].Root == null) { attached.RemoveAt(i); continue; }
+                attached[i].Root.position = snailRoot.TransformPoint(attached[i].Local);
+            }
+        }
+
+        /// <summary>
+        /// 붙어 있던 것을 치운다. 프리팹이 looping 이면 스스로 끝나지 않으므로
+        /// (StopAction=Destroy 가 안 걸린다) 세운 쪽이 반드시 치워야 한다.
+        /// </summary>
+        public static void Detach(List<Attached> attached)
+        {
+            if (attached == null) return;
+
+            foreach (var a in attached)
+                if (a.Root != null) Object.Destroy(a.Root.gameObject);
+
+            attached.Clear();
+        }
     }
 }
