@@ -2679,13 +2679,14 @@ namespace SnailPet
             var egg = SnailBreeding.EggFor(mine.Rarity, mateRarity);
             if (egg == null) return;           // EggData 가 비었다. 낳을 그릇이 없다.
 
-            var gene = SnailBreeding.Cross(mine.Appearance, mateLook, _rng);
+            var gene = SnailBreeding.Cross(mine.Appearance, mateLook, _rng, out int mutations);
             _eggDue.Add(new OwnedEgg { EggId = egg.Id, Gene = gene });
             mine.EggsToday++;
 
             Say($"      [알] {who} 의 달팽이와 알을 낳았습니다 — {Loc.ById(egg.NameId)} " +
                 $"(오늘 {mine.EggsToday}/{Config.CreateEggCount})");
-            Say("      [알] 물려받은 모습: " + gene);
+            Say("      [알] 물려받은 모습: " + gene
+                + (mutations > 0 ? "  (돌연변이 " + mutations + "곳)" : ""));
         }
 
         /// <summary>알 낳기 추첨에 쓰는 주사위. 매번 새로 만들면 같은 눈이 나온다.</summary>
