@@ -270,7 +270,7 @@ namespace SnailPet
             _status = "달팽이·먹이를 끌어 옮길 수 있습니다. 놓으면 아래로 떨어집니다.";
             Say("");
             Say("→ 끄려면 설정 화면의 「종료」를 누르세요. (에디터에서는 ESC)");
-            Say("→ 확인용 치트: F7 = 가짜 손님 · F8 = 알 낳기(가짜 짝) · F9 = 선물 바로 준비 · F10 = 포만도 0");
+            Say("→ 확인용 치트: F6 = 별 이펙트 · F7 = 가짜 손님 · F8 = 알 낳기(가짜 짝) · F9 = 선물 바로 준비 · F10 = 포만도 0");
             WriteReport();
         }
 
@@ -317,6 +317,7 @@ namespace SnailPet
             _crumbs = new CrumbField(transform);
             _poops = new PoopField(transform);
             _eggs = new EggField(transform);
+            _sparks = new SparkField(transform);
             _guestField = new GuestField(transform);
             _coins = new CoinPop(transform);
             _present = new SnailPresent(transform);
@@ -2317,9 +2318,9 @@ namespace SnailPet
         // 열쇠를 둔다. 창이 포커스를 갖지 않아 Unity 의 Input 이 안 되므로 마우스와 같이
         // 전역 키 상태를 읽는다 — 다른 창을 쓰는 중에도 눌리니 흔치 않은 키를 골랐다.
 
-        private const int VK_F7 = 0x76, VK_F8 = 0x77, VK_F9 = 0x78, VK_F10 = 0x79, VK_F11 = 0x7A;
+        private const int VK_F6 = 0x75, VK_F7 = 0x76, VK_F8 = 0x77, VK_F9 = 0x78, VK_F10 = 0x79, VK_F11 = 0x7A;
 
-        private bool _f7Was, _f8Was, _f9Was, _f10Was, _f11Was;
+        private bool _f6Was, _f7Was, _f8Was, _f9Was, _f10Was, _f11Was;
 
         /// <summary>
         /// 확인용. 아직 안 채운 첫 도감 칸을 지금 화면의 달팽이 모습으로 채운다.
@@ -2382,6 +2383,12 @@ namespace SnailPet
             // 남의 달팽이도 혼자서는 볼 수가 없다. 내 것을 한 장 복사해 손님으로 세운다.
             bool f7 = TransparentWindow.IsKeyDown(VK_F7);
             if (f7 && !_f7Was) FakeGuestCheat();
+
+            // 이펙트를 눈으로 보려면 터뜨려 봐야 한다. 자리는 달팽이 몸 한가운데.
+            bool f6 = TransparentWindow.IsKeyDown(VK_F6);
+            if (f6 && !_f6Was) SparkOnSnail("star01", 12);
+
+            _f6Was = f6;
 
             _f7Was = f7;
             _f8Was = f8;
@@ -2698,6 +2705,38 @@ namespace SnailPet
 
         /// <summary>알 낳기 추첨에 쓰는 주사위. 매번 새로 만들면 같은 눈이 나온다.</summary>
         private readonly System.Random _rng = new System.Random();
+
+        // ── 이펙트 ──
+
+        /// <summary>이미지 한 장을 여러 개 뿌리는 곳. 자리는 부르는 쪽이 월드로 넘긴다.</summary>
+        private SparkField _sparks;
+
+        /// <summary>
+        /// 달팽이 몸 한가운데에서 한 번 터뜨린다.
+        /// 달팽이 루트의 자식으로 넣지 않는다 — 거기에는 좌우 반전과 몸통 변형이 걸려 있어
+        /// 이펙트까지 뒤집히고 늘어난다. 말풍선과 같은 이유다.
+        /// </summary>
+        private void SparkOnSnail(string art, int count)
+        {
+            if (_sparks == null || _snail == null) return;
+
+            float bodyPx = (_bounds.Top - _bounds.Foot) * _scale * _pxPerWorld;
+            var at = _snail.position + new Vector3(0f, bodyPx * 0.5f, 0f);
+
+            // 구워 둔 프리팹이 있으면 그것이 이긴다. 값은 프리팹에서 조절한다.
+            if (_sparks.Play("spark", at) != null)
+            {
+                Say($"      [이펙트] 프리팹 spark @({at.x:0},{at.y:0})");
+                return;
+            }
+
+            // 달팽이가 작아도 눈에 띄게. 실제로 쓸 때는 부르는 쪽이 크기를 정한다.
+            float pixels = Mathf.Max(16f, bodyPx * 0.6f);
+
+            var ps = _sparks.Burst(art, at, count, pixels, spread: Mathf.Max(60f, bodyPx * 3f));
+            Say($"      [이펙트] {art} x{count} @({at.x:0},{at.y:0}) 크기 {pixels:0}px " +
+                $"→ 살아 있는 파티클 {(ps == null ? 0 : ps.particleCount)}");
+        }
 
         /// <summary>
         /// 치트(F7). 방에 사람이 없어도 손님 달팽이를 한 마리 세운다.
