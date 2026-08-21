@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 
 namespace SnailPet.Pipeline
 {
-    public enum FieldKind { Int, NullableInt, Double, Bool, String, DateTime, ListInt, ListString, Enum, Unknown }
+    public enum FieldKind { Int, NullableInt, Double, NullableDouble, Bool, String, DateTime, ListInt, ListString, Enum, Unknown }
 
     /// <summary>2행에 적힌 타입 문자열을 해석한 결과.</summary>
     public sealed class FieldType
@@ -37,6 +37,10 @@ namespace SnailPet.Pipeline
                 case "nullableint":    t.Kind = FieldKind.NullableInt; break;
                 case "double":
                 case "float":          t.Kind = FieldKind.Double; break;
+
+                // 빈 칸을 0 과 구분해야 하는 소수. 「안 적음」이 기본값을 뜻하는 열에 쓴다.
+                case "nullabledouble":
+                case "nullablefloat":  t.Kind = FieldKind.NullableDouble; break;
                 case "bool":           t.Kind = FieldKind.Bool; break;
                 case "string":
                 case "nullablestring": t.Kind = FieldKind.String; break;
@@ -50,6 +54,7 @@ namespace SnailPet.Pipeline
             FieldKind.Int         => "int",
             FieldKind.NullableInt => "int?",
             FieldKind.Double      => "double",
+            FieldKind.NullableDouble => "double?",
             FieldKind.Bool        => "bool",
             FieldKind.String      => "string",
             FieldKind.DateTime    => "System.DateTime",

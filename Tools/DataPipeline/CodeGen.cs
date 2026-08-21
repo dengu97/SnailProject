@@ -184,8 +184,9 @@ namespace SnailPet.Pipeline
                     return IdRegistry.IsToken(v) ? ids.Resolve(v).ToString() : int.Parse(v).ToString();
 
                 case FieldKind.Double:
-                    return empty ? "0d"
-                         : double.Parse(v, NumberStyles.Any, CultureInfo.InvariantCulture)
+                case FieldKind.NullableDouble:
+                    if (empty) return c.Type.Kind == FieldKind.Double ? "0d" : "null";
+                    return double.Parse(v, NumberStyles.Any, CultureInfo.InvariantCulture)
                                  .ToString("R", CultureInfo.InvariantCulture) + "d";
 
                 case FieldKind.Bool:
@@ -236,8 +237,9 @@ namespace SnailPet.Pipeline
                     return IdRegistry.IsToken(v) ? ids.Resolve(v).ToString() : int.Parse(v).ToString();
 
                 case FieldKind.Double:
-                    return empty ? "0"
-                         : double.Parse(v, NumberStyles.Any, CultureInfo.InvariantCulture)
+                case FieldKind.NullableDouble:
+                    if (empty) return c.Type.Kind == FieldKind.Double ? "0" : "null";
+                    return double.Parse(v, NumberStyles.Any, CultureInfo.InvariantCulture)
                                  .ToString("R", CultureInfo.InvariantCulture);
 
                 case FieldKind.Bool:

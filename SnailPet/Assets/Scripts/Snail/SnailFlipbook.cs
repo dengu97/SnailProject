@@ -38,7 +38,8 @@ namespace SnailPet.Snail
         /// 이 마리에 시트 파츠를 하나 건다. 컴포넌트가 없으면 붙이면서 시작한다.
         /// 시작 칸을 조금씩 어긋나게 두어, 같은 파츠를 여러 마리가 써도 한 몸처럼 깜빡이지 않는다.
         /// </summary>
-        public static Reel Play(GameObject root, Sprite[] frames, DeformableSprite soft, SpriteRenderer rigid)
+        public static Reel Play(GameObject root, Sprite[] frames, DeformableSprite soft, SpriteRenderer rigid,
+                                float fps = SnailComposer.DefaultFps)
         {
             var book = root.GetComponent<SnailFlipbook>() ?? root.AddComponent<SnailFlipbook>();
 
@@ -47,10 +48,16 @@ namespace SnailPet.Snail
                 Frames = frames,
                 Soft = soft,
                 Rigid = rigid,
-                Time = Random.value * frames.Length / SnailComposer.DefaultFps,
+                Fps = fps > 0f ? fps : SnailComposer.DefaultFps,
+                Time = Random.value * frames.Length / Mathf.Max(1f, fps),
             };
 
             book._reels.Add(reel);
+
+            // 애니메이션 파츠는 드물다. 어떤 속도로 도는지 한 줄 남겨 두면
+            // 시트 값을 고친 뒤 화면을 안 보고도 반영됐는지 알 수 있다.
+            Debug.Log($"[SnailPet] 애니메이션 파츠: {root.name}/{(soft != null ? soft.name : rigid.name)} " +
+                      $"{frames.Length}칸 · {reel.Fps:0.#}fps");
             return reel;
         }
 

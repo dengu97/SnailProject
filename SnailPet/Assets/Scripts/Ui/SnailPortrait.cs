@@ -81,6 +81,11 @@ namespace SnailPet.Ui
             composed.Root.transform.SetParent(_root.transform, false);
             SetLayerRecursive(composed.Root, Layer);
 
+            // 초상은 한 번 찍고 마는 정지 그림이다. 애니메이션 파츠를 그냥 두면 찍는 순간의
+            // 칸이 걸려 목록 썸네일마다 다른 칸이 나온다. 첫 칸에서 세워 둔다.
+            var flip = composed.Root.GetComponent<SnailFlipbook>();
+            if (flip != null) flip.enabled = false;
+
             Texture = new RenderTexture(Mathf.Max(1, widthPx * Supersample),
                                         Mathf.Max(1, heightPx * Supersample), 0,
                                         RenderTextureFormat.ARGB32)

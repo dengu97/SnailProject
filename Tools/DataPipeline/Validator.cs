@@ -154,6 +154,7 @@ namespace SnailPet.Pipeline
                                 break;
 
                             case FieldKind.Double:
+                            case FieldKind.NullableDouble:
                                 if (!double.TryParse(v, System.Globalization.NumberStyles.Any,
                                         System.Globalization.CultureInfo.InvariantCulture, out _))
                                     rep.Error(where, $"{c.Name} 의 값 <{v}> 을 숫자로 읽을 수 없습니다.");

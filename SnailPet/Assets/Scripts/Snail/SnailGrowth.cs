@@ -71,7 +71,12 @@ namespace SnailPet.Snail
         public static LevelDataRow At(int level)
         {
             EnsureIndex();
-            return _byLevel.TryGetValue(level, out var r) ? r : GameData.LevelData[0];
+            if (_byLevel.TryGetValue(level, out var r)) return r;
+
+            // 모르는 레벨은 가까운 쪽으로 붙인다. 상대가 나보다 새 데이터를 쓰면 우리 표에
+            // 없는 레벨이 올 수 있는데, 그때 1 레벨로 떨어뜨리면 큰 달팽이가 갑자기 작아진다.
+            return level > _maxLevel && _byLevel.TryGetValue(_maxLevel, out var top)
+                 ? top : GameData.LevelData[0];
         }
 
         public LevelDataRow Current => _byLevel.TryGetValue(Level, out var r) ? r : GameData.LevelData[0];

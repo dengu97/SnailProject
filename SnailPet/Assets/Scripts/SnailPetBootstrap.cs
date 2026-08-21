@@ -550,6 +550,8 @@ namespace SnailPet
             // 방에 들어가면 내 달팽이가 어떻게 생겼는지 올린다. 남들은 이걸 받아 그린다.
             SteamHub.Entered += made =>
             {
+                // 방마다 따로 올려야 한다. 같은 모습이어도 새 방에는 아직 아무것도 안 올라가 있다.
+                _publishedCard = null;
                 PublishMySnail();
 
                 // 만든 것과 들어간 것은 문구가 다르다
@@ -616,8 +618,34 @@ namespace SnailPet
 
             // 레벨도 같이 올린다. 남의 화면에서 제 크기·속도로 걷는 데 쓰인다.
             string card = SnailShare.WriteCard(active.Name, active.Rarity, _growth.Level, active.Dressed());
+            if (card == _publishedCard) return;
+
+            _publishedCard = card;
             SteamHub.PublishSnail(card);
             Say("      [스팀] 내 달팽이를 올렸습니다 (" + card.Length + "자)");
+        }
+
+        /// <summary>지금 방에 올려 둔 한 장. 바뀐 게 없으면 다시 안 올린다.</summary>
+        private string _publishedCard;
+
+        /// <summary>바뀐 게 없는지 재보는 주기(초).</summary>
+        private const float PublishEvery = 1f;
+        private float _publishAt;
+
+        /// <summary>
+        /// 방에 있는 동안 내 모습을 최신으로 유지한다.
+        ///
+        /// 예전에는 방에 들어갈 때 딱 한 번만 올렸다. 그래서 방 안에서 달팽이를 바꾸거나
+        /// 옷을 갈아입거나 레벨이 오르면 남들에게는 옛 모습이 그대로 남아 있었다.
+        /// 바뀌는 길목마다 부르면 하나 빠뜨리기 쉬워, 한 곳에서 「달라졌는가」만 본다.
+        /// </summary>
+        private void StepPublish()
+        {
+            if (!SteamHub.InLobby) { _publishedCard = null; return; }
+            if (_t < _publishAt) return;
+
+            _publishAt = _t + PublishEvery;
+            PublishMySnail();
         }
 
         /// <summary>멀티 화면을 지금 상태로 다시 그린다. 목록·방·참가자가 한 번에 맞춰진다.</summary>
@@ -1867,6 +1895,7 @@ namespace SnailPet
 
             TickIncubator(Time.deltaTime);
             TickBreeding(Time.deltaTime);
+            StepPublish();         // 방 안에서 모습이 바뀌었으면 다시 올린다
             StepEggDrops(px);      // 낳은 알을 구석에 내놓는다. 박스가 정해진 뒤라야 한다.
 
             // 벽에 붙어 실제로 나아가고 있을 때만 발바닥에 물결이 지나간다

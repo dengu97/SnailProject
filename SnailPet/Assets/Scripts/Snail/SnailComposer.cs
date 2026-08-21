@@ -151,10 +151,13 @@ namespace SnailPet.Snail
                 int baseOrder = p.SortOrder * 2;
                 string label = p.Accessory?.ToString() ?? p.Type.ToString();
 
-                if (!string.IsNullOrEmpty(p.ColorKey))
-                    AddLayer(composed, parent, soft, ColorPath(p.Folder, p.ColorKey), baseOrder, label + "_color");
+                // 애니메이션 파츠면 선화와 색이 같은 속도로 같이 돌아야 한다
+                float fps = AnimFpsOf(p);
 
-                AddLayer(composed, parent, soft, LinePath(p.Folder, p.ResourceKey), baseOrder + 1, label + "_line");
+                if (!string.IsNullOrEmpty(p.ColorKey))
+                    AddLayer(composed, parent, soft, ColorPath(p.Folder, p.ColorKey), baseOrder, label + "_color", fps);
+
+                AddLayer(composed, parent, soft, LinePath(p.Folder, p.ResourceKey), baseOrder + 1, label + "_line", fps);
             }
             return composed;
         }
@@ -170,11 +173,25 @@ namespace SnailPet.Snail
         }
 
         /// <summary>
+        /// 이 파츠를 초당 몇 칸으로 돌릴지. <c>PartsData.AnimFps</c> 가 비어 있으면 기본값이다.
+        /// 악세서리에는 그 칸이 없으므로 늘 기본값이 된다.
+        /// </summary>
+        private static float AnimFpsOf(SnailPartRef part)
+        {
+            if (!part.Accessory.HasValue
+                && GameData.PartsDataById.TryGetValue(part.PartsId, out var row)
+                && row.AnimFps.HasValue && row.AnimFps.Value > 0)
+                return (float)row.AnimFps.Value;
+
+            return DefaultFps;
+        }
+
+        /// <summary>
         /// 말랑한 파츠는 격자 메시로, 단단한 파츠는 그냥 SpriteRenderer 로 만든다.
         /// 안 휘는 것까지 메시로 깔 이유가 없다.
         /// </summary>
         private static void AddLayer(Composed composed, Transform parent, bool soft,
-                                     string path, int sortingOrder, string name)
+                                     string path, int sortingOrder, string name, float fps)
         {
             var sprite = Load(path);
             if (sprite == null) return;
@@ -189,7 +206,7 @@ namespace SnailPet.Snail
                 if (d == null) return;
 
                 composed.Soft.Add(d);
-                if (frames != null) composed.Flips.Add(SnailFlipbook.Play(composed.Root, frames, d, null));
+                if (frames != null) composed.Flips.Add(SnailFlipbook.Play(composed.Root, frames, d, null, fps));
                 return;
             }
 
@@ -199,10 +216,17 @@ namespace SnailPet.Snail
             sr.sprite = first;
             sr.sortingOrder = sortingOrder;
 
-            if (frames != null) composed.Flips.Add(SnailFlipbook.Play(composed.Root, frames, null, sr));
+            if (frames != null) composed.Flips.Add(SnailFlipbook.Play(composed.Root, frames, null, sr, fps));
         }
 
-        /// <summary>씬을 갈아엎을 때 캐시가 남아 있으면 파괴된 스프라이트를 참조하게 된다.</summary>
-        public static void ClearCache() => _cache.Clear();
+        /// <summary>
+        /// 씬을 갈아엎을 때 캐시가 남아 있으면 파괴된 스프라이트를 참조하게 된다.
+        /// 잘라 둔 칸도 그 텍스처를 물고 있으므로 같이 버린다.
+        /// </summary>
+        public static void ClearCache()
+        {
+            _cache.Clear();
+            _frames.Clear();
+        }
     }
 }
