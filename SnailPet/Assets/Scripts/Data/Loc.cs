@@ -56,11 +56,14 @@ namespace SnailPet.Data
             return token;
         }
 
-        /// <summary>자리표시자가 있는 글자. 예: `[레벨]` = "{0}살" → Format("[레벨]", 3) → "3살".</summary>
+        /// <summary>
+        /// 자리표시자가 있는 글자. 예: `[레벨]` = "{0}살" → Format("[레벨]", 3) → "3살".
+        /// 자리표시자 뒤에 조사가 붙어 있으면 넣은 말의 받침에 맞춰 골라 준다 (<see cref="Josa"/>).
+        /// </summary>
         public static string Format(string token, params object[] args)
         {
             string text = Text(token);
-            try { return string.Format(text, args); }
+            try { return Josa.Format(text, args); }
             catch (System.FormatException)
             {
                 // 번역문에 중괄호를 잘못 넣으면 여기로 온다. 앱을 죽일 일은 아니다.

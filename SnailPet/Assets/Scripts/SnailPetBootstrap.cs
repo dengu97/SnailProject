@@ -1383,6 +1383,11 @@ namespace SnailPet
             bool wasActive = _player.ActiveId == soldId;
             long before = _player.Coins;
 
+            // 팔고 나면 목록에 없다. 안내 문구에 쓸 이름을 미리 챙겨 둔다.
+            string soldName = null;
+            foreach (var s in _player.Snails)
+                if (s.Id == soldId) { soldName = s.Name; break; }
+
             var result = Shop.TrySellSnail(_player, soldId);
             if (result != Shop.Result.Ok)
             {
@@ -1406,6 +1411,7 @@ namespace SnailPet
             RefreshSnail();
             RefreshFoods();
             _ui.SetCoin(_player.Coins);
+            _ui.NoticeSnailSold(soldName);
 
             Say($"      [UI] 달팽이 판매: +{_player.Coins - before}코인 → {_player}");
         }
@@ -2522,6 +2528,7 @@ namespace SnailPet
             if (slot < 0) { Say("      [UI] 부화기가 가득 찼습니다"); return; }
 
             RefreshEggs();
+            _ui.NoticeEggHatching();
 
             var row = GameData.EggDataById[eggId];
             Say($"      [UI] {Loc.ById(row.NameId)} 를 {slot}번 칸에 넣음 ({row.HatchTime}초)");

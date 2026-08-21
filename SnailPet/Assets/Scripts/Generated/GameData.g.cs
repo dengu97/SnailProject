@@ -993,6 +993,8 @@ namespace SnailPet.Data
             new LanguageDataRow(310, "맛있는 크림이 들어있는 롤케이크 껍질입니다."),
             new LanguageDataRow(307, "크루아상 껍질"),
             new LanguageDataRow(308, "프랑스출신 달팽이인가봐요."),
+            new LanguageDataRow(327, "{0}를 보냈습니다. 바이바이!"),
+            new LanguageDataRow(328, "알을 부화기에 넣었습니다."),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -1430,6 +1432,8 @@ namespace SnailPet.Data
             { "[레어더듬이]", 324 },
             { "[레어눈]", 325 },
             { "[에픽껍질]", 326 },
+            { "[안내_달팽이판매]", 327 },
+            { "[안내_알부화시작]", 328 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

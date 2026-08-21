@@ -97,6 +97,12 @@ namespace SnailPet.Ui
             /// <summary>구석에 놓인 알을 주웠을 때.</summary>
             public const string EggGot      = "[안내_알생성]";
 
+            /// <summary>알을 부화기에 넣었을 때.</summary>
+            public const string EggHatching = "[안내_알부화시작]";
+
+            /// <summary>달팽이를 팔았을 때. {0} 에 달팽이 이름이 들어간다.</summary>
+            public const string SnailSold   = "[안내_달팽이판매]";
+
             /// <summary>빈 즐겨찾기 칸을 눌렀을 때의 안내.</summary>
             public const string NoticeFavorite = "[안내_즐겨찾기]";
 
@@ -1210,6 +1216,17 @@ namespace SnailPet.Ui
 
         /// <summary>구석에 놓인 알을 주웠다고 알린다.</summary>
         public void NoticeEggGot() => ShowNotice(SnailPet.Data.Loc.Text(Keys.EggGot));
+
+        /// <summary>알을 부화기에 넣었다고 알린다.</summary>
+        public void NoticeEggHatching() => ShowNotice(SnailPet.Data.Loc.Text(Keys.EggHatching));
+
+        /// <summary>
+        /// 달팽이를 팔았다고 알린다. 이름을 안 지은 개체는 목록에서와 같이 「이름 없음」으로 부른다 —
+        /// 문구에 빈칸이 생기면 무엇을 판 것인지 알 수 없다.
+        /// </summary>
+        public void NoticeSnailSold(string name) =>
+            ShowNotice(SnailPet.Data.Loc.Format(Keys.SnailSold,
+                string.IsNullOrWhiteSpace(name) ? SnailPet.Data.Loc.Text(Keys.NoName) : name));
 
         /// <summary>방을 옮길지 묻는다. 「예」를 눌러야 지금 방에서 나온다.</summary>
         public void AskRoomSwap(Action onYes) => ShowAsk(SnailPet.Data.Loc.Text(Keys.RoomSwap), onYes);
