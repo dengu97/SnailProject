@@ -41,6 +41,15 @@ namespace SnailPet.EditorTools
         public const string UiShapeRoot = "Assets/Resources/Ui/Shape";
 
         /// <summary>
+        /// 파티클 이펙트 그림. 머티리얼이 텍스처로 받으므로 Sprite 로 바꿀 필요가 없다.
+        ///
+        /// 기본값으로 들어오면 <b>밉맵이 켜져</b> 작게 그릴 때 흐린 단계가 섞이고,
+        /// <b>Alpha Is Transparency 가 꺼져</b> 반투명 가장자리에 검은 테두리가 생긴다.
+        /// 둘 다 「탁해 보이는」 원인이라 여기서 잡아 준다.
+        /// </summary>
+        public const string EffectRoot = "Assets/Resources/Effects";
+
+        /// <summary>
         /// 도형 아트를 화면 크기의 몇 배로 그리는가.
         ///
         /// 9-슬라이스의 모서리는 <b>원본 픽셀 크기 그대로</b> 찍힌다. 그래서 1:1 로 그리면
@@ -142,6 +151,19 @@ namespace SnailPet.EditorTools
         {
             string path = assetPath.Replace('\\', '/');
 
+            if (path.StartsWith(EffectRoot))
+            {
+                var fx = (TextureImporter)assetImporter;
+                fx.textureType         = TextureImporterType.Default;
+                fx.alphaIsTransparency = true;      // 반투명 가장자리에 검은 테두리가 생기지 않게
+                fx.mipmapEnabled       = false;     // 작게 그릴 때 흐린 단계가 섞이지 않게
+                fx.filterMode          = FilterMode.Bilinear;
+                fx.wrapMode            = TextureWrapMode.Clamp;
+                fx.maxTextureSize      = 512;       // 화면에는 수십 px 로 나온다
+                fx.textureCompression  = TextureImporterCompression.CompressedHQ;
+                return;
+            }
+
             if (path.StartsWith(UiRoot))
             {
                 var ui = (TextureImporter)assetImporter;
@@ -191,6 +213,11 @@ namespace SnailPet.EditorTools
             }
 
             AssetDatabase.ImportAsset(ArtRoot, ImportAssetOptions.ImportRecursive | ImportAssetOptions.ForceUpdate);
+
+            // 이펙트 그림도 규칙이 있으므로 같이 다시 읽는다
+            if (Directory.Exists(Path.GetFullPath(Path.Combine(Application.dataPath, "..", EffectRoot))))
+                AssetDatabase.ImportAsset(EffectRoot, ImportAssetOptions.ImportRecursive | ImportAssetOptions.ForceUpdate);
+
             AssetDatabase.Refresh();
 
             var guids = AssetDatabase.FindAssets("t:Sprite", new[] { ArtRoot });

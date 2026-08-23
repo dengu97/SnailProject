@@ -155,7 +155,7 @@ namespace SnailPet.Snail
                     PartsId = row.Id,
                     Type = row.PartsType,
                     ResourceKey = row.ResourceKey,
-                    ColorKey = string.IsNullOrEmpty(p.color) ? null : p.color,
+                    ColorKey = SnailParts.KeepColor(row, p.color),
                 });
             }
             return look.Parts.Count > 0 ? look : null;
@@ -225,7 +225,7 @@ namespace SnailPet.Snail
                             PartsId = row.Id,
                             Type = row.PartsType,
                             ResourceKey = row.ResourceKey,
-                            ColorKey = string.IsNullOrEmpty(p.color) ? null : p.color,
+                            ColorKey = SnailParts.KeepColor(row, p.color),
                         });
                     }
 
@@ -348,7 +348,7 @@ namespace SnailPet.Snail
                                 ResourceKey = row.ResourceKey,
                                 // JsonUtility 는 null 을 "" 로 적는다. 색을 안 쓰는 파츠는
                                 // 갓 부화한 개체와 똑같이 null 로 되돌려 놓는다.
-                                ColorKey = string.IsNullOrEmpty(p.color) ? null : p.color,
+                                ColorKey = SnailParts.KeepColor(row, p.color),
                             });
                         }
 

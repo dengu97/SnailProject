@@ -96,7 +96,7 @@ namespace SnailPet.Snail
                     PartsId = row.Id,
                     Type = row.PartsType,
                     ResourceKey = row.ResourceKey,
-                    ColorKey = string.IsNullOrEmpty(color) ? null : color,
+                    ColorKey = SnailParts.KeepColor(row, color),
                 });
             }
 

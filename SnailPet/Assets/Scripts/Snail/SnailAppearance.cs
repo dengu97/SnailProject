@@ -38,6 +38,28 @@ namespace SnailPet.Snail
             ColorKey == null ? ResourceKey : ResourceKey + " (" + ColorKey + ")";
     }
 
+    /// <summary>파츠 데이터를 되살릴 때 쓰는 잣대.</summary>
+    public static class SnailParts
+    {
+        /// <summary>
+        /// 되살릴 색. <b>그 파츠가 지금도 쓰는 색일 때만</b> 살린다.
+        ///
+        /// 색은 세이브와 남의 카드에 <b>이름으로</b> 적혀 있어서, 아트와 시트에서 그 색이
+        /// 빠져도 글자는 그대로 남는다. 그러면 없는 그림을 찾다가 그 부위가 비어 보인다.
+        /// 데이터에 없는 색은 「색 안 씀」으로 돌려 선화만 그리게 한다.
+        /// </summary>
+        public static string KeepColor(PartsDataRow row, string color)
+        {
+            if (row == null || string.IsNullOrEmpty(color)) return null;
+            if (!row.IsUseColor || row.Colors == null) return null;
+
+            foreach (var c in row.Colors)
+                if (c == color) return color;
+
+            return null;
+        }
+    }
+
     /// <summary>개체 하나의 외형. 부화 결과이자 합성의 입력.</summary>
     public sealed class SnailAppearance
     {
