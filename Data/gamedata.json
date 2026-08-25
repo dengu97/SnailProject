@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-22 00:01:35",
+  "generatedAt": "2026-08-25 11:44:22",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -350,7 +350,18 @@
     "[에픽_용암몸02]": 337,
     "[에픽_용암몸02정보]": 338,
     "[낫]": 339,
-    "[낫정보]": 340
+    "[낫정보]": 340,
+    "[짝꿍슬롯]": 341,
+    "[짝꿍슬롯정보]": 342,
+    "[배치하기]": 343,
+    "[짝꿍안내]": 344,
+    "[짝꿍비우기]": 345,
+    "[짝꿍배치변경]": 346,
+    "[짝꿍달팽이]": 347,
+    "[짝꿍달팽이자리]": 348,
+    "[짝꿍달팽이자리정보]": 349,
+    "[알발견]": 350,
+    "[알발견정보]": 351
   },
   "tables": {
     "EnumData": [
@@ -505,8 +516,8 @@
       {"Level": 20, "LevelUpTime": 3600, "NeedFullPoint": 105, "NeedHappyPoint": 105, "UseFullPointTime": 120, "UseHappyPointTime": 120, "Speed": 10.5, "Size": 11, "CoinCoolTime": 120, "ItemId": 36, "ItemCount": 90, "SellAdvantage": 3}
     ],
     "BubbleData": [
-      {"Id": 52, "ResourceKey": "bubble_coin", "ResourceSize": 2},
-      {"Id": 254, "ResourceKey": "bubble_hungry", "ResourceSize": 2}
+      {"Id": 52, "ResourceKey": "bubble_coin", "ResourceSize": 2, "SortOrder": 100},
+      {"Id": 254, "ResourceKey": "bubble_hungry", "ResourceSize": 2, "SortOrder": 50}
     ],
     "LevelUpAdvantage": [
       {"NeedHappyPointPercent": 0.5, "NeedFullPointPercent": 0.5, "Acceleration": 0.2, "BuffId": null},
@@ -856,13 +867,28 @@
       {"Id": 336, "Kr": "몸이 너무 뜨거웠던걸까요?"},
       {"Id": 338, "Kr": "몸이 너무 차가웠던걸까요?"},
       {"Id": 339, "Kr": "낫"},
-      {"Id": 340, "Kr": "열심히 농사 마무리하고 왔다네요."}
+      {"Id": 340, "Kr": "수확의 계절이 왔습니다!"},
+      {"Id": 341, "Kr": "짝꿍 슬롯"},
+      {"Id": 342, "Kr": "{0}살 이상의 달팽이를 짝꿍 슬롯에 배치할 수 있습니다."},
+      {"Id": 343, "Kr": "배치하기"},
+      {"Id": 344, "Kr": "{0}살 이상의 달팽이가 없어요."},
+      {"Id": 345, "Kr": "짝꿍 비우기"},
+      {"Id": 346, "Kr": "짝꿍 달팽이로 배치된 달팽이입니다.\n메인 달팽이로 옮길까요?"},
+      {"Id": 347, "Kr": "짝꿍 달팽이란?"},
+      {"Id": 348, "Kr": "짝꿍 달팽이 자리"},
+      {"Id": 349, "Kr": "- 달팽이와 짝을 만들어줄 수 있는 자리입니다.\n- 짝꿍 달팽이는 특정 나이 이상의 달팽이만 배치할 수 있습니다.\n- 짝꿍 달팽이는 옮기거나 만질수는 있지만, 성장하거나 밥을 먹을 수는 없습니다."},
+      {"Id": 350, "Kr": "알 발견?"},
+      {"Id": 351, "Kr": "- 짝꿍 달팽이와 내 달팽이가 놀다보면, 둘 사이의 알이 발견되기도 한답니다."}
     ],
     "UnlockData": [
       {"Id": 101, "ConditionType": "SnailLevel", "NeedConditionValue": 2, "CostItem": null, "CostCount": null}
     ],
     "GameConfig": [
-      {"MutationWeight": 5, "FullDecayPerTick": 1, "HappyDecayPerTick": 1, "PixelsPerSpeed": 16, "PixelsPerSize": 10, "FoodGravity": 1600, "CreateEggCooltime": 1800, "CreateEggPercent": 0.5, "CreateEggPlusPercent": 0.1, "CreateEggCount": 3, "MutationWeight2": 5, "Info": null}
+      {"MutationWeight": 5, "FullDecayPerTick": 1, "HappyDecayPerTick": 1, "PixelsPerSpeed": 16, "PixelsPerSize": 10, "FoodGravity": 1600, "CreateEggCooltime": 1800, "CreateEggPercent": 0.5, "CreateEggPlusPercent": 0.1, "CreateEggCount": 3, "MutationWeight2": 5, "MateSlotLevel": 5, "Info": null}
+    ],
+    "ContentsGuide": [
+      {"GroupId": 347, "MainTitleId": 347, "SubTitleId": 348, "InfoId": 349},
+      {"GroupId": 347, "MainTitleId": null, "SubTitleId": 350, "InfoId": 351}
     ]
   }
 }

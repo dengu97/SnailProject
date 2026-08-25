@@ -57,5 +57,8 @@ namespace SnailPet.Data
 
         /// <summary>달팽이 한 마리가 하루에 낳을 수 있는 알 개수.</summary>
         public static int CreateEggCount => (int)Of(Row?.CreateEggCount ?? 0, 3.0, nameof(CreateEggCount));
+
+        /// <summary>짝꿍 슬롯에 놓을 수 있는 최소 레벨(=나이). 이보다 어린 개체는 못 놓는다.</summary>
+        public static int MateSlotLevel => (int)Of(Row?.MateSlotLevel ?? 0, 10.0, nameof(MateSlotLevel));
     }
 }

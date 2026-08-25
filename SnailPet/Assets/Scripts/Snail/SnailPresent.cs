@@ -81,7 +81,8 @@ namespace SnailPet.Snail
 
             _renderer = go.AddComponent<SpriteRenderer>();
             _renderer.sprite = sprite;
-            _renderer.sortingOrder = 10000;      // 달팽이보다 항상 앞
+            // 달팽이보다 항상 앞. 말풍선끼리의 앞뒤는 시트의 SortOrder 가 정한다.
+            _renderer.sortingOrder = SnailBubble.BaseSortingOrder + (row != null ? row.SortOrder : 0);
             _renderer.enabled = false;
 
             if (sprite != null && SnailMetrics.TryMeasure(sprite, out var e) && e.Width > 0.01f)

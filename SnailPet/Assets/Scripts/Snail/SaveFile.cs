@@ -96,6 +96,9 @@ namespace SnailPet.Snail
         {
             public int version;
             public int activeId;
+
+            /// <summary>짝꿍 슬롯. 나중에 더한 칸이라 옛 세이브에는 없다(0 = 비어 있음).</summary>
+            public int mateId;
             public SnailDto[] snails;
             public int[] eggs;
 
@@ -241,6 +244,7 @@ namespace SnailPet.Snail
             {
                 version = Version,
                 activeId = player.ActiveId,
+                mateId = player.MateId,
                 eggs = player.EggIds(),
                 eggGenes = ToGenes(player.Eggs),
                 looseEggs = IdsOf(player.LooseEggs),
@@ -323,11 +327,12 @@ namespace SnailPet.Snail
             if (root.snails != null)
                 foreach (var s in root.snails)
                 {
+                    // 적어 둔 rarity 는 안 읽는다. 등급은 파츠에서 나오므로 되살릴 것이 없다 —
+                    // 옛 세이브에 「에픽인데 에픽 파츠가 없는」 개체가 있으면 여기서 저절로 고쳐진다.
                     var snail = new OwnedSnail
                     {
                         Id = s.id,
                         Name = s.name,
-                        Rarity = (RarityType)s.rarity,
                         Appearance = new SnailAppearance(),
                         Growth = new SnailGrowth(),
                     };
@@ -385,6 +390,7 @@ namespace SnailPet.Snail
                 }
 
             player.ActiveId = root.activeId;
+            player.MateId = root.mateId;
 
             // 몸통이 없으면 발선을 잴 수 없어 합성이 무너진다. 그런 개체는 낼 수 없다.
             if (player.Active == null || !player.Active.Appearance.TryGetBody(out _))

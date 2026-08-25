@@ -14,6 +14,12 @@ namespace SnailPet.Snail
     /// </summary>
     public sealed class SnailBubble
     {
+        /// <summary>
+        /// 말풍선은 달팽이보다 항상 앞이다. 여기에 시트의 <c>SortOrder</c> 를 더해 앞뒤를 가른다.
+        /// 여러 개가 같은 자리에 겹쳐 뜨므로 어느 것이 위로 오는지는 데이터가 정한다.
+        /// </summary>
+        public const int BaseSortingOrder = 10000;
+
         private readonly Transform _root;
         private readonly SpriteRenderer _renderer;
 
@@ -24,7 +30,7 @@ namespace SnailPet.Snail
         /// <param name="token">BubbleData 토큰. 시트에 있으면 거기 크기·그림을 쓴다.</param>
         /// <param name="fallbackKey">시트에 그 토큰이 없을 때 쓸 그림 이름.</param>
         /// <param name="defaultSize">시트에 없을 때 쓸 ResourceSize.</param>
-        public SnailBubble(Transform parent, string token, string fallbackKey, float defaultSize, int sortingOrder)
+        public SnailBubble(Transform parent, string token, string fallbackKey, float defaultSize)
         {
             var row = GameData.IdByToken.TryGetValue(token, out int id)
                    && GameData.BubbleDataById.TryGetValue(id, out var r) ? r : null;
@@ -42,7 +48,7 @@ namespace SnailPet.Snail
 
             _renderer = go.AddComponent<SpriteRenderer>();
             _renderer.sprite = sprite;
-            _renderer.sortingOrder = sortingOrder;
+            _renderer.sortingOrder = BaseSortingOrder + (row != null ? row.SortOrder : 0);
             _renderer.enabled = false;
 
             if (sprite != null && SnailMetrics.TryMeasure(sprite, out var e) && e.Width > 0.01f)

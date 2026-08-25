@@ -166,15 +166,34 @@ namespace SnailPet.Snail
                 ? row.AppearWeight : 0;
 
         /// <summary>
-        /// 낳은 알이 어느 행인가. 부모 중 <b>높은 등급</b>을 따라간다.
-        /// 그 등급의 알이 데이터에 없으면 (전설 등) 있는 것 중 가장 높은 것으로 내린다.
+        /// 섞은 결과의 등급. <b>파츠 중 가장 높은 등급</b>이다.
+        ///
+        /// 부모의 등급이 아니라 실제로 물려받은 파츠를 본다 — 에픽 부모에게서 나왔어도
+        /// 일반 파츠만 물려받았으면 일반이고, 반대로 돌연변이로 높은 파츠가 하나 나오면
+        /// 그 알은 그 등급이 된다(2026-08-22 결정).
+        /// </summary>
+        public static RarityType RarityOf(SnailAppearance look)
+        {
+            var best = RarityType.Common;
+            if (look == null) return best;
+
+            foreach (var p in look.Parts)
+            {
+                if (p.Accessory.HasValue) continue;
+                if (!GameData.PartsDataById.TryGetValue(p.PartsId, out var row)) continue;
+
+                if (row.RarityType > best) best = row.RarityType;
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// 그 등급의 알 행. 데이터에 그 등급이 없으면 (전설 등) 있는 것 중 가장 높은 것으로 내린다.
         /// 알 행은 껍데기일 뿐이고 태어날 모습은 이미 정해져 있지만, 부화 시간과
         /// 개체의 등급이 여기서 나온다.
         /// </summary>
-        public static EggDataRow EggFor(RarityType mine, RarityType theirs)
+        public static EggDataRow EggFor(RarityType want)
         {
-            var want = mine >= theirs ? mine : theirs;
-
             EggDataRow best = null;
             foreach (var e in GameData.EggData)
             {

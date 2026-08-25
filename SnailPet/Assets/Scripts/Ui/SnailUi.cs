@@ -100,6 +100,19 @@ namespace SnailPet.Ui
             /// <summary>알을 부화기에 넣었을 때.</summary>
             public const string EggHatching = "[안내_알부화시작]";
 
+            // ── 짝꿍 슬롯 ──
+            public const string MateTitle = "[짝꿍슬롯]";
+            public const string MateInfo  = "[짝꿍슬롯정보]";
+            public const string MatePut   = "[배치하기]";
+            public const string MateEmpty = "[짝꿍안내]";
+            public const string MateClear = "[짝꿍비우기]";
+
+            /// <summary>짝꿍으로 놓인 달팽이를 메인으로 옮기려 할 때 묻는 말.</summary>
+            public const string MateSwap  = "[짝꿍배치변경]";
+
+            /// <summary>짝꿍 도움말의 ContentsGuide.GroupId. 물음표를 누르면 이 묶음이 뜬다.</summary>
+            public const string MateHelp = "[짝꿍달팽이]";
+
             /// <summary>달팽이를 팔았을 때. {0} 에 달팽이 이름이 들어간다.</summary>
             public const string SnailSold   = "[안내_달팽이판매]";
 
@@ -257,6 +270,11 @@ namespace SnailPet.Ui
             if (_rewardGroup == null) BuildRewardGroup();
             if (_guestGroup == null) BuildGuestGroup();
             if (_askGroup == null) BuildAskGroup();
+            if (_mateGroup == null) BuildMateGroup();
+            if (_helpGroup == null) BuildHelpGroup();
+
+            // 짝꿍 칸도 프리팹에는 없다. 패널 가장자리에 붙는다.
+            if (_mateSlot == null) BuildMateSlot();
 
             // 상품 미리보기 뒤의 달팽이 실루엣. 상점 패널은 프리팹에 있으므로 여기서 붙인다.
             if (_pickShape == null) _pickShape = ShapeBehind(_pickIcon, "PickShape");
@@ -692,6 +710,7 @@ namespace SnailPet.Ui
                 Close?.Invoke();
             });
             Hook(_maximizeBtn, () => { SetMaximized(true);  Maximize?.Invoke(); });
+            Hook(_mateSlotBtn, () => MateSlotTapped?.Invoke());
 
             // 최소화 창의 최대화는 처음 모습(접힌 달팽이 정보)으로 되돌린다. 목록까지 펼치지는 않는다.
             Hook(_miniMaxBtn,  () => SetMinimized(false));
@@ -725,6 +744,19 @@ namespace SnailPet.Ui
             Hook(_roomOutBtn,     () => LeaveRoom?.Invoke());
             Hook(_roomCodeBtn,    CopyRoomCode);
             Hook(_roomRenameBtn,  () => ShowRoomName(_roomName != null ? _roomName.text : ""));
+
+            // 짝꿍 팝업. 프리팹에 심을 수 있는 묶음이라 배선이 빌더 안에 있으면 안 된다.
+            Hook(_mateHelpBtn, () => ShowHelp(Keys.MateHelp));
+            Hook(_mateClearBtn, () => { HidePopup(); MateCleared?.Invoke(); });
+            Hook(_mateOkBtn, () =>
+            {
+                if (_mateSel < 0 || _mateSel >= _mateIds.Length) return;
+
+                int id = _mateIds[_mateSel];
+                HidePopup();
+                MatePicked?.Invoke(id);
+            });
+            for (int i = 0; i < Count(_mateRows); i++) { int k = i; Hook(_mateRows[i]?.Button, () => PickMateRow(k)); }
 
             Hook(_askNo, HidePopup);
             Hook(_askYes, () =>
@@ -1028,6 +1060,105 @@ namespace SnailPet.Ui
             // 이 둘은 다른 아이콘과 달리 아트에 색이 들어 있다. 물들이면 안 된다.
             _closeBtn = IconButton(_detailRoot, Above(At.Close), "btn_close", "Close", tint: Color.white);
             _maximizeBtn = IconButton(_detailRoot, Above(At.Maximize), "btn_maximize", "Maximize", tint: Color.white);
+
+            BuildMateSlot();
+        }
+
+        // ── 짝꿍 슬롯 ──
+        //
+        // 패널 오른쪽 가장자리의 칸 하나. 비어 있으면 +, 놓여 있으면 그 달팽이 얼굴이 들어간다.
+        // 누르면 짝꿍을 고르는 팝업이 열린다.
+
+        [SerializeField] private RectTransform _mateSlot;
+        [SerializeField] private Image _mateSlotBox;
+        [SerializeField] private RawImage _mateSlotFace;
+        [SerializeField] private Text _mateSlotPlus;
+        [SerializeField] private Button _mateSlotBtn;
+
+        /// <summary>짝꿍 슬롯을 눌렀다. 고르는 팝업을 열어 달라는 뜻이다.</summary>
+        public event Action MateSlotTapped;
+
+        private void BuildMateSlot()
+        {
+            var at = Above(At.MateSlot);
+
+            _mateSlot = NewRect("MateSlot", _detailRoot);
+            Place(_mateSlot, at);
+
+            _mateSlotBox = Backdrop(_mateSlot.gameObject, UiSprites.Shape.Slot2, UiTheme.RowSlot);
+
+            // 빈 칸은 알 부화기와 같은 규칙 — 가운데에 + 하나
+            _mateSlotPlus = Label(_mateSlot, new RectInt(0, 0, at.width, at.height), "+", 16, UiTheme.Ink);
+            _mateSlotPlus.raycastTarget = false;
+
+            _mateSlotFace = FaceView(_mateSlot, new RectInt(0, 0, at.width, at.height));
+
+            _mateSlotBtn = _mateSlot.gameObject.AddComponent<Button>();
+            _mateSlotBtn.targetGraphic = _mateSlotBox;
+
+            // 누르는 것을 잇는 곳은 Rewire 다 — 프리팹에서 온 칸도 거기서 이어져야 한다.
+        }
+
+        /// <summary>
+        /// 프리팹에 짝꿍 칸을 심는다(에디터 도구용). 이미 있으면 아무것도 안 하고 false.
+        /// 실행 중에 짓는 것과 같은 부품이라 자리·모양이 같다.
+        /// </summary>
+        public bool BuildMateSlotForPrefab()
+        {
+            if (_mateSlot != null) return false;
+
+            BuildMateSlot();
+            return true;
+        }
+
+        /// <summary>
+        /// 프리팹에 팝업 묶음(짝꿍·도움말)을 심는다(에디터 도구용). 심은 것이 있으면 true.
+        ///
+        /// 이 둘은 팝업 판의 자식이라 프리팹에 없었고, 그래서 손으로 옮길 수가 없었다.
+        /// 심고 나면 프리팹의 것이 되므로 실행할 때 다시 짓지 않는다 —
+        /// 글자·그림·배선은 살아날 때 <see cref="Bind"/> 와 <see cref="Rewire"/> 가 다시 채운다.
+        /// </summary>
+        public bool BuildPopupGroupsForPrefab()
+        {
+            // 에디터에서 글자가 보이려면 글꼴이 있어야 한다. 실행할 때는 Bind 가 넣어 주지만
+            // 굽는 길은 Bind 를 지나지 않아, 글꼴 없는 Text 는 프리팹에서 <b>안 보인다</b>.
+            if (_font == null) _font = LoadKoreanFont();
+
+            bool added = false;
+
+            if (_mateGroup == null) { BuildMateGroup(); added = true; }
+            if (_helpGroup == null) { BuildHelpGroup(); added = true; }
+
+            // 이미 심어 둔 것도 손본다. 자리는 건드리지 않고 글꼴과 「보이는 글」만 채운다 —
+            // 도움말은 열 때 글을 받아 오므로 구울 때는 빈 상자라 자리를 잡을 수가 없었다.
+            foreach (var t in _mateGroup.GetComponentsInChildren<Text>(true))
+                if (t.font == null) t.font = _font;
+
+            foreach (var t in _helpGroup.GetComponentsInChildren<Text>(true))
+                if (t.font == null) t.font = _font;
+
+            // 굵게 하려고 둘렀던 테두리는 걷어낸다(2026-08-25 결정 — 굵기를 안 쓰기로 했다).
+            // 프리팹에 남아 있으면 코드에서 빼도 계속 굵게 나온다.
+            foreach (var line in _helpGroup.GetComponentsInChildren<Outline>(true))
+                DestroyImmediate(line);
+
+            if (SnailPet.Data.GameData.ContentsGuide.Length > 0)
+                FillHelp(SnailPet.Data.GameData.ContentsGuide[0].GroupId);
+
+            return true;      // 글꼴·미리보기를 채웠으므로 언제나 저장할 거리가 있다
+        }
+
+        /// <summary>짝꿍 칸을 그린다. 얼굴이 없으면 빈 칸(+)이다.</summary>
+        public void SetMateSlot(Texture face)
+        {
+            if (_mateSlot == null) return;
+
+            if (_mateSlotFace != null)
+            {
+                _mateSlotFace.texture = face;
+                _mateSlotFace.enabled = face != null;
+            }
+            if (_mateSlotPlus != null) _mateSlotPlus.enabled = face == null;
         }
 
         [Serializable]
@@ -1227,6 +1358,9 @@ namespace SnailPet.Ui
         public void NoticeSnailSold(string name) =>
             ShowNotice(SnailPet.Data.Loc.Format(Keys.SnailSold,
                 string.IsNullOrWhiteSpace(name) ? SnailPet.Data.Loc.Text(Keys.NoName) : name));
+
+        /// <summary>짝꿍으로 놓인 달팽이를 메인으로 옮길지 묻는다. 「예」면 짝꿍 슬롯이 빈다.</summary>
+        public void AskMateSwap(Action onYes) => ShowAsk(SnailPet.Data.Loc.Text(Keys.MateSwap), onYes);
 
         /// <summary>방을 옮길지 묻는다. 「예」를 눌러야 지금 방에서 나온다.</summary>
         public void AskRoomSwap(Action onYes) => ShowAsk(SnailPet.Data.Loc.Text(Keys.RoomSwap), onYes);
@@ -4542,6 +4676,310 @@ namespace SnailPet.Ui
         [SerializeField] private RawImage _guestFace;
         [SerializeField] private GuideRow[] _guestParts;
 
+        // ── 짝꿍 고르기 팝업 ──
+        //
+        // 제목·설명 아래에 달팽이 목록이 서고 바닥에 「짝꿍 비우기」·「배치하기」가 놓인다.
+        // 줄은 달팽이 목록과 같은 부품(BuildRow)을 그대로 쓴다 — 모양이 같아야 한다.
+
+        [SerializeField] private RectTransform _mateGroup, _mateListRoot, _mateContent;
+        [SerializeField] private ListRow[] _mateRows;
+        [SerializeField] private Text _mateEmptyText, _mateInfoText, _mateClearLabel;
+        [SerializeField] private Button _mateOkBtn, _mateClearBtn, _mateHelpBtn;
+
+        /// <summary>팝업에 보이는 줄들의 개체 Id. 고른 줄을 부트스트랩에 알릴 때 쓴다.</summary>
+        private int[] _mateIds = new int[0];
+
+        /// <summary>지금 고른 줄. -1 이면 아무것도 안 골랐다.</summary>
+        private int _mateSel = -1;
+
+        /// <summary>짝꿍으로 놓는다(개체 Id). 「배치하기」를 눌렀을 때.</summary>
+        public event Action<int> MatePicked;
+
+        /// <summary>짝꿍 슬롯을 비운다.</summary>
+        public event Action MateCleared;
+
+        private void BuildMateGroup()
+        {
+            _mateGroup = Fill(NewRect("MateGroup", _popup));
+            _mateGroup.gameObject.SetActive(false);
+
+            LocLabel(_mateGroup, Pop.MateTitle, Keys.MateTitle, 12, UiTheme.Ink);
+
+            // 도움말. 아직 물음표 아트가 없어 +/- 와 같은 글자 버튼으로 그린다.
+            _mateHelpBtn = StepButton(_mateGroup, Pop.MateHelp, "?", "MateHelp");
+
+            // 두 안내 글은 「{0}살 이상」 꼴이다. 자리표시자는 팝업을 열 때 채운다.
+            _mateInfoText = LocLabel(_mateGroup, Pop.MateInfo, Keys.MateInfo, 8, UiTheme.Ink);
+            _mateInfoText.horizontalOverflow = HorizontalWrapMode.Wrap;
+
+            _mateEmptyText = LocLabel(_mateGroup, Pop.MateEmpty, Keys.MateEmpty, 9, UiTheme.Faded);
+            _mateEmptyText.enabled = false;
+
+            BuildScrollView(_mateGroup, "MateList", Pop.MateView, out _mateListRoot, out _mateContent);
+            _mateListRoot.gameObject.SetActive(true);
+
+            _mateRows = new ListRow[Pop.MateRowPool];
+            for (int i = 0; i < _mateRows.Length; i++)
+            {
+                _mateRows[i] = BuildRow(_mateContent,
+                    new RectInt(Pop.MateRow.x, Pop.MateRow.y + i * Max.RowStep,
+                                Pop.MateRow.width, Pop.MateRow.height), i);
+
+                // 목록의 교체 버튼은 여기 필요 없다 — 고르는 것은 아래 「배치하기」가 한다
+                if (_mateRows[i].Swap != null) _mateRows[i].Swap.gameObject.SetActive(false);
+            }
+
+            _mateClearBtn = TextButton(_mateGroup, Pop.MateClear, Keys.MateClear, "MateClear", out _mateClearLabel);
+            _mateOkBtn    = TextButton(_mateGroup, Pop.MateOk,    Keys.MatePut,   "MateOk");
+
+            // 누르는 것을 잇는 곳은 Rewire 다 — 이 묶음은 프리팹에 심을 수 있다.
+        }
+
+        private void PickMateRow(int index)
+        {
+            if (index < 0 || index >= _mateIds.Length) return;
+
+            _mateSel = index;
+            PaintMateFrames();
+        }
+
+        /// <summary>고른 줄에만 테두리를 남긴다. 달팽이 목록과 같은 방식이다.</summary>
+        private void PaintMateFrames()
+        {
+            for (int i = 0; i < Count(_mateRows); i++)
+                if (_mateRows[i]?.Frame != null)
+                    _mateRows[i].Frame.enabled = i == _mateSel;
+        }
+
+        /// <summary>
+        /// 짝꿍을 고르는 팝업을 연다. 넘기는 것은 <b>자격이 되는 달팽이</b>들이다 —
+        /// 나이 제한을 가리는 것은 게임 쪽이 한다.
+        /// </summary>
+        /// <param name="minLevel">짝꿍이 될 수 있는 최소 나이. 안내 글의 {0} 에 들어간다.</param>
+        public void ShowMate((int id, string name, SnailPet.Data.RarityType rarity, int age, Texture face)[] rows,
+                             int mateId, int minLevel)
+        {
+            if (_mateGroup == null) return;
+
+            HidePopupGroups();
+            _mateGroup.gameObject.SetActive(true);
+            _popup.sizeDelta = new Vector2(Pop.W, Pop.MateH);
+
+            // 기준 나이는 컨피그가 정하므로 글자도 열 때마다 다시 만든다.
+            if (_mateInfoText != null)  _mateInfoText.text  = SnailPet.Data.Loc.Format(Keys.MateInfo, minLevel);
+            if (_mateEmptyText != null) _mateEmptyText.text = SnailPet.Data.Loc.Format(Keys.MateEmpty, minLevel);
+
+            int count = rows?.Length ?? 0;
+            if (count > _mateRows.Length)
+                Debug.LogWarning($"[SnailPet] 짝꿍 후보 {count}마리 중 {_mateRows.Length}마리만 나옵니다 " +
+                                 $"(UiTheme.Popup.MateRowPool)");
+
+            _mateIds = new int[Mathf.Min(count, _mateRows.Length)];
+            _mateSel = -1;
+
+            _mateContent.sizeDelta = new Vector2(Pop.MateView.width,
+                Mathf.Max(Pop.MateView.height, Pop.MateRow.y + _mateIds.Length * Max.RowStep));
+
+            for (int i = 0; i < _mateRows.Length; i++)
+            {
+                bool has = i < _mateIds.Length;
+                _mateRows[i].Root.gameObject.SetActive(has);
+                if (!has) continue;
+
+                var r = rows[i];
+                _mateIds[i] = r.id;
+
+                _mateRows[i].Name.text = string.IsNullOrWhiteSpace(r.name)
+                                       ? SnailPet.Data.Loc.Text(Keys.NoName) : r.name;
+                _mateRows[i].Age.text = SnailPet.Data.Loc.Format(Keys.Age, r.age);
+                ApplyRarity(_mateRows[i].RarityIcon, _mateRows[i].RarityBadge, _mateRows[i].Rarity, r.rarity);
+
+                if (_mateRows[i].Thumb != null)
+                    SetSlotArt((RectTransform)_mateRows[i].Thumb.transform, r.rarity, UiSprites.Shape.Slot2);
+
+                if (_mateRows[i].Face != null)
+                {
+                    _mateRows[i].Face.texture = r.face;
+                    _mateRows[i].Face.enabled = r.face != null;
+                }
+
+                // 이미 짝꿍인 개체가 있으면 그 줄을 골라 둔 채로 연다
+                if (r.id == mateId && mateId != 0) _mateSel = i;
+            }
+
+            // 자격이 되는 달팽이가 없으면 목록 대신 안내만 남긴다
+            bool empty = _mateIds.Length == 0;
+            _mateListRoot.gameObject.SetActive(!empty);
+            _mateEmptyText.enabled = empty;
+            _mateOkBtn.gameObject.SetActive(!empty);
+
+            // 비울 짝꿍이 없어도 버튼은 자리를 지킨다 — 사라지면 아래가 휑해 보인다.
+            // 대신 못 누르게 죽여 두고, 글자도 같이 흐려 놓는다.
+            bool canClear = mateId != 0;
+            _mateClearBtn.gameObject.SetActive(true);
+            _mateClearBtn.interactable = canClear;
+            if (_mateClearLabel != null)
+                _mateClearLabel.color = canClear ? UiTheme.OnButton
+                                                 : new Color(UiTheme.OnButton.r, UiTheme.OnButton.g,
+                                                             UiTheme.OnButton.b, UiTheme.Faded.a);
+
+            PaintMateFrames();
+            OpenBlocker();
+        }
+
+        // ── 도움말 ──
+        //
+        // 컨텐츠마다 붙은 물음표를 누르면 뜬다. 무엇이 적히는지는 ContentsGuide 시트가 정한다:
+        // 한 GroupId 의 줄들을 순서대로 모아, 큰 제목(MainTitleId) 아래에
+        // 「소제목(SubTitleId) + 본문(InfoId)」 덩이를 쌓는다.
+        //
+        // 글 길이를 미리 알 수 없으므로 <b>자리를 목업 좌표로 굳혀 둘 수 없다</b>.
+        // 상자만 잡아 두고, 열 때 글자 높이를 재어 위에서부터 흘려 쌓는다.
+
+        [SerializeField] private RectTransform _helpGroup, _helpView, _helpContent;
+        [SerializeField] private Text _helpTitle;
+        [SerializeField] private Text[] _helpSubs, _helpInfos;
+
+        /// <summary>도움말을 연 화면. 도움말은 다른 팝업 <b>위에</b> 뜨므로 닫으면 그리로 돌아간다.</summary>
+        private RectTransform _helpBack;
+        private float _helpBackH;
+
+        private void BuildHelpGroup()
+        {
+            _helpGroup = Fill(NewRect("HelpGroup", _popup));
+            _helpGroup.gameObject.SetActive(false);
+
+            // 차례는 크기로만 낸다: 큰 제목 13 > 소제목 10 > 본문 9.
+            // 굵게는 쓰지 않는다 — 글꼴이 Regular 한 벌뿐이라 Bold 는 합성이고 너무 두꺼웠다.
+            _helpTitle = Label(_helpGroup, Pop.HelpTitle, "", 13, UiTheme.Ink);
+
+            BuildScrollView(_helpGroup, "HelpList", Pop.HelpView, out _helpView, out _helpContent);
+            _helpView.gameObject.SetActive(true);
+
+            _helpSubs = new Text[Pop.HelpBlockPool];
+            _helpInfos = new Text[Pop.HelpBlockPool];
+
+            var box = new RectInt(0, 0, Pop.HelpBlockW, 20);
+            for (int i = 0; i < Pop.HelpBlockPool; i++)
+            {
+                _helpSubs[i] = HelpText(box, 10);
+                _helpInfos[i] = HelpText(box, 9);
+            }
+        }
+
+        /// <summary>도움말 글 한 줄. 왼쪽 맞춤에 줄바꿈을 켠다 — 본문이 여러 줄이다.</summary>
+        private Text HelpText(RectInt box, int size)
+        {
+            var t = Label(_helpContent, box, "", size, UiTheme.Ink);
+            t.alignment = TextAnchor.UpperLeft;
+            t.horizontalOverflow = HorizontalWrapMode.Wrap;
+            return t;
+        }
+
+        /// <summary>도움말을 띄운다. 토큰은 ContentsGuide.GroupId 로 쓰인다.</summary>
+        public void ShowHelp(string token)
+        {
+            if (!SnailPet.Data.GameData.IdByToken.TryGetValue(token, out int groupId))
+            {
+                Debug.LogWarning("[SnailPet] 알 수 없는 도움말 토큰: " + token);
+                return;
+            }
+            ShowHelp(groupId);
+        }
+
+        /// <param name="groupId">ContentsGuide.GroupId. 물음표를 단 컨텐츠마다 하나씩이다.</param>
+        public void ShowHelp(int groupId)
+        {
+            if (_helpGroup == null) return;
+
+            // 돌아갈 곳은 「지금 떠 있는 묶음」이다. 감추기 전에 잡아 둬야 한다.
+            var back = ActivePopupGroup();
+            float backH = _popup.sizeDelta.y;
+
+            HidePopupGroups();
+            _helpBack = back;
+            _helpBackH = backH;
+
+            _helpGroup.gameObject.SetActive(true);
+            _popup.sizeDelta = new Vector2(Pop.W, Pop.HelpH);
+
+            FillHelp(groupId);
+            OpenBlocker();
+        }
+
+        /// <summary>
+        /// 시트에서 글을 가져와 채우고 위에서부터 쌓는다.
+        /// 띄우는 것과 나눠 둔 것은 프리팹에 구울 때도 이것만 쓰기 때문이다 —
+        /// 빈 글자로 구우면 에디터에서 아무것도 안 보여 자리를 잡을 수가 없다.
+        /// </summary>
+        private void FillHelp(int groupId)
+        {
+            string title = null;
+            int n = 0;
+
+            foreach (var row in SnailPet.Data.GameData.ContentsGuide)
+            {
+                if (row.GroupId != groupId) continue;
+
+                // 큰 제목은 묶음마다 하나다. 어느 줄에 적혀 있든 그것을 쓴다.
+                if (title == null && row.MainTitleId.HasValue) title = SnailPet.Data.Loc.ById(row.MainTitleId.Value);
+
+                if (n >= _helpSubs.Length)
+                {
+                    Debug.LogWarning($"[SnailPet] 도움말 {groupId} 의 줄이 {_helpSubs.Length}개를 넘습니다 " +
+                                     $"(UiTheme.Popup.GuideBlockPool)");
+                    break;
+                }
+
+                _helpSubs[n].text = SnailPet.Data.Loc.ById(row.SubTitleId);
+                _helpInfos[n].text = SnailPet.Data.Loc.ById(row.InfoId);
+                n++;
+            }
+
+            if (n == 0) Debug.LogWarning("[SnailPet] ContentsGuide 에 없는 도움말: " + groupId);
+            _helpTitle.text = title ?? "";
+
+            // 위에서부터 글자 높이만큼씩 흘려 쌓는다
+            float y = 0f;
+            for (int i = 0; i < _helpSubs.Length; i++)
+            {
+                bool has = i < n;
+                _helpSubs[i].gameObject.SetActive(has);
+                _helpInfos[i].gameObject.SetActive(has);
+                if (!has) continue;
+
+                y = Flow(_helpSubs[i], y) + Pop.HelpLead;
+                y = Flow(_helpInfos[i], y) + Pop.HelpGap;
+            }
+
+            _helpContent.sizeDelta = new Vector2(Pop.HelpView.width,
+                                                  Mathf.Max(Pop.HelpView.height, y));
+            _helpContent.anchoredPosition = Vector2.zero;   // 늘 맨 위에서 시작한다
+        }
+
+        /// <summary>글 높이에 맞춰 그 자리에 놓고, 다음 글이 시작할 y 를 돌려준다.</summary>
+        private static float Flow(Text t, float y)
+        {
+            var rt = (RectTransform)t.transform;
+
+            // preferredHeight 는 지금 상자 가로를 기준으로 줄바꿈해 잰 값이다.
+            rt.sizeDelta = new Vector2(rt.sizeDelta.x, Mathf.Ceil(t.preferredHeight));
+            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, -y);
+            return y + rt.sizeDelta.y;
+        }
+
+        /// <summary>지금 떠 있는 팝업 묶음. 없으면 null.</summary>
+        private RectTransform ActivePopupGroup()
+        {
+            var groups = new[] { _mateGroup, _buyGroup, _renameGroup, _doneGroup,
+                                 _rewardGroup, _guestGroup, _askGroup };
+
+            foreach (var g in groups)
+                if (g != null && g.gameObject.activeSelf) return g;
+
+            return null;
+        }
+
         private void BuildGuestGroup()
         {
             _guestGroup = Fill(NewRect("GuestGroup", _popup));
@@ -4641,12 +5079,15 @@ namespace SnailPet.Ui
         /// <summary>팝업 묶음은 한 번에 하나만 보인다. 판 크기도 기본으로 되돌린다.</summary>
         private void HidePopupGroups()
         {
+            if (_mateGroup != null)   _mateGroup.gameObject.SetActive(false);
             if (_buyGroup != null)    _buyGroup.gameObject.SetActive(false);
             if (_renameGroup != null) _renameGroup.gameObject.SetActive(false);
             if (_doneGroup != null)   _doneGroup.gameObject.SetActive(false);
             if (_rewardGroup != null) _rewardGroup.gameObject.SetActive(false);
             if (_guestGroup != null)  _guestGroup.gameObject.SetActive(false);
             if (_askGroup != null)    _askGroup.gameObject.SetActive(false);
+            if (_helpGroup != null)  _helpGroup.gameObject.SetActive(false);
+            _helpBack = null;
             ResetHatch();
 
             if (_popup != null) _popup.sizeDelta = new Vector2(Pop.W, Pop.H);
@@ -4960,10 +5401,15 @@ namespace SnailPet.Ui
         }
 
         private Button TextButton(RectTransform parent, RectInt at, string token, string name)
+            => TextButton(parent, at, token, name, out _);
+
+        /// <param name="label">글자. 못 누르는 동안 같이 죽여 두려면 잡아 둔다 —
+        /// 유니티의 흐리게 하기는 <see cref="Button.targetGraphic"/> 인 상자에만 걸린다.</param>
+        private Button TextButton(RectTransform parent, RectInt at, string token, string name, out Text label)
         {
             var box = Box(parent, at, UiTheme.Slot, UiSprites.Shape.Button, name);
             box.raycastTarget = true;
-            LocLabel(parent, at, token, 10, UiTheme.OnButton);
+            label = LocLabel(parent, at, token, 10, UiTheme.OnButton);
 
             var btn = box.gameObject.AddComponent<Button>();
             btn.targetGraphic = box;
@@ -4993,6 +5439,18 @@ namespace SnailPet.Ui
 
         public void HidePopup()
         {
+            // 도움말은 다른 화면 위에 뜬 것이다. 닫으면 팝업을 끄는 게 아니라 그 화면으로 돌아간다.
+            if (_helpGroup != null && _helpGroup.gameObject.activeSelf && _helpBack != null)
+            {
+                var back = _helpBack;
+                float h = _helpBackH;
+
+                HidePopupGroups();               // _helpBack 도 여기서 지워진다
+                back.gameObject.SetActive(true);
+                _popup.sizeDelta = new Vector2(Pop.W, h);
+                return;
+            }
+
             if (_popupBlocker != null) _popupBlocker.gameObject.SetActive(false);
             SetDim(false);
             ResetHatch();

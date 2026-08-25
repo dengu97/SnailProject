@@ -41,7 +41,7 @@ namespace SnailPet.Data
         /// 자리표시자를 채우면서 조사를 고친다. 우리가 다룰 수 없는 꼴(<c>{0:0.#}</c> 등)이면
         /// 그냥 <see cref="string.Format(string, object[])"/> 에 넘긴다.
         /// </summary>
-        public static string Format(string template, object[] args)
+        public static string Format(string template, params object[] args)
         {
             if (string.IsNullOrEmpty(template) || args == null || args.Length == 0)
                 return template;

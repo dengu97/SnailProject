@@ -198,12 +198,14 @@ namespace SnailPet.Data
         public readonly int Id;
         public readonly string ResourceKey;
         public readonly double ResourceSize;
+        public readonly int SortOrder;
 
-        public BubbleDataRow(int id, string resourceKey, double resourceSize)
+        public BubbleDataRow(int id, string resourceKey, double resourceSize, int sortOrder)
         {
             Id = id;
             ResourceKey = resourceKey;
             ResourceSize = resourceSize;
+            SortOrder = sortOrder;
         }
     }
 
@@ -456,9 +458,10 @@ namespace SnailPet.Data
         public readonly double CreateEggPlusPercent;
         public readonly double CreateEggCount;
         public readonly double MutationWeight2;
+        public readonly double MateSlotLevel;
         public readonly string Info;
 
-        public GameConfigRow(int mutationWeight, double fullDecayPerTick, double happyDecayPerTick, double pixelsPerSpeed, double pixelsPerSize, double foodGravity, double createEggCooltime, double createEggPercent, double createEggPlusPercent, double createEggCount, double mutationWeight2, string info)
+        public GameConfigRow(int mutationWeight, double fullDecayPerTick, double happyDecayPerTick, double pixelsPerSpeed, double pixelsPerSize, double foodGravity, double createEggCooltime, double createEggPercent, double createEggPlusPercent, double createEggCount, double mutationWeight2, double mateSlotLevel, string info)
         {
             MutationWeight = mutationWeight;
             FullDecayPerTick = fullDecayPerTick;
@@ -471,7 +474,24 @@ namespace SnailPet.Data
             CreateEggPlusPercent = createEggPlusPercent;
             CreateEggCount = createEggCount;
             MutationWeight2 = mutationWeight2;
+            MateSlotLevel = mateSlotLevel;
             Info = info;
+        }
+    }
+
+    public sealed class ContentsGuideRow
+    {
+        public readonly int GroupId;
+        public readonly int? MainTitleId;
+        public readonly int SubTitleId;
+        public readonly int InfoId;
+
+        public ContentsGuideRow(int groupId, int? mainTitleId, int subTitleId, int infoId)
+        {
+            GroupId = groupId;
+            MainTitleId = mainTitleId;
+            SubTitleId = subTitleId;
+            InfoId = infoId;
         }
     }
 
@@ -638,8 +658,8 @@ namespace SnailPet.Data
 
         public static readonly BubbleDataRow[] BubbleData = new BubbleDataRow[]
         {
-            new BubbleDataRow(52, "bubble_coin", 2d),
-            new BubbleDataRow(254, "bubble_hungry", 2d),
+            new BubbleDataRow(52, "bubble_coin", 2d, 100),
+            new BubbleDataRow(254, "bubble_hungry", 2d, 50),
         };
 
         public static readonly LevelUpAdvantageRow[] LevelUpAdvantage = new LevelUpAdvantageRow[]
@@ -1009,7 +1029,18 @@ namespace SnailPet.Data
             new LanguageDataRow(336, "몸이 너무 뜨거웠던걸까요?"),
             new LanguageDataRow(338, "몸이 너무 차가웠던걸까요?"),
             new LanguageDataRow(339, "낫"),
-            new LanguageDataRow(340, "열심히 농사 마무리하고 왔다네요."),
+            new LanguageDataRow(340, "수확의 계절이 왔습니다!"),
+            new LanguageDataRow(341, "짝꿍 슬롯"),
+            new LanguageDataRow(342, "{0}살 이상의 달팽이를 짝꿍 슬롯에 배치할 수 있습니다."),
+            new LanguageDataRow(343, "배치하기"),
+            new LanguageDataRow(344, "{0}살 이상의 달팽이가 없어요."),
+            new LanguageDataRow(345, "짝꿍 비우기"),
+            new LanguageDataRow(346, "짝꿍 달팽이로 배치된 달팽이입니다.\n메인 달팽이로 옮길까요?"),
+            new LanguageDataRow(347, "짝꿍 달팽이란?"),
+            new LanguageDataRow(348, "짝꿍 달팽이 자리"),
+            new LanguageDataRow(349, "- 달팽이와 짝을 만들어줄 수 있는 자리입니다.\n- 짝꿍 달팽이는 특정 나이 이상의 달팽이만 배치할 수 있습니다.\n- 짝꿍 달팽이는 옮기거나 만질수는 있지만, 성장하거나 밥을 먹을 수는 없습니다."),
+            new LanguageDataRow(350, "알 발견?"),
+            new LanguageDataRow(351, "- 짝꿍 달팽이와 내 달팽이가 놀다보면, 둘 사이의 알이 발견되기도 한답니다."),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -1019,7 +1050,13 @@ namespace SnailPet.Data
 
         public static readonly GameConfigRow[] GameConfig = new GameConfigRow[]
         {
-            new GameConfigRow(5, 1d, 1d, 16d, 10d, 1600d, 1800d, 0.5d, 0.1d, 3d, 5d, null),
+            new GameConfigRow(5, 1d, 1d, 16d, 10d, 1600d, 1800d, 0.5d, 0.1d, 3d, 5d, 5d, null),
+        };
+
+        public static readonly ContentsGuideRow[] ContentsGuide = new ContentsGuideRow[]
+        {
+            new ContentsGuideRow(347, 347, 348, 349),
+            new ContentsGuideRow(347, null, 350, 351),
         };
 
         public static readonly Dictionary<int, PartsDataRow> PartsDataById = BuildPartsDataById();
@@ -1461,6 +1498,17 @@ namespace SnailPet.Data
             { "[에픽_용암몸02정보]", 338 },
             { "[낫]", 339 },
             { "[낫정보]", 340 },
+            { "[짝꿍슬롯]", 341 },
+            { "[짝꿍슬롯정보]", 342 },
+            { "[배치하기]", 343 },
+            { "[짝꿍안내]", 344 },
+            { "[짝꿍비우기]", 345 },
+            { "[짝꿍배치변경]", 346 },
+            { "[짝꿍달팽이]", 347 },
+            { "[짝꿍달팽이자리]", 348 },
+            { "[짝꿍달팽이자리정보]", 349 },
+            { "[알발견]", 350 },
+            { "[알발견정보]", 351 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

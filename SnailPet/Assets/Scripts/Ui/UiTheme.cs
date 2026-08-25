@@ -86,6 +86,12 @@ namespace SnailPet.Ui
             public static readonly RectInt CoinText = new RectInt(72, 10, 45, 21);
             public static readonly RectInt Close    = new RectInt(152,  -9, 28, 28);
             public static readonly RectInt Maximize = new RectInt(152,  19, 28, 28);
+
+            /// <summary>
+            /// 짝꿍 슬롯. 닫기·최대화와 같은 x 라 오른쪽 가장자리에 나란히 걸친다.
+            /// 비어 있으면 +, 놓여 있으면 그 달팽이 얼굴이 들어간다.
+            /// </summary>
+            public static readonly RectInt MateSlot = new RectInt(152, 97, 28, 28);
         }
 
         /// <summary>
@@ -497,6 +503,54 @@ namespace SnailPet.Ui
             public static readonly RectInt GuestPartIcon   = new RectInt( 86, 64, 16, 16);
             public static readonly RectInt GuestPartRarity = new RectInt(103, 67, 30, 11);
             public static readonly RectInt GuestPartName   = new RectInt(131, 65, 88, 17);
+
+            // ── 짝꿍 슬롯 ──
+            //
+            // 제목·설명 아래에 달팽이 목록이 들어가고 바닥에 버튼 둘이 선다.
+            // 목록 줄은 달팽이 목록과 같은 모양(Max.Row*)을 그대로 쓴다.
+
+            public const int MateH = 216;
+
+            public static readonly RectInt MateTitle = new RectInt( 0, 12, W, 21);
+            public static readonly RectInt MateInfo  = new RectInt(16, 36, W - 32, 24);
+
+            /// <summary>목록이 보이는 영역. 이 안에서만 그려지고 넘치면 잘린다.</summary>
+            public static readonly RectInt MateView  = new RectInt(34, 64, 173, 108);
+
+            /// <summary>줄 하나. 자리는 목록 안쪽 기준이고 크기는 달팽이 목록과 같다.</summary>
+            public static readonly RectInt MateRow   = new RectInt(9, 4, 155, 40);
+
+            /// <summary>미리 만들어 두는 줄 수. 자격이 되는 달팽이가 이보다 많으면 안 보인다.</summary>
+            public const int MateRowPool = 12;
+
+            /// <summary>자격이 되는 달팽이가 없을 때 한가운데에 뜨는 안내.</summary>
+            public static readonly RectInt MateEmpty = new RectInt(20, 104, W - 40, 20);
+
+            public static readonly RectInt MateClear = new RectInt( 22, 180, 90, 24);
+            public static readonly RectInt MateOk    = new RectInt(129, 180, 90, 24);
+
+            /// <summary>도움말 물음표. 닫기 X 의 반대쪽인 왼쪽 위 모서리에 걸친다(목업).</summary>
+            public static readonly RectInt MateHelp  = new RectInt(6, 3, 24, 24);
+
+            // ── 도움말 ──
+            //
+            // 컨텐츠마다 물음표를 누르면 뜬다. 무엇이 적히는지는 ContentsGuide 시트가 정하고,
+            // 글 길이가 제각각이라 <b>자리는 글자 높이를 재서 런타임에 쌓는다</b>.
+            // 그래서 여기 있는 것은 판 크기와 글이 들어갈 상자뿐이다.
+
+            public const int HelpH = 216;
+
+            public static readonly RectInt HelpTitle = new RectInt( 0, 14, W, 24);
+            public static readonly RectInt HelpView  = new RectInt(20, 46, W - 40, 156);
+
+            /// <summary>글 한 덩이(소제목+본문)의 가로. 세로는 글에 따라 정해진다.</summary>
+            public const int HelpBlockW = W - 48;
+
+            /// <summary>소제목과 본문 사이, 그리고 덩이와 덩이 사이의 틈(px).</summary>
+            public const int HelpLead = 2, HelpGap = 9;
+
+            /// <summary>미리 만들어 두는 덩이 수. 한 GroupId 의 줄이 이보다 많으면 안 보인다.</summary>
+            public const int HelpBlockPool = 8;
 
             public static readonly RectInt DoneName = new RectInt(57, 107, 131, 22);
             public static readonly RectInt DoneOk   = new RectInt(92, 137,  63, 22);

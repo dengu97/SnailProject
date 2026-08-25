@@ -12,8 +12,14 @@ namespace SnailPet.Snail
         /// <summary>아직 이름을 못 지었으면 null. UI 가 「이름 없음」으로 채운다.</summary>
         public string Name;
 
-        /// <summary>나온 알의 등급을 그대로 물려받는다.</summary>
-        public RarityType Rarity;
+        /// <summary>
+        /// 이 개체의 등급. <b>타고난 파츠 중 가장 높은 것</b>이다.
+        ///
+        /// 예전에는 나온 알의 등급을 그대로 물려받아 들고 있었는데, 그러면 에픽 알에서
+        /// 일반 파츠만 나와도 「에픽 달팽이」가 됐다. 값을 들고 있지 않고 파츠에서 읽으면
+        /// 어긋날 길이 없다(2026-08-22 결정). 악세서리는 갈아입는 것이라 안 센다.
+        /// </summary>
+        public RarityType Rarity => SnailBreeding.RarityOf(Appearance);
 
         /// <summary>타고난 외형. 부화할 때 정해지고 바뀌지 않는다.</summary>
         public SnailAppearance Appearance;
@@ -256,6 +262,30 @@ namespace SnailPet.Snail
         /// <summary>화면에 나와 있는 개체의 <see cref="OwnedSnail.Id"/>.</summary>
         public int ActiveId;
 
+        /// <summary>
+        /// 짝꿍 슬롯에 놓인 개체. 0 이면 비어 있다.
+        ///
+        /// 짝꿍은 <b>화면에 같이 기어다니기만</b> 한다 — 먹지도, 들리지도, 자라지도 않는다.
+        /// 대신 교배 상대가 되어 혼자서도 알을 얻을 수 있다.
+        /// 메인과 같은 개체일 수는 없다 (한 마리가 제 짝이 될 수는 없다).
+        /// </summary>
+        public int MateId;
+
+        /// <summary>짝꿍으로 놓인 개체. 없거나 팔렸으면 null.</summary>
+        public OwnedSnail Mate
+        {
+            get
+            {
+                if (MateId == 0 || MateId == ActiveId) return null;
+                foreach (var s in Snails) if (s.Id == MateId) return s;
+                return null;
+            }
+        }
+
+        /// <summary>짝꿍 슬롯에 놓을 수 있는가. 나이(레벨)가 기준에 닿아야 하고 메인이면 안 된다.</summary>
+        public bool CanBeMate(OwnedSnail snail) =>
+            snail != null && snail.Id != ActiveId && snail.Growth.Level >= Config.MateSlotLevel;
+
         private int _nextId = 1;
 
         private static int _coinItemId = -1;
@@ -281,12 +311,12 @@ namespace SnailPet.Snail
             }
         }
 
-        public OwnedSnail AddSnail(SnailAppearance appearance, RarityType rarity)
+        /// <summary>등급은 따로 받지 않는다. 외형에서 나온다 (<see cref="OwnedSnail.Rarity"/>).</summary>
+        public OwnedSnail AddSnail(SnailAppearance appearance)
         {
             var snail = new OwnedSnail
             {
                 Id = _nextId++,
-                Rarity = rarity,
                 Appearance = appearance,
                 Growth = new SnailGrowth(),
             };
