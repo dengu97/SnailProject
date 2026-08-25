@@ -172,6 +172,35 @@ namespace SnailPet.Snail
             return null;
         }
 
+        /// <summary>
+        /// 한 번이라도 가졌던 파츠. 달팽이를 팔아도 남는다 —
+        /// 「무엇을 봤는가」의 기록이라 지금 가진 것과는 다르다.
+        /// </summary>
+        public readonly List<PartEntry> Parts = new List<PartEntry>();
+
+        public PartEntry FindPart(int partsId)
+        {
+            foreach (var p in Parts)
+                if (p.PartsId == partsId) return p;
+            return null;
+        }
+
+        /// <summary>이 모습의 파츠를 모은 것으로 친다. 처음 보는 것이 있었으면 true.</summary>
+        public bool SeeParts(SnailAppearance look)
+        {
+            if (look == null) return false;
+
+            bool fresh = false;
+            foreach (var part in look.Parts)
+            {
+                if (part.PartsId <= 0 || FindPart(part.PartsId) != null) continue;
+
+                Parts.Add(new PartEntry { PartsId = part.PartsId });
+                fresh = true;
+            }
+            return fresh;
+        }
+
         /// <summary>화폐 아이템의 토큰. 말풍선 아트인 `[코인]` 과는 다른 행이다.</summary>
         public const string CoinToken = "[팽이코인]";
 
@@ -321,6 +350,7 @@ namespace SnailPet.Snail
                 Growth = new SnailGrowth(),
             };
             Snails.Add(snail);
+            SeeParts(appearance);      // 도감은 「가졌던 것」을 기록한다
             if (ActiveId == 0) ActiveId = snail.Id;
             return snail;
         }
@@ -332,6 +362,11 @@ namespace SnailPet.Snail
         public void RestoreSnail(OwnedSnail snail)
         {
             Snails.Add(snail);
+
+            // 파츠 도감이 없던 시절의 세이브도 지금 가진 달팽이만큼은 채워 준다.
+            // 이미 적혀 있으면 아무 일도 안 한다.
+            SeeParts(snail.Appearance);
+
             if (snail.Id >= _nextId) _nextId = snail.Id + 1;
         }
 

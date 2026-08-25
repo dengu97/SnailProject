@@ -25,6 +25,10 @@ namespace SnailPet.EditorTools
         public static void AddPopupGroups()
             => Patch("짝꿍·도움말 팝업", ui => ui.BuildPopupGroupsForPrefab());
 
+        [MenuItem("SnailPet/9. 파츠 도감을 UI 프리팹에 넣기", priority = 9)]
+        public static void AddPartsBook()
+            => Patch("파츠 도감", ui => ui.BuildPartsBookForPrefab());
+
         /// <summary>
         /// 프리팹을 열어 <paramref name="add"/> 를 한 번 돌리고, 뭔가 심었을 때만 저장한다.
         /// 아무것도 안 심었으면 그대로 닫는다 — 괜히 저장해서 파일을 흔들 이유가 없다.

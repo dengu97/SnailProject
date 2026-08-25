@@ -53,6 +53,20 @@ namespace SnailPet.Snail
             public float VelY;
 
             public bool Free => Held || Falling;
+
+            // ── 흐물거림 ──
+            //
+            // 내 달팽이와 같은 부품이다. 합성 결과(Soft·Rigid)를 들고 있어야 매 프레임
+            // 변형을 먹일 수 있어서, 세울 때 받은 것을 버리지 않고 그대로 둔다.
+
+            public SnailComposer.Composed Composed;
+            public SnailDeform Deform;
+
+            /// <summary>껍질 한가운데의 로컬 y. 안 휘는 껍질을 이 점 기준으로 옮긴다.</summary>
+            public float ShellCenterY;
+
+            /// <summary>걸음 위상. 나아간 거리로 돈다.</summary>
+            public float WalkPhase;
         }
 
         private readonly Transform _parent;
@@ -126,12 +140,20 @@ namespace SnailPet.Snail
             // 자리는 아래 Tick 에서 루트 자세가 정해진 뒤에 맞춘다.
             var effects = _sparks?.AttachTo(appearance, composed.Root.transform);
 
+            // 흐물거림은 내 달팽이와 같은 부품으로 먹인다. 재는 것(발바닥 선·껍질 중심)은
+            // 모습이 바뀌지 않으므로 세울 때 한 번만 한다.
+            var deform = new SnailDeform { Foot = bounds.Foot };
+            MeasureSole(appearance, deform);
+
             return new Guest
             {
                 Effects = effects,
                 Name = name,
                 Look = card,
                 Appearance = appearance,
+                Composed = composed,
+                Deform = deform,
+                ShellCenterY = ShellCenterOf(appearance, bounds),
                 Root = composed.Root.transform,
                 Bounds = bounds,
                 Scale = (float)(row.Size * SnailGrowth.PixelsPerSizeUnit) / width,
@@ -171,6 +193,7 @@ namespace SnailPet.Snail
                 if (g.Free)
                 {
                     Carry(g, deltaSeconds, box, halfExtent, footDepth, gravity);
+                    StepWobble(g, deltaSeconds, pixelsPerWorld);   // 들려 있으면 물결이 잦아든다
                     continue;
                 }
 
@@ -182,7 +205,94 @@ namespace SnailPet.Snail
                 g.Screen = pose.RootScreen;
                 g.RotationDeg = pose.RotationDeg;
                 g.Flip = pose.FlipX;
+
+                StepWobble(g, deltaSeconds, pixelsPerWorld);
             }
+        }
+
+        // ── 흐물거림 ──
+        //
+        // 내 달팽이와 같은 값(<see cref="Wobble"/>)으로 흔든다. 다른 점은 스프링을 안 거는 것뿐이다 —
+        // 손님은 들리거나 먹지 않아 목표가 튀는 일이 없어서, 사인 값을 그대로 써도 같아 보인다.
+
+        private static void StepWobble(Guest g, float deltaSeconds, float pixelsPerWorld)
+        {
+            if (g.Deform == null || g.Composed == null) return;
+
+            var d = g.Deform;
+            float width = Mathf.Max(0.01f, g.Bounds.Right - g.Bounds.Left);
+            bool walking = !g.Free;
+
+            // 걸음 위상은 나아간 거리로 돈다. 서 있으면 그대로 멈춘다.
+            if (walking) g.WalkPhase += g.Speed * deltaSeconds / Wobble.Wavelength;
+
+            float amp = walking ? Mathf.Clamp01(g.Speed / Wobble.FullSpeed) : 0f;
+            float w = g.WalkPhase * Mathf.PI * 2f;
+
+            d.Foot = g.Bounds.Foot;
+            d.HalfWidth = width * 0.5f;
+            d.Mirrored = g.Flip;
+
+            // 발바닥 물결
+            d.FootBand = (g.Bounds.Top - g.Bounds.Foot) * Wobble.FootBandFraction;
+            d.WaveLength = width * Wobble.WaveLengthFraction;
+            d.WaveDirection = g.Anchor.Forward ? 1f : -1f;
+
+            float want = walking ? width * Wobble.WaveAmplitudeFraction : 0f;
+            d.WaveAmplitude = Mathf.MoveTowards(d.WaveAmplitude, want, width * 0.12f * deltaSeconds);
+
+            if (walking && d.WaveLength > 0f && g.Scale > 0f)
+                d.WavePhase += g.Speed / (g.Scale * d.WaveLength) * deltaSeconds;
+
+            // 물결에 맞춰 몸이 끄덕인다. 내 달팽이와 같은 규칙이다.
+            float full = Mathf.Max(0.0001f, width * Wobble.WaveAmplitudeFraction);
+            float ramp = Mathf.Clamp01(d.WaveAmplitude / full);
+            float bob = Mathf.Sin(d.WavePhase * Mathf.PI * 2f) * Wobble.BobAmount * ramp;
+
+            d.Stretch = Mathf.Sin(w) * Wobble.Stretch * amp + bob;
+            d.LeanDeg = Mathf.Cos(w) * Wobble.LeanDeg * amp;
+
+            foreach (var s in g.Composed.Soft) s.Apply(d);
+
+            // 껍질은 안 휜다. 껍질 중심이 간 자리로 통째로 옮기고 같이 기울기만 한다.
+            var rigid = g.Composed.GroupOrNull(PartsLayer.RigidGroup);
+            if (rigid == null) return;
+
+            d.RigidPose(g.ShellCenterY, out var pos, out var rot);
+            rigid.localScale = Vector3.one;
+            rigid.localRotation = rot;
+            rigid.localPosition = pos;
+        }
+
+        /// <summary>발바닥 선을 재어 변형에 물려 준다. 몸통 파츠에서 잰다.</summary>
+        private static void MeasureSole(SnailAppearance look, SnailDeform deform)
+        {
+            foreach (var p in look.Parts)
+            {
+                if (p.Type != SnailPet.Data.PartsType.Body) continue;
+
+                var sprite = SnailComposer.LoadFrame(SnailComposer.LinePath(p.Type, p.ResourceKey));
+                if (sprite == null) continue;
+                if (!SnailMetrics.TryMeasureSole(sprite, Wobble.SoleSamples, out var sole,
+                                                 out float minX, out float maxX)) continue;
+
+                deform.SetSole(sole, minX, maxX);
+                return;
+            }
+        }
+
+        /// <summary>껍질 한가운데의 로컬 y. 껍질이 없으면 몸 한가운데로 둔다.</summary>
+        private static float ShellCenterOf(SnailAppearance look, SnailBounds bounds)
+        {
+            foreach (var p in look.Parts)
+            {
+                if (p.Type != SnailPet.Data.PartsType.Shell) continue;
+
+                var sprite = SnailComposer.LoadFrame(SnailComposer.LinePath(p.Type, p.ResourceKey));
+                if (sprite != null && SnailMetrics.TryMeasure(sprite, out var e))
+                    return (e.Bottom + e.Top) * 0.5f;
+            }
+            return (bounds.Foot + bounds.Top) * 0.5f;
         }
 
         // ── 집어서 옮기기 ──

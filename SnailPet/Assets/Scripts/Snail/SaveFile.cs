@@ -44,6 +44,14 @@ namespace SnailPet.Snail
             public PartDto[] look;
         }
 
+        /// <summary>모아 둔 파츠 한 칸. 무엇을 모았는지와 보상을 받았는지만 적는다.</summary>
+        [Serializable]
+        private sealed class PartsDto
+        {
+            public int parts;
+            public bool reward;
+        }
+
         [Serializable]
         private sealed class SnailDto
         {
@@ -127,6 +135,9 @@ namespace SnailPet.Snail
 
             /// <summary>채운 도감. 없으면 아직 아무것도 안 채운 것이다.</summary>
             public GuideDto[] guides;
+
+            /// <summary>모은 파츠. 없으면 파츠 도감이 없던 시절의 세이브다 — 가진 달팽이에서 다시 채운다.</summary>
+            public PartsDto[] parts;
         }
 
         /// <summary>물려받은 모습을 적을 꼴로. 없으면 null 이라 세이브에도 안 남는다.</summary>
@@ -206,6 +217,31 @@ namespace SnailPet.Snail
             return list;
         }
 
+        private static PartsDto[] ToPartsDtos(PlayerState player)
+        {
+            var list = new PartsDto[player.Parts.Count];
+            for (int i = 0; i < list.Length; i++)
+                list[i] = new PartsDto { parts = player.Parts[i].PartsId, reward = player.Parts[i].RewardTaken };
+            return list;
+        }
+
+        /// <summary>
+        /// 모은 파츠를 되살린다. 데이터에서 빠진 파츠는 버린다 —
+        /// 도감에 없는 칸을 들고 있어 봐야 보여 줄 자리가 없다.
+        /// </summary>
+        private static void RestoreParts(PlayerState player, PartsDto[] parts)
+        {
+            if (parts == null) return;
+
+            foreach (var p in parts)
+            {
+                if (p == null || !GameData.PartsDataById.ContainsKey(p.parts)) continue;
+                if (player.FindPart(p.parts) != null) continue;
+
+                player.Parts.Add(new PartEntry { PartsId = p.parts, RewardTaken = p.reward });
+            }
+        }
+
         /// <summary>
         /// 도감을 되살린다. 파츠는 달팽이와 같은 방식으로 Id 에서 아트 정보를 다시 찾는다 —
         /// 데이터에서 빠진 파츠는 그 부위만 빼고 되살린다(그림이 한 겹 비는 것이 낫다).
@@ -253,6 +289,7 @@ namespace SnailPet.Snail
                 options = player.Options,
                 hasOptions = true,
                 guides = ToGuideDtos(player),
+                parts = ToPartsDtos(player),
                 snails = new SnailDto[player.Snails.Count],
                 incubator = new SlotDto[player.Incubator.Length],
             };
@@ -376,6 +413,7 @@ namespace SnailPet.Snail
             RestoreEggs(player.LooseEggs, root.looseEggs, root.looseGenes);
             if (root.favorites != null) player.Favorites.AddRange(root.favorites);
             RestoreGuides(player, root.guides);
+            RestoreParts(player, root.parts);
 
             // 설정이 없던 시절의 세이브는 전부 꺼진 것처럼 읽힌다. 그러면 알림 셋이
             // 꺼진 채로 시작해 기본값과 어긋나므로, 적혀 있을 때만 가져온다.

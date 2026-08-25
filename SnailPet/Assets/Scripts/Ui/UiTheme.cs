@@ -60,6 +60,12 @@ namespace SnailPet.Ui
             // 여기 좌표는 그 프리팹에서 옮겨 온 것이지만 배율까지는 담지 못하므로,
             // 다시 구우면 크기가 1배로 돌아간다. 굽기 전에 Tools/Diff-PrefabLayout.ps1 로 확인할 것.
 
+            /// <summary>
+            /// 파츠(외형) 도감. 달팽이 도감 버튼 바로 옆이다 —
+            /// 아래 <see cref="Actions"/> 첫 칸과 둘째 칸 사이의 빈자리에 들어간다.
+            /// </summary>
+            public static readonly RectInt PartsBook = new RectInt(47, 186, 24, 22);
+
             /// <summary>하단 액션 4개. 상세정보 · 옷장 · 유전정보 · 판매.</summary>
             public static readonly RectInt[] Actions =
             {
@@ -355,6 +361,12 @@ namespace SnailPet.Ui
 
             /// <summary>뒤로 가기. 목업에서 닫기 X 자리에 화살표가 들어온다.</summary>
             public static readonly RectInt Back = At.Close;
+
+            /// <summary>
+            /// 알 상세의 「확률」 버튼. 음식의 포만·행복이 앉는 자리에 들어간다 —
+            /// 알에는 그 값이 없어 비어 있던 칸이다.
+            /// </summary>
+            public static readonly RectInt Rates = new RectInt(59, 118, 55, 20);
         }
 
         /// <summary>
@@ -552,6 +564,31 @@ namespace SnailPet.Ui
             /// <summary>미리 만들어 두는 덩이 수. 한 GroupId 의 줄이 이보다 많으면 안 보인다.</summary>
             public const int HelpBlockPool = 8;
 
+            // ── 알 등장 확률 ──
+            //
+            // 위에 부위 토글 넉 줄(껍질·몸·더듬이·얼굴), 아래에 그 부위의 파츠 목록.
+            // 한 부위에 파츠가 마흔 가까이 되므로 목록은 굴려서 본다.
+
+            public const int RatesH = 236;
+
+            public static readonly RectInt RatesTitle = new RectInt( 0, 12, W, 22);
+            public static readonly RectInt RatesTab   = new RectInt(12, 40, 52, 18);
+            public const int RatesTabStep = 55;
+
+            public static readonly RectInt RatesView  = new RectInt(14, 66, W - 28, 154);
+
+            /// <summary>줄 하나. 자리는 목록 안쪽 기준이다.</summary>
+            public static readonly RectInt RatesRow = new RectInt(3, 3, 207, 22);
+
+            // 줄 안쪽. 이름 · 등급 · 확률 순으로 앉는다 (줄 왼쪽 위가 원점).
+            public static readonly RectInt RatesName    = new RectInt( 12, 0,  95, 22);
+            public static readonly RectInt RatesRarity  = new RectInt(112, 4,  46, 14);
+            public static readonly RectInt RatesPercent = new RectInt(162, 0,  34, 22);
+            public const int RatesRowStep = 26;
+
+            /// <summary>미리 만들어 두는 줄 수. 한 부위의 파츠가 이보다 많으면 안 보인다.</summary>
+            public const int RatesRowPool = 48;
+
             public static readonly RectInt DoneName = new RectInt(57, 107, 131, 22);
             public static readonly RectInt DoneOk   = new RectInt(92, 137,  63, 22);
 
@@ -644,6 +681,58 @@ namespace SnailPet.Ui
             public static readonly RectInt PartIcon   = InRow(Gene.SlimThumb);
             public static readonly RectInt PartRarity = InRow(Gene.SlimRarity);
             public static readonly RectInt PartName   = InRow(Gene.SlimName);
+        }
+
+        /// <summary>
+        /// 파츠(외형) 도감. 달팽이 도감과 같은 좌우 구성이다.
+        ///
+        /// 왼쪽 위에 부위 토글 넷, 그 아래에 그 부위의 파츠 목록.
+        /// 오른쪽은 고른 파츠 하나 — 실루엣 위에 그 파츠만 얹고, 설명과 보상을 보여 준다.
+        /// </summary>
+        public static class PartsGuide
+        {
+            // ── 왼쪽: 부위 토글 + 목록 ──
+            public static readonly RectInt Type = new RectInt(16, 10, 21, 21);
+            public const int TypeStep = 37;
+
+            /// <summary>목록이 보이는 영역. 토글 줄 아래부터 패널 끝까지다.</summary>
+            public static readonly RectInt View = new RectInt(0, 38, PanelW, PanelH - 38);
+
+            /// <summary>줄 하나. 자리는 <b>스크롤 내용 기준</b>이다.</summary>
+            public static readonly RectInt Row = new RectInt(11, 4, 151, 24);
+            public const int RowStep = 28;
+
+            /// <summary>미리 만들어 두는 줄 수. 지금 가장 많은 부위(껍질)가 39개다.</summary>
+            public const int RowPool = 48;
+
+            // 아래 둘은 줄 왼쪽 위가 원점
+            public static readonly RectInt RowName   = new RectInt(  8, 3, 100, 18);
+            public static readonly RectInt RowRarity = new RectInt(108, 5,  37, 14);
+
+            // ── 오른쪽: 고른 파츠 ──
+            public static readonly RectInt Title  = new RectInt(21, 11, 131, 22);
+
+            /// <summary>
+            /// 실루엣과 파츠가 겹쳐 앉는 자리. 파츠 아트와 실루엣은 <b>같은 1200x1200 캔버스</b>라
+            /// 같은 사각형에 겹쳐 놓기만 하면 제자리에 온다 — 합성이 쓰는 규칙과 같다.
+            /// </summary>
+            public static readonly RectInt Image  = new RectInt(24, 40, 125, 105);
+
+            public static readonly RectInt Rarity = new RectInt(69, 132, 35, 12);
+
+            public static readonly RectInt InfoBox = new RectInt(12, 148, 149, 20);
+            public static readonly RectInt Info    = new RectInt(16, 150, 141, 16);
+
+            /// <summary>
+            /// 보상 칸 셋. <b>크기와 간격은 달팽이 도감과 같아야 한다</b> —
+            /// 가운데로 모아 놓는 <c>SnailUi.FillRewardSlots</c> 가 그쪽 값으로 자리를 다시 잡는다.
+            /// 여기만 줄였더니 상자는 32 인데 그림은 28 짜리로 남아 왼쪽 위로 쏠렸다.
+            /// </summary>
+            public static readonly RectInt Reward = new RectInt(31, 174, 32, 32);
+            public const int RewardStep = 37, RewardCount = 3;
+
+            /// <summary>아직 아무것도 안 고른 상태에서 한가운데 뜨는 안내.</summary>
+            public static readonly RectInt Empty = new RectInt(16, 100, PanelW - 32, 20);
         }
 
         /// <summary>

@@ -58,6 +58,44 @@ namespace SnailPet.Snail
             return appearance;
         }
 
+        /// <summary>
+        /// 이 알에서 그 부위에 나올 수 있는 파츠와 각각의 확률(0~1). <b>등급 높은 순</b>으로 준다.
+        ///
+        /// 뽑기와 같은 규칙으로 세야 하므로 <see cref="PickWeighted"/> 바로 옆에 둔다 —
+        /// 뽑는 방식이 바뀌면 보여 주는 숫자도 같이 고쳐야 한다.
+        /// </summary>
+        public static List<(PartsDataRow Part, double Chance)> Chances(int eggId, PartsType type)
+        {
+            var list = new List<(PartsDataRow, double)>();
+            if (!GameData.EggDataById.TryGetValue(eggId, out var egg)) return list;
+
+            var pool = new List<PartsDataRow>();
+            foreach (var p in GameData.PartsData)
+                if (p.PartsType == type && Contains(egg.PartsGroupIds, p.PartsGroupId)) pool.Add(p);
+
+            if (pool.Count == 0) return list;
+
+            long total = 0;
+            foreach (var p in pool) total += p.AppearWeight > 0 ? p.AppearWeight : 0;
+
+            foreach (var p in pool)
+            {
+                // 가중치가 전부 0 이면 뽑기도 균등하다. 보여 주는 숫자도 같아야 한다.
+                double chance = total > 0
+                              ? (p.AppearWeight > 0 ? p.AppearWeight : 0) / (double)total
+                              : 1.0 / pool.Count;
+                list.Add((p, chance));
+            }
+
+            // 등급이 높은 것부터. 같은 등급이면 잘 나오는 것부터.
+            list.Sort((a, b) =>
+            {
+                int byRarity = ((int)b.Item1.RarityType).CompareTo((int)a.Item1.RarityType);
+                return byRarity != 0 ? byRarity : b.Item2.CompareTo(a.Item2);
+            });
+            return list;
+        }
+
         private static bool Contains(IReadOnlyList<int> ids, int value)
         {
             if (ids == null) return false;

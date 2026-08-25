@@ -159,12 +159,12 @@ namespace SnailPet
         // 버프로 빨라지면 빠르게 출렁이고, 멈춰 있으면 아예 멈춘다.
 
         /// <summary>이 거리(px)마다 한 번 출렁인다.</summary>
-        private const float WobbleWavelength = 46f;
-        private const float WobbleStretch = 0.045f;
-        private const float WobbleLeanDeg = 2.2f;
+        private const float WobbleWavelength = SnailPet.Snail.Wobble.Wavelength;
+        private const float WobbleStretch = SnailPet.Snail.Wobble.Stretch;
+        private const float WobbleLeanDeg = SnailPet.Snail.Wobble.LeanDeg;
 
         /// <summary>이 속도(px/s)에서 출렁임이 최대가 된다.</summary>
-        private const float WobbleFullSpeed = 120f;
+        private const float WobbleFullSpeed = SnailPet.Snail.Wobble.FullSpeed;
 
         /// <summary>모서리를 도는 동안 진행 방향으로 기울어지는 정도. 관성으로 몸이 먼저 넘어간다.</summary>
         private const float TurnLeanDeg = 14f;
@@ -178,7 +178,7 @@ namespace SnailPet
         // 전부 몸 크기에 대한 비율로 둔다. 레벨이 올라 몸이 커져도 상대 비율이 유지된다.
 
         /// <summary>몸 높이 중 발바닥으로 볼 비율. 이 위로는 발 변형이 안 간다.</summary>
-        private const float FootBandFraction = 0.35f;
+        private const float FootBandFraction = SnailPet.Snail.Wobble.FootBandFraction;
 
         /// <summary>모서리 꺾임이 퍼지는 폭. 몸통 가로폭 대비.</summary>
         private const float CornerSpanFraction = 0.5f;
@@ -199,10 +199,10 @@ namespace SnailPet
         private const bool CornerFoldEnabled = true;
 
         /// <summary>물결 하나의 길이. 몸통 가로폭 대비.</summary>
-        private const float WaveLengthFraction = 0.30f;
+        private const float WaveLengthFraction = SnailPet.Snail.Wobble.WaveLengthFraction;
 
         /// <summary>물결이 부푸는 높이. 몸통 가로폭 대비.</summary>
-        private const float WaveAmplitudeFraction = 0.045f;
+        private const float WaveAmplitudeFraction = SnailPet.Snail.Wobble.WaveAmplitudeFraction;
 
         /// <summary>들렸을 때 발이 처지는 깊이. 몸 높이 대비.</summary>
         private const float DangleDepthFraction = 0.10f;
@@ -454,7 +454,7 @@ namespace SnailPet
         /// 발바닥 선을 몇 등분해서 잴지. 부화할 때 한 번만 재므로 넉넉히 잡아도 된다.
         /// 격자 정점(가로 25줄)뿐 아니라 껍질 자세 계산에서도 임의의 x 로 조회한다.
         /// </summary>
-        private const int SoleSamples = 48;
+        private const int SoleSamples = SnailPet.Snail.Wobble.SoleSamples;
 
         private SnailUi _ui;
         private RarityType _rarity = RarityType.Common;
@@ -493,6 +493,11 @@ namespace SnailPet
             _ui.GuidePicked += PickGuide;
             _ui.GuideDoneConfirmed += TakeGuideReward;
             _ui.RewardClosed += () => { RefreshGuides(); ShowNextGuideDone(); };
+            _ui.PartsBook       += OpenPartsBook;
+            _ui.PartsTypePicked += _ => RefreshPartsBook();
+            _ui.PartPicked      += PickPart;
+            _ui.PartRewardTaken += _ => TakePartReward();
+
             _ui.Wardrobe += OpenWardrobe;
             _ui.ToggleEquip += EquipAccessory;
             _ui.FilterChanged += RefreshWardrobe;
@@ -1021,6 +1026,108 @@ namespace SnailPet
                                look, entry != null);
             _ui.SetGuideRewards(RewardIcons(row));
             _ui.SetGuideParts(GuideParts(row));
+        }
+
+        // ── 파츠(외형) 도감 ──
+        //
+        // 한 번이라도 가졌던 파츠를 부위별로 보여 준다. 안 모은 칸은 이름과 등급만 보이고
+        // 눌러도 열리지 않는다. 보상은 여기서 눌러 받는다(2026-08-25 결정).
+
+        /// <summary>지금 보고 있는 부위의 줄들. 화면의 차례와 같은 순서다.</summary>
+        private List<PartsDataRow> _partsShown = new List<PartsDataRow>();
+
+        /// <summary>고른 줄. -1 이면 아직 아무것도 안 골랐다.</summary>
+        private int _partsPick = -1;
+
+        private void OpenPartsBook()
+        {
+            _ui.OpenParts(true);
+            _partsPick = -1;
+            RefreshPartsBook();
+
+            Say($"      [UI] 외형 도감 — 모은 파츠 {_player.Parts.Count}/{GameData.PartsData.Length}개");
+        }
+
+        /// <summary>고른 부위의 목록을 지금 상태로 그린다. 부위를 바꾸면 고른 것도 풀린다.</summary>
+        private void RefreshPartsBook()
+        {
+            _partsShown = PartsBook.Sorted(_ui.PartsType);
+            _partsPick = -1;
+
+            var rows = new (string, RarityType, bool)[_partsShown.Count];
+            for (int i = 0; i < rows.Length; i++)
+            {
+                var row = _partsShown[i];
+                rows[i] = (Loc.ById(row.NameId), row.RarityType, _player.FindPart(row.Id) != null);
+            }
+
+            _ui.SetParts(rows);
+            ShowPartDetail();
+        }
+
+        private void PickPart(int index)
+        {
+            _partsPick = index;
+            ShowPartDetail();
+        }
+
+        /// <summary>오른쪽에 고른 파츠를 그린다. 아무것도 안 골랐으면 안내만 남는다.</summary>
+        private void ShowPartDetail()
+        {
+            if (_partsPick < 0 || _partsPick >= _partsShown.Count)
+            {
+                _ui.SetPartDetail("", "", RarityType.Common, null, null, null, false);
+                return;
+            }
+
+            var row = _partsShown[_partsPick];
+            var entry = _player.FindPart(row.Id);
+
+            // 색을 쓰는 파츠는 첫 색으로 보여 준다. 도감은 「이런 파츠가 있다」를 보여 주는 곳이라
+            // 어느 색으로 나왔는지까지 기억하지는 않는다.
+            string colorKey = row.IsUseColor && row.Colors != null && row.Colors.Length > 0 ? row.Colors[0] : null;
+
+            var line  = SnailComposer.Load(SnailComposer.LinePath(row.PartsType, row.ResourceKey));
+            var color = string.IsNullOrEmpty(colorKey)
+                      ? null : SnailComposer.Load(SnailComposer.ColorPath(row.PartsType.ToString(), colorKey));
+
+            _ui.SetPartDetail(Loc.ById(row.NameId), Loc.ById(row.InfoId), row.RarityType,
+                              line, color, PartRewardIcons(row), entry != null && entry.RewardTaken);
+        }
+
+        /// <summary>보상 칸을 눌렀다. 한 번 받은 것은 다시 안 준다.</summary>
+        private void TakePartReward()
+        {
+            if (_partsPick < 0 || _partsPick >= _partsShown.Count) return;
+
+            var row = _partsShown[_partsPick];
+            var entry = _player.FindPart(row.Id);
+            if (entry == null || entry.RewardTaken) return;
+
+            var rewards = PartsBook.RewardsOf(row);
+            if (rewards.Count == 0) return;
+
+            foreach (var (itemId, count) in rewards) _player.Items.Add(itemId, count);
+            entry.RewardTaken = true;
+
+            Say($"      [외형 도감] 보상 수령: {Loc.ById(row.NameId)} → 가방: {_player.Items}");
+
+            RefreshFoods();
+            _ui.SetCoin(_player.Coins);
+            ShowPartDetail();
+
+            // 무엇을 받았는지 보여 준다. 달팽이 도감이 쓰는 그 팝업이다.
+            _ui.ShowRewards(PartRewardIcons(row));
+        }
+
+        private static (Sprite, int)[] PartRewardIcons(PartsDataRow row)
+        {
+            var list = PartsBook.RewardsOf(row);
+            var icons = new (Sprite, int)[list.Count];
+            for (int i = 0; i < icons.Length; i++)
+                icons[i] = (ItemSprite(list[i].itemId), list[i].count);
+
+            return icons;
         }
 
         /// <summary>도감 보상을 (그림, 개수)로. 아이템 종류마다 아트가 있는 폴더가 다르다.</summary>
@@ -1885,7 +1992,7 @@ namespace SnailPet
         private float ShellGroundLift => _bounds.Foot - _shellBottomLocalY;
 
         /// <summary>걸을 때 머리가 흔들리는 폭. 몸 세로 신장 비율이라 0.05 면 5% 다.</summary>
-        private const float WalkBobAmount = 0.05f;
+        private const float WalkBobAmount = SnailPet.Snail.Wobble.BobAmount;
 
         /// <summary>이번 프레임의 끄덕임. 떼는 연출·먹는 뽀잉뽀잉과 같은 축이라 더해서 쓴다.</summary>
         private float _walkBob;

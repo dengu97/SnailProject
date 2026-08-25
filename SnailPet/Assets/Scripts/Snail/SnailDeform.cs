@@ -3,6 +3,35 @@ using UnityEngine;
 namespace SnailPet.Snail
 {
     /// <summary>
+    /// 기어갈 때의 흐물거림을 정하는 값들.
+    ///
+    /// 내 달팽이와 손님이 <b>같은 값</b>을 써야 한 화면에서 따로 놀지 않는다.
+    /// 예전에는 부트스트랩에만 있어서 손님은 아예 뻣뻣했다(2026-08-25).
+    /// </summary>
+    public static class Wobble
+    {
+        /// <summary>이만큼 나아갈 때마다 한 번 출렁인다(화면 px).</summary>
+        public const float Wavelength = 46f;
+
+        public const float Stretch = 0.045f;
+        public const float LeanDeg = 2.2f;
+
+        /// <summary>이 속도(px/s)에서 흔들림이 최대가 된다. 느리면 그만큼 얕다.</summary>
+        public const float FullSpeed = 120f;
+
+        // ── 발바닥 물결 ──
+        public const float FootBandFraction = 0.35f;
+        public const float WaveLengthFraction = 0.30f;
+        public const float WaveAmplitudeFraction = 0.045f;
+
+        /// <summary>발바닥 선을 몇 점으로 재는가.</summary>
+        public const int SoleSamples = 48;
+
+        /// <summary>걸음에 맞춘 끄덕임의 세기.</summary>
+        public const float BobAmount = 0.05f;
+    }
+
+    /// <summary>
     /// 달팽이 한 마리의 변형 상태 전부. 파츠마다 따로 계산하지 않고
     /// 이 하나가 「로컬 좌표 → 변형된 로컬 좌표」 함수 노릇을 한다.
     ///
