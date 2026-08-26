@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -306,6 +307,9 @@ namespace SnailPet.Ui
             if (_partsRoot == null && _geneRoot != null) BuildPartsList((RectTransform)_geneRoot.parent);
             if (_partsPanel == null) BuildPartsPanel();
 
+            // 레드닷은 나중에 더한 것이라 구워진 프리팹에는 없다. 없는 곳에만 붙인다.
+            EnsurePartsDots();
+
             // 짝꿍 칸도 프리팹에는 없다. 패널 가장자리에 붙는다.
             if (_mateSlot == null) BuildMateSlot();
 
@@ -359,6 +363,7 @@ namespace SnailPet.Ui
             // 멀티플레이어도 마찬가지다. 진입 버튼은 설정 기어 오른쪽에 붙인다.
             if (_multiRoot == null && _geneRoot != null) BuildMultiList((RectTransform)_geneRoot.parent);
             if (_multiPanel == null) BuildMultiPanel();
+
 
             // 「부화시킬 알이 없습니다」는 프리팹에 부화기 패널에 구워져 있다. 비는 쪽은
             // 왼쪽 목록이므로 그리로 옮긴다. 다시 구우면 처음부터 그 자리에 지어진다.
@@ -466,6 +471,16 @@ namespace SnailPet.Ui
             // 부화기 타이머도 버튼 글자와 같은 색이다. 프리팹에는 먹색으로 굳어 있다.
             for (int i = 0; i < Count(_hatchSlots); i++)
                 if (_hatchSlots[i]?.Timer != null) _hatchSlots[i].Timer.color = UiTheme.OnButton;
+
+            // 정사각 칸에는 둥근 테두리를 덧씌운다. 지은 것과 프리팹에 구워진 것을 한꺼번에 다뤄야 하므로,
+            // 짓는 자리마다 붙이지 않고 여기서 한 번에 훑는다. 위에서 얼굴 그림·선택 테두리를
+            // 줄에 얹은 <b>뒤라야</b> 한다 — 먼저 붙이면 나중에 지어진 얼굴에 가린다.
+            AddSlotFrames();
+
+            // 개수 배지는 테두리보다 앞이라야 읽힌다. 테두리가 칸의 형제라 칸 안에서는
+            // 이길 수가 없어, 배지를 테두리의 자식으로 옮긴다.
+            LiftCountBadges(_foodSlots, _eggSlots, _shopSlots, _wardrobeSlots, _wornSlots,
+                            _partsRewards, _guideRewards, _rewardSlots);
 
             Rewire();
             EnsureEventSystem();
@@ -1103,6 +1118,25 @@ namespace SnailPet.Ui
         private void BuildPartsBookButton()
         {
             _partsBookBtn = IconButton(_panel, At.PartsBook, "icon_snail", "PartsBook");
+            MatchAction(_partsBookBtn);
+        }
+
+        /// <summary>
+        /// 옆에 선 액션 버튼과 크기를 맞춘다.
+        ///
+        /// 프리팹의 액션 넷에는 <b>손으로 준 배율</b>이 걸려 있다(At 표에는 담기지 않는 값이다).
+        /// 코드로 새로 지은 버튼은 1배라 저 혼자 작아 보였다 — 그래서 표를 따르지 않고
+        /// 이웃을 그대로 베낀다. 나중에 그쪽 크기를 바꿔도 저절로 따라간다.
+        /// </summary>
+        private void MatchAction(Button btn)
+        {
+            if (btn == null || Count(_actionBtns) == 0 || _actionBtns[0] == null) return;
+
+            var src = (RectTransform)_actionBtns[0].transform;
+            var dst = (RectTransform)btn.transform;
+
+            dst.localScale = src.localScale;
+            dst.sizeDelta  = src.sizeDelta;
         }
 
         /// <summary>패널 밖으로 걸치는 것들. 설정 · 코인 · 닫기 · 최대화.</summary>
@@ -1709,6 +1743,125 @@ namespace SnailPet.Ui
         /// </summary>
         private static void SetSlotRarity(GridSlot slot, SnailPet.Data.RarityType rarity) =>
             SetSlotArt(slot?.Root, rarity, UiSprites.Shape.Slot2);
+
+        /// <summary>
+        /// 정사각 칸마다 둥근 테두리를 덧씌운다.
+        ///
+        /// 칸을 짓는 자리가 열 곳이 넘고 <b>대부분은 프리팹에 이미 구워져 있어</b> 짓는 쪽에
+        /// 넣을 수가 없다. 그래서 여기서 한 번에 훑는다.
+        ///
+        /// 가려내는 기준은 <see cref="UiShapeRef"/> 가 아니라 <b>깔린 그림이 slot2 인가</b>다.
+        /// 역할표는 믿을 수 없다 — 프리팹은 enum 을 숫자로 저장하는데 그 사이 항목이 끼어들어,
+        /// 목록 줄의 칸 24 개가 지금은 엉뚱한 역할(LevelBadge)로 읽힌다. 그림은 안 밀린다.
+        ///
+        /// 테두리는 칸의 자식이 아니라 <b>칸과 같은 자리에 놓인 형제</b>이고, 맨 마지막에 그려진다.
+        /// 칸 안에 넣으면 얼굴 그림에 가린다 — 목록 줄에서는 얼굴이 칸의 자식이 아니라
+        /// 칸보다 나중에 그려지는 형제이기 때문이다.
+        /// 형제인 대가로 <b>칸을 꺼도 저 혼자 남는다</b>. 빈 그리드 칸은 칸째로 꺼지므로
+        /// (SetEggs 등의 Root.SetActive) 테두리만 스무 개 떠 있었다. 그래서 칸에
+        /// <see cref="UiSlotFrame"/> 을 붙여 켜고 끄는 것을 짝지어 둔다.
+        /// </summary>
+        private void AddSlotFrames()
+        {
+            var art = UiSprites.Of(UiSprites.Shape.SlotRound);
+            var square = UiSprites.Of(UiSprites.Shape.Slot2);
+            if (art == null || square == null) return;
+
+            // 훑는 동안 새 Image 가 늘어나므로 먼저 다 모아 둔다.
+            var slots = new List<RectTransform>();
+            foreach (var img in GetComponentsInChildren<Image>(true))
+                if (img.sprite == square) slots.Add((RectTransform)img.transform);
+
+            foreach (var slot in slots)
+            {
+                var parent = slot.parent as RectTransform;
+                if (parent == null) continue;
+
+                var name = SlotFrameName + slot.GetInstanceID();
+                if (parent.Find(name) != null) continue;
+
+                var frame = NewRect(name, parent);
+
+                // 칸과 똑같은 자리·크기로 겹쳐 놓는다
+                frame.anchorMin = slot.anchorMin; frame.anchorMax = slot.anchorMax;
+                frame.pivot = slot.pivot;
+                frame.anchoredPosition = slot.anchoredPosition;
+                frame.sizeDelta = slot.sizeDelta;
+                frame.localScale = slot.localScale;
+                Inflate(frame, SlotFramePad);
+
+                var img = frame.gameObject.AddComponent<Image>();
+                img.sprite = art;
+                img.type = Image.Type.Sliced;
+                img.raycastTarget = false;
+
+                frame.SetAsLastSibling();
+
+                // 칸이 꺼지면 테두리도 꺼진다. 형제라서 저절로는 안 따라간다.
+                frame.gameObject.SetActive(slot.gameObject.activeSelf);
+                var link = slot.gameObject.GetComponent<UiSlotFrame>()
+                        ?? slot.gameObject.AddComponent<UiSlotFrame>();
+                link.Frame = frame.gameObject;
+            }
+        }
+
+        private const string SlotFrameName = "SlotFrame";
+
+        /// <summary>
+        /// 테두리가 칸보다 사방으로 얼마나 큰가(px).
+        ///
+        /// 딱 맞추면 <b>칸 그림이 테두리 밖으로 비어져 나온다</b>. 등급 칸(slot_epic 등)은
+        /// 모서리가 둥근 정도가 테두리와 달라, 같은 크기여도 귀퉁이가 삐져나와 보였다.
+        /// </summary>
+        private const int SlotFramePad = 2;
+
+        /// <summary>가운데를 지킨 채 사방으로 <paramref name="pad"/> 만큼 키운다.</summary>
+        private static void Inflate(RectTransform rt, int pad)
+        {
+            rt.sizeDelta += new Vector2(pad * 2, pad * 2);
+
+            // 커지는 방향은 피벗이 정한다. 반대쪽으로 그만큼 되밀어야 가운데가 안 움직인다.
+            rt.anchoredPosition += new Vector2((rt.pivot.x - 0.5f) * pad * 2,
+                                               (rt.pivot.y - 0.5f) * pad * 2);
+        }
+
+        /// <summary>
+        /// 개수 배지(바탕 + 숫자)를 테두리 위로 올린다.
+        ///
+        /// 테두리는 칸의 <b>형제</b>라 칸보다 나중에 그려진다. 그래서 칸 안에 있는 배지는
+        /// 무슨 수를 써도 테두리에 눌린다 — 5개짜리 배지에 갈색 선이 가로질렀다.
+        /// 배지를 테두리의 자식으로 옮기면 이긴다. 테두리는 칸과 자리·크기가 같아
+        /// 옮겨도 자리가 그대로다(<see cref="Transform.SetParent(Transform, bool)"/> 의 false).
+        ///
+        /// 배지가 있는 칸은 그리드와 보상 칸뿐이라 배열을 짚어서 받는다. 목록 줄에는 배지가 없다.
+        /// </summary>
+        private static void LiftCountBadges(params GridSlot[][] groups)
+        {
+            foreach (var slots in groups)
+                for (int i = 0; i < Count(slots); i++)
+                {
+                    var slot = slots[i];
+                    if (slot?.Root == null) continue;
+
+                    var link = slot.Root.GetComponent<UiSlotFrame>();
+                    if (link == null || link.Frame == null) continue;
+
+                    Lift(slot.CountBg, link.Frame.transform);
+                    Lift(slot.Count, link.Frame.transform);
+                }
+
+            void Lift(Graphic g, Transform frame)
+            {
+                if (g == null) return;
+                g.transform.SetParent(frame, false);
+                g.transform.SetAsLastSibling();
+
+                // 테두리는 칸보다 사방으로 SlotFramePad 만큼 크다. 그 왼쪽 위를 기준으로
+                // 앉으면 배지가 그만큼 안쪽으로 밀리므로 되돌려 제자리에 둔다.
+                ((RectTransform)g.transform).anchoredPosition +=
+                    new Vector2(SlotFramePad, -SlotFramePad);
+            }
+        }
 
         /// <summary>
         /// 배경을 등급 그림으로 바꾼다. 못 찾으면 <paramref name="fallback"/> 도형으로 둔다.
@@ -4093,9 +4246,18 @@ namespace SnailPet.Ui
             public Image RarityBadge, RarityIcon;
             public Text Rarity;
             public Button Button;
+
+            /// <summary>받을 보상이 있다는 표시. 없으면 꺼 둔다.</summary>
+            public Image Dot;
         }
 
         [SerializeField] private RectTransform _partsRoot, _partsView, _partsContent, _partsPanel;
+
+        /// <summary>도감 버튼 위의 레드닷. 받을 것이 하나라도 있으면 켠다.</summary>
+        [SerializeField] private Image _partsBookDot;
+
+        /// <summary>부위 토글마다의 레드닷. RateTypes 와 같은 차례다.</summary>
+        [SerializeField] private Image[] _partsTypeDots;
         [SerializeField] private FilterChip[] _partsTypes;
         [SerializeField] private PartsRow[] _partsRows;
         [SerializeField] private Text _partsTitle, _partsInfo, _partsEmpty, _partsRarityText;
@@ -4184,6 +4346,9 @@ namespace SnailPet.Ui
             return row;
         }
 
+        /// <summary>파츠 뒤에 까는 실루엣. 도감(달팽이) 쪽과 다른 그림을 쓴다.</summary>
+        private const string PartsShapeArt = "snail_shape2";
+
         private void BuildPartsPanel()
         {
             _partsPanel = Panel(_detailRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
@@ -4193,7 +4358,7 @@ namespace SnailPet.Ui
             _partsTitle = Label(_partsPanel, UiTheme.PartsGuide.Title, "", 11, UiTheme.Ink);
 
             // 실루엣과 파츠는 같은 자리에 겹친다. 캔버스가 같아 그것만으로 제자리에 온다.
-            _partsShape = Icon(_partsPanel, UiTheme.PartsGuide.Image, "snail_shape", Color.white, "Shape");
+            _partsShape = Icon(_partsPanel, UiTheme.PartsGuide.Image, PartsShapeArt, Color.white, "Shape");
             _partsShape.raycastTarget = false;
 
             _partsColor = Icon(_partsPanel, UiTheme.PartsGuide.Image, null, Color.white, "PartColor");
@@ -4254,9 +4419,23 @@ namespace SnailPet.Ui
             if (_font == null) _font = LoadKoreanFont();
 
             if (_partsBookBtn == null && _panel != null) BuildPartsBookButton();
+
+            // 이미 심어 둔 버튼도 옆과 크기를 맞춘다 — 프리팹의 액션 넷에는 손으로 준 배율이 있다.
+            MatchAction(_partsBookBtn);
+
             if (_partsRoot == null && _geneRoot != null) BuildPartsList((RectTransform)_geneRoot.parent);
             if (_partsPanel == null) BuildPartsPanel();
             if (_partsRoot == null || _partsPanel == null) return false;
+
+            // 레드닷은 나중에 더한 것이라 이미 구운 프리팹에는 없다. 없으면 붙이고, 자리는 코드 값으로 맞춘다.
+            EnsurePartsDots(relayout: true);
+
+            // 실루엣 그림도 코드가 정한 것으로 되돌린다 — 프리팹에는 구울 때의 것이 굳어 있다.
+            if (_partsShape != null)
+            {
+                _partsShape.sprite = Resources.Load<Sprite>("Ui/Icon/" + PartsShapeArt);
+                _partsShape.enabled = _partsShape.sprite != null;
+            }
 
             foreach (var t in _partsRoot.GetComponentsInChildren<Text>(true))
                 if (t.font == null) t.font = _font;
@@ -4272,9 +4451,10 @@ namespace SnailPet.Ui
         {
             var list = SnailPet.Snail.PartsBook.Sorted(_partsType);
 
-            var rows = new (string, SnailPet.Data.RarityType, bool)[list.Count];
+            // 굽는 길에서만 쓰는 미리보기다. 모은 것으로 치되 보상 표시는 켜지 않는다.
+            var rows = new (string, SnailPet.Data.RarityType, bool, bool)[list.Count];
             for (int i = 0; i < rows.Length; i++)
-                rows[i] = (SnailPet.Data.Loc.ById(list[i].NameId), list[i].RarityType, true);
+                rows[i] = (SnailPet.Data.Loc.ById(list[i].NameId), list[i].RarityType, true, false);
 
             SetParts(rows);
             PaintPartsTypes();
@@ -4285,13 +4465,143 @@ namespace SnailPet.Ui
             string colorKey = row.IsUseColor && row.Colors != null && row.Colors.Length > 0 ? row.Colors[0] : null;
 
             SetPartDetail(SnailPet.Data.Loc.ById(row.NameId), SnailPet.Data.Loc.ById(row.InfoId), row.RarityType,
-                          SnailPet.Snail.SnailComposer.Load(
+                          SnailPet.Snail.SnailComposer.LoadFrame(
                               SnailPet.Snail.SnailComposer.LinePath(row.PartsType, row.ResourceKey)),
                           string.IsNullOrEmpty(colorKey)
                               ? null
-                              : SnailPet.Snail.SnailComposer.Load(
+                              : SnailPet.Snail.SnailComposer.LoadFrame(
                                     SnailPet.Snail.SnailComposer.ColorPath(row.PartsType.ToString(), colorKey)),
                           new (Sprite, int)[0], false);
+        }
+
+        /// <summary>
+        /// 레드닷을 없는 곳에 붙인다.
+        ///
+        /// 줄과 버튼은 이미 프리팹에 구워져 있어서, 나중에 더한 이 표시는 그 안에 없다.
+        /// 짓는 길과 살아나는 길 양쪽에서 지나므로 어느 쪽으로 와도 붙는다.
+        /// </summary>
+        /// <param name="relayout">
+        /// 이미 있는 표시의 자리·크기를 코드 값으로 되돌릴지. 굽는 길에서만 켠다 —
+        /// 실행할 때 켜면 프리팹에서 손으로 옮겨 둔 것을 매번 덮어쓴다.
+        /// </param>
+        private void EnsurePartsDots(bool relayout = false)
+        {
+            if (_partsBookBtn != null && _partsBookDot == null)
+                _partsBookDot = Icon((RectTransform)_partsBookBtn.transform,
+                                     UiTheme.PartsGuide.ButtonDot, "red_dot", Color.white, "RedDot");
+
+            if (Count(_partsTypeDots) < Count(_partsTypes)) _partsTypeDots = new Image[Count(_partsTypes)];
+
+            for (int i = 0; i < Count(_partsTypes); i++)
+            {
+                if (_partsTypes[i]?.Root == null || _partsTypeDots[i] != null) continue;
+
+                _partsTypeDots[i] = Icon(_partsTypes[i].Root, UiTheme.PartsGuide.TypeDot,
+                                         "red_dot", Color.white, "RedDot");
+            }
+
+            for (int i = 0; i < Count(_partsRows); i++)
+            {
+                if (_partsRows[i] == null || _partsRows[i].Root == null) continue;
+                if (_partsRows[i].Dot != null) continue;
+
+                _partsRows[i].Dot = Icon(_partsRows[i].Root, UiTheme.PartsGuide.RowDot,
+                                         "red_dot", Color.white, "RedDot");
+            }
+
+            if (relayout)
+            {
+                if (_partsBookDot != null)
+                    PlaceCentered((RectTransform)_partsBookDot.transform, UiTheme.PartsGuide.ButtonDot);
+
+                for (int i = 0; i < Count(_partsTypeDots); i++)
+                    if (_partsTypeDots[i] != null)
+                        PlaceCentered((RectTransform)_partsTypeDots[i].transform, UiTheme.PartsGuide.TypeDot);
+
+                for (int i = 0; i < Count(_partsRows); i++)
+                    if (_partsRows[i]?.Dot != null)
+                        PlaceCentered((RectTransform)_partsRows[i].Dot.transform, UiTheme.PartsGuide.RowDot);
+            }
+
+            // 켜고 끄는 것은 받는 쪽이 정한다. 처음에는 꺼 둔다.
+            if (_partsBookDot != null) _partsBookDot.enabled = false;
+            for (int i = 0; i < Count(_partsTypeDots); i++)
+                if (_partsTypeDots[i] != null) { _partsTypeDots[i].raycastTarget = false; _partsTypeDots[i].enabled = false; }
+            for (int i = 0; i < Count(_partsRows); i++)
+                if (_partsRows[i]?.Dot != null) { _partsRows[i].Dot.raycastTarget = false; _partsRows[i].Dot.enabled = false; }
+        }
+
+        /// <summary>도감 버튼의 레드닷. 받을 보상이 하나라도 있으면 켠다.</summary>
+        public void SetPartsBookDot(bool on)
+        {
+            if (_partsBookDot != null) _partsBookDot.enabled = on;
+        }
+
+        /// <summary>
+        /// 부위 토글의 레드닷. 그 부위에 받을 것이 있으면 켠다.
+        /// 순서를 아는 것은 이쪽이므로 부위를 넘겨 물어본다.
+        /// </summary>
+        public void SetPartsTypeDots(Func<SnailPet.Data.PartsType, bool> has)
+        {
+            if (has == null) return;
+
+            for (int i = 0; i < Count(_partsTypeDots) && i < RateTypes.Length; i++)
+                if (_partsTypeDots[i] != null) _partsTypeDots[i].enabled = has(RateTypes[i]);
+        }
+
+        // ── 목록 자동 스크롤 ──
+        //
+        // 보상을 받아 표시가 꺼지면 다음 표시가 있는 줄로 목록이 스르륵 따라간다.
+        // 툭 옮기면 어디로 갔는지 알 수 없어, 시간을 두고 미끄러지게 한다.
+
+        /// <summary>목표 y. 음수면 지금 옮기는 중이 아니다.</summary>
+        private float _partsScrollTo = -1f;
+
+        /// <summary>초당 이만큼의 비율로 남은 거리를 좁힌다. 클수록 빠르다.</summary>
+        private const float PartsScrollSpeed = 9f;
+
+        /// <summary>다 왔다고 보는 거리(px).</summary>
+        private const float PartsScrollSnap = 0.5f;
+
+        /// <summary>그 줄이 보이도록 목록을 옮긴다. 이미 보이면 아무 일도 안 한다.</summary>
+        public void FocusPartsRow(int index)
+        {
+            if (_partsContent == null || index < 0) return;
+
+            float view = UiTheme.PartsGuide.View.height;
+            float step = UiTheme.PartsGuide.RowStep;
+
+            float top = UiTheme.PartsGuide.Row.y + index * step;
+            float bottom = top + UiTheme.PartsGuide.Row.height;
+
+            float now = _partsScrollTo >= 0f ? _partsScrollTo : _partsContent.anchoredPosition.y;
+            float want = now;
+
+            if (top < now) want = top;                       // 위로 벗어났다
+            else if (bottom > now + view) want = bottom - view;   // 아래로 벗어났다
+
+            // 내용보다 더 굴릴 수는 없다
+            float max = Mathf.Max(0f, _partsContent.sizeDelta.y - view);
+            want = Mathf.Clamp(want, 0f, max);
+
+            if (Mathf.Abs(want - _partsContent.anchoredPosition.y) < PartsScrollSnap) return;
+            _partsScrollTo = want;
+        }
+
+        private void StepPartsScroll()
+        {
+            if (_partsScrollTo < 0f || _partsContent == null) return;
+
+            var at = _partsContent.anchoredPosition;
+            float y = Mathf.Lerp(at.y, _partsScrollTo, 1f - Mathf.Exp(-PartsScrollSpeed * Time.deltaTime));
+
+            if (Mathf.Abs(_partsScrollTo - y) < PartsScrollSnap)
+            {
+                y = _partsScrollTo;
+                _partsScrollTo = -1f;
+            }
+
+            _partsContent.anchoredPosition = new Vector2(at.x, y);
         }
 
         /// <summary>파츠 도감을 켜고 끈다. 옷장·도감과 같은 모드다.</summary>
@@ -4378,14 +4688,20 @@ namespace SnailPet.Ui
             _partsType = RateTypes[index];
             _partsPick = -1;
             PaintPartsTypes();
+
+            // 다른 부위는 다른 목록이다. 굴려 둔 자리를 물려받으면 엉뚱한 데서 시작한다.
+            // <b>알리기 전에</b> 되돌린다 — 받는 쪽이 곧바로 「받을 줄」로 옮기기 때문이다.
+            _partsScrollTo = -1f;
+            if (_partsContent != null) _partsContent.anchoredPosition = Vector2.zero;
+
             PartsTypePicked?.Invoke(_partsType);
         }
 
         /// <summary>
-        /// 목록을 채운다. 줄마다 (이름, 등급, 모았는지).
+        /// 목록을 채운다. 줄마다 (이름, 등급, 모았는지, 받을 보상이 있는지).
         /// 안 모은 줄은 흐리고 눌리지 않는다 — 무엇이 있는지는 보여 주되 볼 수는 없다.
         /// </summary>
-        public void SetParts((string name, SnailPet.Data.RarityType rarity, bool owned)[] rows)
+        public void SetParts((string name, SnailPet.Data.RarityType rarity, bool owned, bool claim)[] rows)
         {
             int count = rows?.Length ?? 0;
             if (count > Count(_partsRows))
@@ -4406,6 +4722,9 @@ namespace SnailPet.Ui
                 _partsRows[i].Box.color = r.owned ? Color.white : UiTheme.Faded;
                 _partsRows[i].Name.color = r.owned ? UiTheme.Ink : UiTheme.Slot;
                 _partsRows[i].Button.interactable = r.owned;
+
+                // 받을 보상이 있으면 표시를 켠다
+                if (_partsRows[i].Dot != null) _partsRows[i].Dot.enabled = r.claim;
             }
 
             if (_partsContent != null)
@@ -5963,6 +6282,7 @@ namespace SnailPet.Ui
             StepPopupGrow();
             StepNotice();
             StepHatch();
+            StepPartsScroll();
         }
 
         private void StepHatch()
@@ -6497,6 +6817,16 @@ namespace SnailPet.Ui
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
             rt.sizeDelta = new Vector2(r.width, r.height);
             rt.anchoredPosition = new Vector2(r.x, -r.y);
+
+            // 테두리를 씌운 칸은 옮길 때 테두리도 같이 옮긴다 — 자식이 아니라 형제라
+            // 저절로는 안 따라온다. 보상 칸이 개수에 따라 가운데로 다시 놓이는데,
+            // 테두리만 처음 자리에 남아 빈 칸처럼 보였다. (테두리에는 이 부품이 없어 여기서 멈춘다)
+            var link = rt.GetComponent<UiSlotFrame>();
+            if (link == null || link.Frame == null) return;
+
+            var frame = (RectTransform)link.Frame.transform;
+            Place(frame, r);
+            Inflate(frame, SlotFramePad);
         }
 
         /// <summary>

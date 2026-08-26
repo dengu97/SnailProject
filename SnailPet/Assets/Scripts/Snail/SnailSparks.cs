@@ -21,6 +21,9 @@ namespace SnailPet.Snail
         /// <summary>이펙트 이미지가 있는 곳.</summary>
         private const string ArtFolder = "Effects/";
 
+        /// <summary>이펙트가 달팽이 위로 오게 하는 순서. 프리팹이 0 일 때만 쓴다.</summary>
+        private const int DefaultOrder = 9600;
+
         private readonly Transform _parent;
         private readonly Dictionary<string, Material> _materials = new Dictionary<string, Material>();
         private readonly Dictionary<string, Texture2D> _textures = new Dictionary<string, Texture2D>();
@@ -168,6 +171,13 @@ namespace SnailPet.Snail
 
             var go = Object.Instantiate(src, world, Quaternion.identity, _parent);
             go.transform.position = world;      // 부모가 안 움직이므로 월드 그대로 둔다
+
+            // 그리는 순서를 안 정해 둔 프리팹은 달팽이 위로 올린다.
+            // 스토어에서 받은 이펙트는 대개 0 이라 그대로 두면 몸에 가려 안 보인다.
+            // 0 이 아닌 것은 만든 사람이 정한 값이므로 건드리지 않는다.
+            foreach (var r in go.GetComponentsInChildren<ParticleSystemRenderer>(true))
+                if (r.sortingOrder == 0) r.sortingOrder = DefaultOrder;
+
             return go;
         }
 

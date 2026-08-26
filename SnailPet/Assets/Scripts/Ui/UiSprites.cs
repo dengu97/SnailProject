@@ -50,6 +50,14 @@ namespace SnailPet.Ui
             SlotCount,      // 칸의 개수 뱃지. 숫자가 길어지면 가로로 늘어난다
 
             Notice,         // 잠깐 떴다 사라지는 안내 문구의 바탕
+
+            /// <summary>
+            /// 정사각 칸 위에 덧씌우는 둥근 테두리. 가운데가 비어 있어 칸 그림이 비친다.
+            ///
+            /// <b>맨 뒤에 붙인다.</b> 프리팹은 이 enum 을 숫자로 저장하므로 가운데에 끼우면
+            /// 이미 구워진 칸들의 역할이 한 칸씩 밀린다.
+            /// </summary>
+            SlotRound,
         }
 
         /// <summary>역할별 기본 모서리 반지름. 아트가 없을 때만 쓴다.</summary>
@@ -75,6 +83,7 @@ namespace SnailPet.Ui
             Shape.PanelBorder => "panelborder",
             Shape.FillHappy   => "fill_happy",
             Shape.SlotCount   => "slot_count",
+            Shape.SlotRound   => "slot_round",
             Shape.Selection   => "slotline",   // 고른 칸에 덧그리는 테두리
             Shape.RowSelection => "slotline2",
             _ => s.ToString().ToLowerInvariant(),

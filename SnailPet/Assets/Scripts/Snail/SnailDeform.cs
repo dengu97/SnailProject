@@ -29,6 +29,31 @@ namespace SnailPet.Snail
 
         /// <summary>걸음에 맞춘 끄덕임의 세기.</summary>
         public const float BobAmount = 0.05f;
+
+        // ── 벽에서 떼기 ──
+        //
+        // 몸이 목표를 곧장 따라가지 않고 스프링으로 따라붙는다. 그래서 당기면 저항이 생기고,
+        // 놓으면 지나쳤다 돌아오며 출렁인다 — 「쫀득함」은 전부 여기서 나온다.
+
+        public const float SpringStiffness = 320f;
+        public const float SpringDamping = 12f;
+
+        /// <summary>이만큼 당겨야 떨어진다(화면 px).</summary>
+        public const float PeelThreshold = 72f;
+
+        public const float PeelMaxStretch = 0.35f;
+        public const float PeelMaxLeanDeg = 18f;
+
+        /// <summary>떨어지는 순간 되튕기는 양.</summary>
+        public const float PopRecoil = -0.22f;
+
+        /// <summary>스프링 한 걸음. 내 달팽이와 손님이 같은 것을 쓴다.</summary>
+        public static void Spring(ref float value, ref float velocity, float target, float dt)
+        {
+            velocity += (target - value) * SpringStiffness * dt;
+            velocity *= Mathf.Exp(-SpringDamping * dt);
+            value += velocity * dt;
+        }
     }
 
     /// <summary>

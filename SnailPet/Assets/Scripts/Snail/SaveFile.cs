@@ -236,7 +236,16 @@ namespace SnailPet.Snail
             foreach (var p in parts)
             {
                 if (p == null || !GameData.PartsDataById.ContainsKey(p.parts)) continue;
-                if (player.FindPart(p.parts) != null) continue;
+
+                // 달팽이가 먼저 되살아나면서 그 파츠가 이미 「안 받음」으로 등록돼 있다.
+                // 그때 건너뛰면 <b>보상을 받았다는 표시만 사라져</b> 다시 받을 수 있게 된다.
+                // 파일에 적힌 것이 기록이므로 받은 것은 여기서 되살린다.
+                var entry = player.FindPart(p.parts);
+                if (entry != null)
+                {
+                    if (p.reward) entry.RewardTaken = true;
+                    continue;
+                }
 
                 player.Parts.Add(new PartEntry { PartsId = p.parts, RewardTaken = p.reward });
             }

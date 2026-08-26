@@ -705,9 +705,18 @@ namespace SnailPet.Ui
             /// <summary>미리 만들어 두는 줄 수. 지금 가장 많은 부위(껍질)가 39개다.</summary>
             public const int RowPool = 48;
 
-            // 아래 둘은 줄 왼쪽 위가 원점
+            // 아래 셋은 줄 왼쪽 위가 원점
             public static readonly RectInt RowName   = new RectInt(  8, 3, 100, 18);
             public static readonly RectInt RowRarity = new RectInt(108, 5,  37, 14);
+
+            /// <summary>받을 보상이 있다는 표시. 줄 오른쪽 위 모서리에 걸친다.</summary>
+            public static readonly RectInt RowDot    = new RectInt(145, 0,  6, 6);
+
+            /// <summary>도감 버튼 위의 같은 표시. 버튼 오른쪽 위에 걸친다.</summary>
+            public static readonly RectInt ButtonDot = new RectInt( 19, -1,  6, 6);
+
+            /// <summary>부위 토글 위의 같은 표시. 토글이 21px 이라 그 오른쪽 위다.</summary>
+            public static readonly RectInt TypeDot   = new RectInt( 16, -1,  6, 6);
 
             // ── 오른쪽: 고른 파츠 ──
             public static readonly RectInt Title  = new RectInt(21, 11, 131, 22);

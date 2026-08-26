@@ -67,6 +67,22 @@ namespace SnailPet.Snail
 
             /// <summary>걸음 위상. 나아간 거리로 돈다.</summary>
             public float WalkPhase;
+
+            /// <summary>
+            /// 벽에서 떼는 중. 발은 붙어 있고 몸만 손을 따라 늘어난다.
+            /// 다 늘어나면 떨어져 손에 들리고, 덜 당기고 놓으면 그대로 붙어 있는다.
+            /// </summary>
+            public bool Peeling;
+
+            /// <summary>잡기 시작한 화면 좌표. 여기서 얼마나 멀어졌는지로 잰다.</summary>
+            public Vector2 GrabScreen;
+
+            // 스프링. 목표로 곧장 가지 않고 따라붙으므로 당길 때 저항이 생긴다.
+            public float Stretch, StretchVel;
+            public float Lean, LeanVel;
+
+            /// <summary>떼는 중(또는 들린 중)의 목표. 걷는 동안에는 안 쓴다.</summary>
+            public float PeelStretch, PeelLean;
         }
 
         private readonly Transform _parent;
@@ -221,9 +237,9 @@ namespace SnailPet.Snail
 
             var d = g.Deform;
             float width = Mathf.Max(0.01f, g.Bounds.Right - g.Bounds.Left);
-            bool walking = !g.Free;
+            bool walking = !g.Free && !g.Peeling;
 
-            // 걸음 위상은 나아간 거리로 돈다. 서 있으면 그대로 멈춘다.
+            // 걸음 위상은 나아간 거리로 돈다. 서 있거나 떼는 중이면 그대로 멈춘다.
             if (walking) g.WalkPhase += g.Speed * deltaSeconds / Wobble.Wavelength;
 
             float amp = walking ? Mathf.Clamp01(g.Speed / Wobble.FullSpeed) : 0f;
@@ -249,8 +265,16 @@ namespace SnailPet.Snail
             float ramp = Mathf.Clamp01(d.WaveAmplitude / full);
             float bob = Mathf.Sin(d.WavePhase * Mathf.PI * 2f) * Wobble.BobAmount * ramp;
 
-            d.Stretch = Mathf.Sin(w) * Wobble.Stretch * amp + bob;
-            d.LeanDeg = Mathf.Cos(w) * Wobble.LeanDeg * amp;
+            // 목표를 정하고 스프링으로 따라붙는다. 내 달팽이와 같은 규칙이라
+            // 떼는 저항도, 놓았을 때의 출렁임도 같은 느낌이 된다.
+            float stretchTarget = walking ? Mathf.Sin(w) * Wobble.Stretch * amp : g.PeelStretch;
+            float leanTarget    = walking ? Mathf.Cos(w) * Wobble.LeanDeg * amp : g.PeelLean;
+
+            Wobble.Spring(ref g.Stretch, ref g.StretchVel, stretchTarget, deltaSeconds);
+            Wobble.Spring(ref g.Lean,    ref g.LeanVel,    leanTarget,    deltaSeconds);
+
+            d.Stretch = g.Stretch + bob;
+            d.LeanDeg = g.Lean;
 
             foreach (var s in g.Composed.Soft) s.Apply(d);
 
@@ -316,6 +340,56 @@ namespace SnailPet.Snail
                  && local.y >= g.Bounds.Foot && local.y <= g.Bounds.Top) return g;
             }
             return null;
+        }
+
+        /// <summary>
+        /// 잡았다. 아직 안 떨어진다 — 벽에서 <b>당겨 떼어내야</b> 손에 들린다.
+        /// 내 달팽이와 같은 규칙이다.
+        /// </summary>
+        public static void StartPeel(Guest g, Vector2 cursor)
+        {
+            if (g == null) return;
+
+            g.Peeling = true;
+            g.GrabScreen = cursor;
+        }
+
+        /// <summary>덜 당기고 놓았다. 그대로 벽에 붙어 있는다.</summary>
+        public static void CancelPeel(Guest g)
+        {
+            if (g == null) return;
+
+            g.Peeling = false;
+            g.PeelStretch = 0f;
+            g.PeelLean = 0f;
+        }
+
+        /// <summary>
+        /// 떼는 중. 당긴 만큼 몸이 늘어나고, 충분히 늘어나면 떨어져 손에 들린다(true).
+        ///
+        /// 커서가 얼마나 갔는지가 아니라 <b>몸이 실제로 얼마나 늘어났는지</b>로 판정한다 —
+        /// 확 잡아채도 스프링이 따라잡을 때까지는 안 떨어지므로 「쭉 늘어나다 툭」이 항상 보인다.
+        /// </summary>
+        public bool StepPeel(Guest g, Vector2 cursor, ScreenRect box, float pixelsPerWorld)
+        {
+            if (g == null || !g.Peeling) return false;
+
+            var n = BoxWalk.OutwardNormal(g.Anchor);
+            var dir = BoxWalk.Tangent(box, g.Anchor);
+            Vector2 pull = cursor - g.GrabScreen;
+
+            float away  = Vector2.Dot(pull, -n);     // 벽에서 멀어지는 성분
+            float along = Vector2.Dot(pull, dir);    // 벽을 따라가는 성분
+
+            g.PeelStretch = Mathf.Clamp01(away / Wobble.PeelThreshold) * Wobble.PeelMaxStretch;
+            g.PeelLean    = Mathf.Clamp(along / Wobble.PeelThreshold, -1f, 1f) * -Wobble.PeelMaxLeanDeg;
+
+            if (away < Wobble.PeelThreshold || g.Stretch < Wobble.PeelMaxStretch * 0.9f) return false;
+
+            CancelPeel(g);
+            Grab(g, box, pixelsPerWorld);
+            g.StretchVel += Wobble.PopRecoil * Wobble.SpringStiffness * 0.05f;   // 툭 하고 되튕긴다
+            return true;
         }
 
         /// <summary>집어 든다. 지금 서 있는 자리에서 발 좌표를 받아 둔다(그래야 손이 튀지 않는다).</summary>

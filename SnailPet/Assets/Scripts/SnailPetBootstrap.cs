@@ -124,19 +124,19 @@ namespace SnailPet
         // 늘어남·저항·반동을 값 하나(_stretch)에 감쇠 스프링으로 태워 한 번에 처리한다.
 
         /// <summary>이만큼(px) 당기면 떨어진다.</summary>
-        private const float PeelThreshold = 72f;
+        private const float PeelThreshold = SnailPet.Snail.Wobble.PeelThreshold;
 
         /// <summary>임계점에서의 몸통 신장 비율. 0.35 면 35% 늘어난다.</summary>
-        private const float PeelMaxStretch = 0.35f;
+        private const float PeelMaxStretch = SnailPet.Snail.Wobble.PeelMaxStretch;
 
         /// <summary>떼는 동안 벽을 따라 끌려가며 기울어지는 최대 각(도).</summary>
-        private const float PeelMaxLeanDeg = 18f;
+        private const float PeelMaxLeanDeg = SnailPet.Snail.Wobble.PeelMaxLeanDeg;
 
         /// <summary>떨어지는 순간 되튕기는 양. 음수라 잠깐 움츠러든다.</summary>
-        private const float PopRecoil = -0.22f;
+        private const float PopRecoil = SnailPet.Snail.Wobble.PopRecoil;
 
-        private const float SpringStiffness = 320f;
-        private const float SpringDamping = 12f;
+        private const float SpringStiffness = SnailPet.Snail.Wobble.SpringStiffness;
+        private const float SpringDamping = SnailPet.Snail.Wobble.SpringDamping;
 
         // ── 들고 다닐 때 ──
         // 손이 움직이면 몸이 못 따라오고 늘어졌다가 흔들린다.
@@ -572,6 +572,7 @@ namespace SnailPet
 
             // 이미 가지고 있던 개체도 도감을 채운다. 세이브를 읽은 직후 한 번 훑는다.
             ScanGuides();
+            RefreshPartsAfterChange();   // 켤 때부터 받을 것이 있으면 표시가 뜬다
 
             // 세이브에서 읽은 설정을 UI 에 넣는다. 이 호출은 OptionsChanged 를 내지 않으므로
             // 넣자마자 다시 저장이 도는 일이 없다.
@@ -1052,23 +1053,75 @@ namespace SnailPet
         private void RefreshPartsBook()
         {
             _partsShown = PartsBook.Sorted(_ui.PartsType);
-            _partsPick = -1;
+            _partsPick = -1;      // 부위가 바뀌었으니 고른 것도 푼다
 
-            var rows = new (string, RarityType, bool)[_partsShown.Count];
+            FillPartsRows();
+
+            // 들어오자마자 받을 줄이 보이게 옮긴다. 표시만 켜 두고 어디 있는지 안 알려 주면
+            // 마흔 줄을 손으로 굴려 찾아야 한다.
+            int first = NextClaimableRow(-1);
+            if (first >= 0) _ui.FocusPartsRow(first);
+        }
+
+        /// <summary>목록과 표시를 지금 상태로 다시 그린다. 고른 줄은 그대로 둔다.</summary>
+        private void FillPartsRows()
+        {
+            var rows = new (string, RarityType, bool, bool)[_partsShown.Count];
             for (int i = 0; i < rows.Length; i++)
             {
                 var row = _partsShown[i];
-                rows[i] = (Loc.ById(row.NameId), row.RarityType, _player.FindPart(row.Id) != null);
+                rows[i] = (Loc.ById(row.NameId), row.RarityType,
+                           _player.FindPart(row.Id) != null, CanTakePartReward(row));
             }
 
             _ui.SetParts(rows);
             ShowPartDetail();
+            RefreshPartsDot();
         }
 
         private void PickPart(int index)
         {
             _partsPick = index;
             ShowPartDetail();
+        }
+
+        /// <summary>
+        /// <paramref name="from"/> 다음으로 받을 것이 있는 줄. 끝까지 없으면 앞에서부터 다시 찾는다.
+        /// 하나도 없으면 -1. 지금 보고 있는 부위 안에서만 찾는다 — 목록을 옮기는 것이 목적이라
+        /// 다른 부위로 건너뛰면 화면이 통째로 바뀌어 오히려 헷갈린다.
+        /// </summary>
+        private int NextClaimableRow(int from)
+        {
+            if (_partsShown.Count == 0) return -1;
+
+            for (int i = 1; i <= _partsShown.Count; i++)
+            {
+                int k = ((from + i) % _partsShown.Count + _partsShown.Count) % _partsShown.Count;
+                if (CanTakePartReward(_partsShown[k])) return k;
+            }
+            return -1;
+        }
+
+        /// <summary>이 파츠의 보상을 지금 받을 수 있는가. 모았고, 줄 것이 있고, 아직 안 받았을 때다.</summary>
+        private bool CanTakePartReward(PartsDataRow row)
+        {
+            var entry = _player.FindPart(row.Id);
+            return entry != null && !entry.RewardTaken && PartsBook.RewardsOf(row).Count > 0;
+        }
+
+        /// <summary>
+        /// 도감 버튼의 레드닷. <b>부위를 가리지 않고</b> 하나라도 받을 것이 있으면 켠다 —
+        /// 지금 보고 있는 부위만 세면 다른 칸에 있는 보상을 놓친다.
+        /// </summary>
+        private void RefreshPartsDot()
+        {
+            // 부위별로 한 번에 센다. 버튼은 그 합이다.
+            var byType = new HashSet<PartsType>();
+            foreach (var row in GameData.PartsData)
+                if (CanTakePartReward(row)) byType.Add(row.PartsType);
+
+            _ui.SetPartsBookDot(byType.Count > 0);
+            _ui.SetPartsTypeDots(byType.Contains);
         }
 
         /// <summary>오른쪽에 고른 파츠를 그린다. 아무것도 안 골랐으면 안내만 남는다.</summary>
@@ -1087,9 +1140,11 @@ namespace SnailPet
             // 어느 색으로 나왔는지까지 기억하지는 않는다.
             string colorKey = row.IsUseColor && row.Colors != null && row.Colors.Length > 0 ? row.Colors[0] : null;
 
-            var line  = SnailComposer.Load(SnailComposer.LinePath(row.PartsType, row.ResourceKey));
+            // 애니메이션 파츠는 칸을 이어 붙인 시트라, 통째로 그리면 옆으로 죽 늘어선다.
+            // 도감은 한 장만 보여 주면 되므로 첫 칸을 잘라 쓴다.
+            var line  = SnailComposer.LoadFrame(SnailComposer.LinePath(row.PartsType, row.ResourceKey));
             var color = string.IsNullOrEmpty(colorKey)
-                      ? null : SnailComposer.Load(SnailComposer.ColorPath(row.PartsType.ToString(), colorKey));
+                      ? null : SnailComposer.LoadFrame(SnailComposer.ColorPath(row.PartsType.ToString(), colorKey));
 
             _ui.SetPartDetail(Loc.ById(row.NameId), Loc.ById(row.InfoId), row.RarityType,
                               line, color, PartRewardIcons(row), entry != null && entry.RewardTaken);
@@ -1114,7 +1169,11 @@ namespace SnailPet
 
             RefreshFoods();
             _ui.SetCoin(_player.Coins);
-            ShowPartDetail();
+            FillPartsRows();      // 그 줄의 표시가 꺼지고 버튼 쪽도 다시 센다
+
+            // 받고 나면 다음 받을 줄로 목록이 스르륵 따라간다. 없으면 그 자리에 머문다.
+            int next = NextClaimableRow(_partsPick);
+            if (next >= 0) _ui.FocusPartsRow(next);
 
             // 무엇을 받았는지 보여 준다. 달팽이 도감이 쓰는 그 팝업이다.
             _ui.ShowRewards(PartRewardIcons(row));
@@ -1205,6 +1264,21 @@ namespace SnailPet
 
             if (_ui != null && _ui.InGuide) RefreshGuides();
             ShowNextGuideDone();
+        }
+
+        /// <summary>
+        /// 파츠 도감 쪽을 다시 그린다. 개체가 늘면 모은 파츠도 느는데, 그때 받을 것이 생기면
+        /// 버튼에 표시가 떠야 한다.
+        ///
+        /// <b>도감 채움 검사(ScanGuides)에 붙이면 안 된다</b> — 그쪽은 새로 채운 칸이 없으면
+        /// 곧장 빠져나가서, 켤 때처럼 「채운 것은 없지만 받을 것은 있는」 경우를 놓친다.
+        /// </summary>
+        private void RefreshPartsAfterChange()
+        {
+            if (_ui == null) return;
+
+            if (_ui.InParts) FillPartsRows();
+            else RefreshPartsDot();
         }
 
         /// <summary>채운 것을 하나씩 알린다. 여러 칸이 한꺼번에 채워질 수 있어 줄을 세운다.</summary>
@@ -1587,6 +1661,7 @@ namespace SnailPet
             }
 
             RefreshFoods();
+            RefreshEggs();       // 알을 사고팔면 알 목록도 바뀐다
             _ui.SetCoin(_player.Coins);
             _ui.RefreshShop();
 
@@ -2709,6 +2784,7 @@ namespace SnailPet
         {
             _eggs.Remove(egg);
             _player.AddEgg(egg.EggId, egg.Gene);
+            RefreshEggs();
 
             _ui.NoticeEggGot();
 
@@ -2768,6 +2844,14 @@ namespace SnailPet
 
         // ── 부화기 ──
 
+        /// <summary>
+        /// 알 목록과 부화기 칸을 지금 상태로 다시 그린다.
+        ///
+        /// <b>알을 건드리는 곳은 전부 여기를 불러야 한다.</b> UI 는 넘겨받은 값을 그대로
+        /// 들고 있을 뿐이라 저 혼자 다시 읽지 않는다. TickIncubator 가 매초 부화기를
+        /// 갱신하지만 그건 <b>남은 시간이 바뀔 때만</b>이라, 다 깬 알(0초)만 남으면
+        /// 아무것도 안 돈다 — 그래서 깬 알을 받아도 칸에 그대로 남아 보였다.
+        /// </summary>
         private void RefreshEggs()
         {
             _ui.SetEggs(_player.EggIds());
@@ -2784,6 +2868,7 @@ namespace SnailPet
             if (slot < 0) { Say("      [UI] 부화기가 가득 찼습니다"); return; }
 
             _ui.NoticeEggHatching();
+            RefreshEggs();
 
             var row = GameData.EggDataById[eggId];
             Say($"      [UI] {Loc.ById(row.NameId)} 를 {slot}번 칸에 넣음 ({row.HatchTime}초)");
@@ -2852,7 +2937,9 @@ namespace SnailPet
             var look = gene ?? SnailHatchery.Hatch(egg.Id, new System.Random());
             var born = _player.AddSnail(look);
             RefreshSnail(reshoot: false);   // 화면에 나와 있는 개체는 그대로다
+            RefreshEggs();                  // 칸이 비었다 — 안 그러면 깬 알이 그대로 남아 보인다
             ScanGuides();                  // 새로 얻은 개체가 도감을 채웠을 수 있다
+            RefreshPartsAfterChange();     // 새 파츠를 모았을 수 있다
 
             // 갓 태어난 개체를 한 장 찍어 팝업에 넘긴다. 경계는 그 개체로 다시 재야 한다 —
             // 껍질이 다르면 실루엣도 달라 화면에 나와 있는 개체의 값으로는 어긋난다.
@@ -3213,6 +3300,9 @@ namespace SnailPet
                 }
             }
 
+            // 손님도 같은 저항을 거친다. 다 늘어나면 그 안에서 손에 붙는다.
+            StepGuestPeel(cursor, hasCursor);
+
             // ── 저항 단계: 발은 붙어 있고 몸만 딸려온다 ──
             _stretchTarget = 0f;
             _leanTarget = 0f;
@@ -3283,6 +3373,13 @@ namespace SnailPet
                     _stretchTarget += TurnSquash * k;
                     _leanTarget    += (_anchor.TurnToNext ? -1f : 1f) * TurnLeanDeg * k;
                 }
+            }
+
+            if (!down && _wasMouseDown && _peelGuest != null)
+            {
+                GuestField.CancelPeel(_peelGuest);
+                _peelGuest = null;
+                Say("      놓았습니다. 손님은 벽에 그대로 붙어 있습니다.");
             }
 
             if (!down && _wasMouseDown && _peeling)
@@ -3479,7 +3576,7 @@ namespace SnailPet
             // 키보드 포커스까지 같이 잃는다.
             // _cursorOnUi 는 StepDrag 에서 이미 이번 프레임 값으로 갱신됐다
             TransparentWindow.SetClickThrough(
-                !(_cursorOnSnail || onBubble || onReturn || onFood || onPoop || onEgg || onGuest || _cursorOnUi || _ui.PopupOpen || _drag != DragTarget.None));
+                !(_cursorOnSnail || onBubble || onReturn || onFood || onPoop || onEgg || onGuest || _cursorOnUi || _ui.PopupOpen || _drag != DragTarget.None || _peelGuest != null));
         }
 
         /// <summary>
@@ -3550,24 +3647,43 @@ namespace SnailPet
         }
 
         /// <summary>
-        /// 커서 아래에 손님(짝꿍 포함)이 있으면 집어 든다.
+        /// 커서 아래에 손님(짝꿍 포함)이 있으면 잡는다.
         ///
-        /// 내 달팽이처럼 당겨 떼어내지 않고 바로 들린다 — 손님에게는 늘어나는 변형이 없어
-        /// 당기는 동안 아무 반응이 없기 때문이다. 옮기는 것 말고는 아무것도 하지 않는다.
+        /// 내 달팽이와 같이 <b>당겨 떼어내야</b> 들린다. 손님도 흐물거리게 된 뒤로는
+        /// 당기는 동안 몸이 늘어나는 것이 보이므로 같은 규칙을 쓸 수 있다(2026-08-25).
         /// </summary>
         private bool GrabGuest(int cx, int cy)
         {
             var g = _guestField?.FindAt(VirtualToWorld(cx, cy));
-            if (g == null) return false;
+            if (g == null || g.Free) return false;
 
-            _guestField.Grab(g, _box, _pxPerWorld);
+            GuestField.StartPeel(g, new Vector2(cx, cy));
+            _peelGuest = g;
+
+            Say($"      손님을 잡았습니다: {g.Name} (당기면 떨어집니다)");
+            return true;
+        }
+
+        /// <summary>지금 벽에서 떼는 중인 손님. 다 늘어나면 손에 들린다.</summary>
+        private GuestField.Guest _peelGuest;
+
+        /// <summary>떼는 중인 손님을 한 걸음 진행시킨다. 떨어졌으면 손에 붙인다.</summary>
+        private void StepGuestPeel(Vector2 cursor, bool hasCursor)
+        {
+            if (_peelGuest == null) return;
+
+            // 나갔거나 다시 세워졌으면 잡고 있던 것이 사라진 것이다
+            if (_peelGuest.Root == null || _guestField == null) { _peelGuest = null; return; }
+            if (!hasCursor) return;
+
+            if (!_guestField.StepPeel(_peelGuest, cursor, _box, _pxPerWorld)) return;
 
             _drag = DragTarget.Guest;
-            _dragGuest = g;
-            _grabOffset = g.FootScreen - new Vector2(cx, cy);
+            _dragGuest = _peelGuest;
+            _grabOffset = _peelGuest.FootScreen - cursor;
+            _peelGuest = null;
 
-            Say($"      손님을 집었습니다: {g.Name}");
-            return true;
+            Say("      손님이 벽에서 떨어졌습니다.");
         }
 
         private bool CursorOnSnail()
