@@ -211,10 +211,7 @@ namespace SnailPet.Snail
                 if (!Data.GameData.PartsDataById.TryGetValue(p.PartsId, out var row)) continue;
                 if (string.IsNullOrEmpty(row.EffectPath)) continue;
 
-                var sprite = SnailComposer.LoadFrame(SnailComposer.LinePath(p.Type, p.ResourceKey));
-                if (sprite == null || !SnailMetrics.TryMeasure(sprite, out var e)) continue;
-
-                var local = new Vector3((e.Left + e.Right) * 0.5f, (e.Bottom + e.Top) * 0.5f, 0f);
+                if (!AnchorOf(p, out var local)) continue;
 
                 var go = Play(row.EffectPath, snailRoot.TransformPoint(local));
                 if (go == null)
@@ -227,6 +224,36 @@ namespace SnailPet.Snail
                 list.Add(new Attached { Root = go.transform, Local = local });
             }
             return list;
+        }
+
+        /// <summary>
+        /// 그 파츠 그림의 <b>불투명한 부분 한가운데</b>. 파츠가 전부 같은 캔버스에 그려져 있어
+        /// 이 값이 곧 합성 안에서의 자리가 된다. 못 재면 false.
+        /// </summary>
+        private static bool AnchorOf(SnailPartRef p, out Vector3 local)
+        {
+            local = Vector3.zero;
+
+            var sprite = SnailComposer.LoadFrame(SnailComposer.LinePath(p.Type, p.ResourceKey));
+            if (sprite == null || !SnailMetrics.TryMeasure(sprite, out var e)) return false;
+
+            local = new Vector3((e.Left + e.Right) * 0.5f, (e.Bottom + e.Top) * 0.5f, 0f);
+            return true;
+        }
+
+        /// <summary>
+        /// 그 부위의 이펙트 자리. 미리보기(F5)가 <b>실제와 같은 자리</b>에 붙이려고 쓴다 —
+        /// 두 벌로 재면 미리보기와 출시본이 어긋난다.
+        /// </summary>
+        public static bool AnchorOf(SnailAppearance look, Data.PartsType type, out Vector3 local)
+        {
+            local = Vector3.zero;
+            if (look == null) return false;
+
+            foreach (var p in look.Parts)
+                if (!p.Accessory.HasValue && p.Type == type) return AnchorOf(p, out local);
+
+            return false;
         }
 
         /// <summary>

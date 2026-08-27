@@ -37,6 +37,14 @@ namespace SnailPet.Ui
 
         // ── 치수 (목업 좌표) ──
         public const int PanelW = 173, PanelH = 220;
+
+        /// <summary>
+        /// 왼쪽 목록 판의 폭. 오른쪽에 스프링 제본이 붙은 그림(panel2)이라 그만큼 넓다.
+        /// 왼쪽 끝은 그대로 두고 오른쪽으로만 자라, 남는 20px 이 상세 판 위로 겹친다 —
+        /// 그 겹치는 자리가 노트의 가운데 제본이 된다. 그림 비율대로면 186 인데, 그러면 두 판의
+        /// 너덜한 가장자리 사이에 바탕화면이 비치는 틈이 9px 남아 그만큼 더 물렸다.
+        /// </summary>
+        public const int ListPanelW = 193;
         public const int PanelRadius = 6, PanelBorderPx = 1;
 
         /// <summary>패널 왼쪽 위를 원점으로 한 각 요소의 위치·크기.</summary>
@@ -50,10 +58,19 @@ namespace SnailPet.Ui
             /// <summary>지금 나와 있는 달팽이의 모습. 등급 뱃지와 나이 뱃지 사이를 채운다.</summary>
             public static readonly RectInt Portrait  = new RectInt(16, 44, 141, 80);
 
+            // 게이지는 알 칸이 들어오면서 짧아졌다. 오른쪽 끝(29+85=114)에서 칸까지 6px 이 뜬다.
             public static readonly RectInt FullIcon  = new RectInt(16, 141, 19, 18);
-            public static readonly RectInt FullBar   = new RectInt(29, 145, 127, 12);
+            public static readonly RectInt FullBar   = new RectInt(29, 145, 85, 12);
             public static readonly RectInt HappyIcon = new RectInt(16, 163, 19, 18);
-            public static readonly RectInt HappyBar  = new RectInt(29, 167, 127, 12);
+            public static readonly RectInt HappyBar  = new RectInt(29, 167, 85, 12);
+
+            /// <summary>
+            /// 오늘 낳을 수 있는 알. 게이지 두 줄 오른쪽에 붙는 네모 칸으로,
+            /// 알 그림 아래에 「남은 수 / 전체 수」가 앉는다.
+            /// </summary>
+            public static readonly RectInt EggBox   = new RectInt(120, 139, 36, 42);
+            public static readonly RectInt EggIcon  = new RectInt(128, 142, 20, 20);
+            public static readonly RectInt EggCount = new RectInt(120, 165, 36, 12);
 
             // 주의: 프리팹에는 이 표로 나타낼 수 없는 손 조정이 더 들어 있다 —
             // Portrait 0.7배, 아래 Actions 넷 1.2배, CoinIcon 0.8배의 localScale.
@@ -64,14 +81,21 @@ namespace SnailPet.Ui
             /// 파츠(외형) 도감. 달팽이 도감 버튼 바로 옆이다 —
             /// 아래 <see cref="Actions"/> 첫 칸과 둘째 칸 사이의 빈자리에 들어간다.
             /// </summary>
-            public static readonly RectInt PartsBook = new RectInt(47, 186, 24, 22);
+            public static readonly RectInt PartsBook = new RectInt(45, 186, 24, 22);
 
-            /// <summary>하단 액션 4개. 상세정보 · 옷장 · 유전정보 · 판매.</summary>
+            /// <summary>
+            /// 하단 액션 4개. 상세정보 · 옷장 · 유전정보 · 판매.
+            ///
+            /// 사이에 <see cref="PartsBook"/> 이 끼어 실제로는 <b>다섯 개가 한 줄</b>이다.
+            /// 그래서 x 는 16부터 132까지 <b>29씩</b> 고르게 나눠 놓는다 —
+            /// 프리팹에서 손으로 옮기다 31·31·27·27 로 들쭉날쭉해진 것을 되돌린 값이다(2026-08-27).
+            /// 양 끝(16·132)은 그대로 두어 줄 전체의 자리는 안 움직인다.
+            /// </summary>
             public static readonly RectInt[] Actions =
             {
                 new RectInt( 16, 186, 24, 22),
-                new RectInt( 78, 186, 24, 22),
-                new RectInt(105, 186, 24, 22),
+                new RectInt( 74, 186, 24, 22),
+                new RectInt(103, 186, 24, 22),
                 new RectInt(132, 186, 24, 22),
             };
 
@@ -212,18 +236,36 @@ namespace SnailPet.Ui
             public const int Height = 26;
             public const int PadX = 14;
             public const int MinWidth = 60;
+
+            /// <summary>
+            /// 띠의 최대 폭. <b>펼쳤을 때와 접었을 때가 다르다.</b>
+            ///
+            /// 띠는 위젯 안에서 가운데를 잡는데, 접으면 그 가운데가 오른쪽 상세 판이라
+            /// 오른쪽으로 93px 밖에 안 남는다. 320 을 그대로 쓰면 화면 밖으로 넘친다.
+            /// 접었을 때는 186(=93×2)까지만 쓰고, 넘치는 글은 두 줄로 접는다.
+            /// </summary>
             public const int MaxWidth = 320;
+            public const int MaxWidthFolded = 186;
             public const int FontSize = 12;
+
+            /// <summary>한 줄이 늘어날 때마다 띠가 이만큼 높아진다.</summary>
+            public const int LineStep = 15;
+
+            /// <summary>몇 줄까지 접을지. 그보다 길면 넘친다 — 문구를 줄일 일이다.</summary>
+            public const int MaxLines = 2;
 
             /// <summary>
             /// 위젯 안에서의 자리.
             ///
             /// 세로는 위젯 한가운데를 <b>앵커로</b> 잡는다 — 최소화로 상자가 줄어도 따라온다.
-            /// 가로는 오른쪽 끝에서 패널 기둥 한가운데까지 되돌아온 값이다. 위젯 상자는 최대화
-            /// 기준으로 잡혀 있어서 상자의 한가운데는 접었을 때 빈 왼쪽 절반에 떨어진다.
+            /// 가로는 두 가지다. 위젯 상자는 <b>최대화 기준 폭</b>이라 상자의 한가운데는 접었을 때
+            /// 빈 왼쪽 절반에 떨어진다. 그래서 접었을 때는 오른쪽 끝에서 상세 판 한가운데까지
+            /// 되돌아오고(<see cref="Offset"/>), 펼쳤을 때는 두 판 사이(노트 제본)로 간다
+            /// (<see cref="OffsetMax"/>).
             /// </summary>
             public static readonly Vector2 Anchor = new Vector2(1f, 0.5f);
             public static readonly Vector2 Offset = new Vector2(-(At.Close.xMax - PanelW * 0.5f), 0f);
+            public static readonly Vector2 OffsetMax = new Vector2(-At.Close.xMax, 0f);
         }
 
         /// <summary>
@@ -485,6 +527,15 @@ namespace SnailPet.Ui
 
             public static readonly RectInt No  = new RectInt( 37, 112, 63, 22);
             public static readonly RectInt Yes = new RectInt(135, 112, 63, 22);
+
+            /// <summary>
+            /// 예/아니오만 있는 물음 팝업의 문구.
+            ///
+            /// 제목 자리(<see cref="Title"/>)에 두면 21px 높이 한가운데에 맞춰져 <b>글이 위에 붙어</b>
+            /// 보인다. 여기서는 위 여백부터 버튼 위까지를 통째로 차지해, 두 줄짜리 문구도
+            /// 버튼 위 공간의 한가운데에 온다.
+            /// </summary>
+            public static readonly RectInt Ask = new RectInt(0, 14, W, No.y - 18);
 
             /// <summary>닫기 X. 패널 오른쪽 위에 걸친다.</summary>
             public static readonly RectInt Close = new RectInt(220, -6, 28, 28);

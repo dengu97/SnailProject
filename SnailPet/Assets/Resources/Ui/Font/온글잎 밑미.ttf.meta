@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 3badd10236a758c4e8b2c8046a09f6c0
+guid: b6a6cb5c00c24784493cdac4f603c5d5
 TrueTypeFontImporter:
   externalObjects: {}
   serializedVersion: 4
@@ -9,7 +9,7 @@ TrueTypeFontImporter:
   characterPadding: 1
   includeFontData: 1
   fontNames:
-  - Griun Fromsol
+  - Ownglyph meetme
   fallbackFontReferences: []
   customCharacters: 
   fontRenderingMode: 0

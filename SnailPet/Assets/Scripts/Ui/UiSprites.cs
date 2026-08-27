@@ -58,6 +58,27 @@ namespace SnailPet.Ui
             /// 이미 구워진 칸들의 역할이 한 칸씩 밀린다.
             /// </summary>
             SlotRound,
+
+            /// <summary>속이 찬 네모 칸. 게이지 옆 「오늘 낳을 수 있는 알」 칸에 쓴다.</summary>
+            Square,
+
+            /// <summary>
+            /// 왼쪽 목록 판. 오른쪽 가장자리에 스프링 제본이 그려져 있어 <b>그만큼 넓다</b>
+            /// (714 → 767). 제본이 오른쪽 판 위로 겹쳐 노트처럼 보이게 하는 것이 요점이다.
+            /// </summary>
+            Panel2,
+
+            /// <summary>
+            /// 나이 알약. <see cref="LevelBadge"/> 는 줄 배경과 같은 연한 색이라 안 보였다.
+            /// 이건 중간 톤이라 배경에서 떠 보인다.
+            /// </summary>
+            Badge2,
+
+            /// <summary>
+            /// 안내 문구의 바탕. <see cref="Notice"/> 와 같은 도형인데 <b>어두운 색</b>이다 —
+            /// 그래서 쓰는 쪽은 글자를 밝은 색으로 얹어야 한다.
+            /// </summary>
+            Notice2,
         }
 
         /// <summary>역할별 기본 모서리 반지름. 아트가 없을 때만 쓴다.</summary>
@@ -144,7 +165,13 @@ namespace SnailPet.Ui
         /// </summary>
         private static Vector4 BorderOf(Shape s) => s switch
         {
+            // 제본(오른쪽 66px 남짓)이 늘어나면 코일이 뭉갠다. 그쪽만 넉넉히 잡아 둔다.
+            Shape.Panel2    => new Vector4(32, 32, 80, 32),
+            // 알약은 <b>세로로 자르지 않는다</b>. 24 로 잡으면 둥근 끝을 가로질러 각져 보인다
+            // (badge 도 같은 모양이지만 어두운 테두리가 있어 덜 티가 났다). 좌우 끝(43px)만 지킨다.
+            Shape.Badge2    => new Vector4(43, 0, 43, 0),
             Shape.Notice    => new Vector4(30, 26, 30, 26),
+            Shape.Notice2   => new Vector4(30, 26, 30, 26),   // notice 와 같은 도형이다
             Shape.SlotCount => new Vector4(30, 26, 30, 26),   // notice 와 같은 도형이다
             _            => Vector4.zero,
         };

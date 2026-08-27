@@ -53,6 +53,14 @@ namespace SnailPet.Snail
         }
 
         /// <summary>
+        /// 오늘 더 낳을 수 있는 횟수. <b>세던 것을 건드리지 않고 보기만 한다</b> —
+        /// UI 가 매 프레임 물어보므로, 여기서 날짜를 접으면 화면이 세이브를 바꾸게 된다.
+        /// 접는 것은 <see cref="CanLayToday"/> 한 곳에서만 한다.
+        /// </summary>
+        public int EggsLeftToday =>
+            System.Math.Max(0, Config.CreateEggCount - (EggDay == SnailBreeding.Today ? EggsToday : 0));
+
+        /// <summary>
         /// 장착한 악세서리의 AccessoriesData.Id. 부위마다 하나만 낄 수 있다.
         ///
         /// 타고난 외형과 섞지 않는다 — 외형은 신원이고 이건 갈아입는 것이라,

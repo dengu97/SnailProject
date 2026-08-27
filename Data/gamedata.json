@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26 15:00:44",
+  "generatedAt": "2026-08-27 18:36:53",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -418,7 +418,13 @@
     "[넥타이01]": 405,
     "[넥타이01정보]": 406,
     "[외형도감]": 407,
-    "[외형도감안내]": 408
+    "[외형도감안내]": 408,
+    "[알개수]": 409,
+    "[일반달팽이_눈09]": 410,
+    "[일반달팽이_눈09정보]": 411,
+    "[에픽_동생껍질]": 412,
+    "[에픽_동생껍질정보]": 413,
+    "[알안내]": 414
   },
   "tables": {
     "EnumData": [
@@ -497,6 +503,7 @@
       {"Id": 176, "NameId": 176, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "commoneyes06", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 177, "SellItem": 36, "SellCount": 5, "AnimFps": null, "MutationGroup": 320, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 197, "NameId": 197, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "commoneyes07", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 198, "SellItem": 36, "SellCount": 5, "AnimFps": null, "MutationGroup": 320, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 206, "NameId": 206, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "commoneyes08", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 207, "SellItem": 36, "SellCount": 5, "AnimFps": null, "MutationGroup": 320, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
+      {"Id": 410, "NameId": 410, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "commoneyes09", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 411, "SellItem": 36, "SellCount": 5, "AnimFps": null, "MutationGroup": 320, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 363, "NameId": 363, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "commoneyes12", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 364, "SellItem": 36, "SellCount": 5, "AnimFps": null, "MutationGroup": 320, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 178, "NameId": 178, "PartsGroupId": 169, "RarityType": "Epic", "PartsType": "Eyes", "ResourceKey": "epiceyes01", "IsUseColor": false, "Colors": [], "AppearWeight": 5, "InfoId": 179, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 321, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 26, "NameId": 26, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler01", "IsUseColor": true, "Colors": ["commonfeeler01_c01"], "AppearWeight": 10, "InfoId": 81, "SellItem": 36, "SellCount": 5, "AnimFps": null, "MutationGroup": 322, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
@@ -559,7 +566,8 @@
       {"Id": 397, "NameId": 397, "PartsGroupId": 169, "RarityType": "Epic", "PartsType": "Body", "ResourceKey": "epicbody05", "IsUseColor": false, "Colors": [], "AppearWeight": 5, "InfoId": 398, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 319, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 399, "NameId": 399, "PartsGroupId": 169, "RarityType": "Epic", "PartsType": "Body", "ResourceKey": "epicbody06", "IsUseColor": false, "Colors": [], "AppearWeight": 5, "InfoId": 398, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 319, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 400, "NameId": 400, "PartsGroupId": 169, "RarityType": "Epic", "PartsType": "Shell", "ResourceKey": "heart", "IsUseColor": true, "Colors": ["heart_c01"], "AppearWeight": 5, "InfoId": 401, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 326, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
-      {"Id": 402, "NameId": 402, "PartsGroupId": 169, "RarityType": "Epic", "PartsType": "Shell", "ResourceKey": "heart", "IsUseColor": true, "Colors": ["heart_c01"], "AppearWeight": 5, "InfoId": 401, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 326, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null}
+      {"Id": 402, "NameId": 402, "PartsGroupId": 169, "RarityType": "Epic", "PartsType": "Shell", "ResourceKey": "heart", "IsUseColor": true, "Colors": ["heart_c01"], "AppearWeight": 5, "InfoId": 401, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 326, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
+      {"Id": 412, "NameId": 412, "PartsGroupId": 169, "RarityType": "Epic", "PartsType": "Shell", "ResourceKey": "snailbaby", "IsUseColor": false, "Colors": [], "AppearWeight": 5, "InfoId": 413, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 326, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null}
     ],
     "FoodData": [
       {"Id": 31, "FoodType": "vegetable", "NameId": 31, "RarityType": "Common", "FullPoint": 5, "HappyPoint": 3, "EatTime": 2, "BuffId": 0, "InfoId": 124, "ResourceKey": "food_lettuce", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 1, "PoopTime": 20, "ResourceSize": 1},
@@ -847,8 +855,10 @@
       {"Id": 225, "Kr": "등 뒤에 있는 식물은 어느정도 자라면 먹으면서 크기를 유지한답니다."},
       {"Id": 208, "Kr": "초롱아귀 더듬이"},
       {"Id": 209, "Kr": "누군가를 유인하려는걸까?"},
-      {"Id": 206, "Kr": "앵두 입술"},
-      {"Id": 207, "Kr": "도돔하니 귀여운 입술입니다."},
+      {"Id": 410, "Kr": "앵두 입술"},
+      {"Id": 411, "Kr": "도돔하니 귀여운 입술입니다."},
+      {"Id": 206, "Kr": "피곤한 얼굴"},
+      {"Id": 207, "Kr": "눈꺼풀이 점점 닫히고 있습니다."},
       {"Id": 210, "Kr": "오리 얼굴"},
       {"Id": 211, "Kr": "물을 좋아한다는 점은 닮았네요!"},
       {"Id": 212, "Kr": "물개 얼굴"},
@@ -1017,13 +1027,17 @@
       {"Id": 398, "Kr": "뭔가 몸 안에서 돌아다니고 있습니다.."},
       {"Id": 400, "Kr": "하트 껍질(분홍색)"},
       {"Id": 402, "Kr": "하트 껍질(파란색)"},
-      {"Id": 401, "Kr": "사랑을 듬뿍받아 집으로 만들었나봐요"}
+      {"Id": 401, "Kr": "사랑을 듬뿍받아 집으로 만들었나봐요"},
+      {"Id": 409, "Kr": "{0}/{1}"},
+      {"Id": 412, "Kr": "동생 달팽이"},
+      {"Id": 413, "Kr": "동생 목마를 태워주고 있습니다. 착하네요!"},
+      {"Id": 414, "Kr": "달팽이마다 하루에 낳을 수 있는 알의 개수가 정해져 있습니다. (멀티 포함)"}
     ],
     "UnlockData": [
       {"Id": 101, "ConditionType": "SnailLevel", "NeedConditionValue": 2, "CostItem": null, "CostCount": null}
     ],
     "GameConfig": [
-      {"MutationWeight": 5, "FullDecayPerTick": 1, "HappyDecayPerTick": 1, "PixelsPerSpeed": 10, "PixelsPerSize": 10, "FoodGravity": 1600, "CreateEggCooltime": 1800, "CreateEggPercent": 0.5, "CreateEggPlusPercent": 0.1, "CreateEggCount": 3, "MutationWeight2": 5, "MateSlotLevel": 5, "Info": null}
+      {"MutationWeight": 5, "FullDecayPerTick": 1, "HappyDecayPerTick": 1, "PixelsPerSpeed": 10, "PixelsPerSize": 10, "FoodGravity": 1600, "CreateEggCooltime": 1800, "CreateEggPercent": 0.5, "CreateEggPlusPercent": 0.1, "CreateEggCount": 3, "MutationWeight2": 5, "MateSlotLevel": 5, "CreateEggCount2": 3, "Info": null}
     ],
     "ContentsGuide": [
       {"GroupId": 347, "MainTitleId": 347, "SubTitleId": 348, "InfoId": 349},

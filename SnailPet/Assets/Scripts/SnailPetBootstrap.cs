@@ -533,6 +533,11 @@ namespace SnailPet
             _ui.TabChanged += i =>
             {
                 ShowActiveSnail();      // 탭을 옮기면 오른쪽이 화면의 달팽이로 돌아온다
+
+                // 파티 탭은 들어가는 순간 목록을 채운다. 예전에는 친구/로비 칩을 눌러야
+                // 채워져, 처음 들어가면 프리팹의 자리표시자 이름이 그대로 보였다.
+                if (i == SnailUi.MultiTab) EnterMulti();
+
                 Say($"      [UI] 탭 {i}");
             };
             _ui.SnailPicked += PickSnail;
@@ -635,12 +640,7 @@ namespace SnailPet
                 ClearGuests();
             };
 
-            _ui.MultiTabChanged += lobby =>
-            {
-                // 로비 탭으로 옮기는 순간 목록을 새로 받아 온다. 결과는 Changed 로 돌아온다.
-                if (lobby && SteamHub.Available) SteamHub.RefreshLobbies();
-                RefreshMulti();
-            };
+            _ui.MultiTabChanged += _ => EnterMulti();
 
             _ui.InviteFriend += i => SteamHub.Invite(i);
             SteamHub.SameRoom += () => _ui.NoticeSameRoom();
@@ -714,6 +714,21 @@ namespace SnailPet
 
             _publishAt = _t + PublishEvery;
             PublishMySnail();
+        }
+
+        /// <summary>
+        /// 파티 화면을 지금 상태로 채운다. <b>탭으로 들어올 때와 친구/로비 칩을 누를 때</b>
+        /// 둘 다 여기로 온다 — 예전에는 칩 쪽에만 있어서, 탭에 들어가면 프리팹에 구워진
+        /// 자리표시자 이름(「친구 이름」…)이 그대로 보이다가 칩을 눌러야 진짜 목록이 떴다.
+        ///
+        /// 로비 목록은 스팀에서 비동기로 오므로 들어올 때마다 새로 받아 온다. 결과는 Changed 로 돌아온다.
+        /// </summary>
+        private void EnterMulti()
+        {
+            if (_ui == null) return;
+
+            if (_ui.OnLobbyTab && SteamHub.Available) SteamHub.RefreshLobbies();
+            RefreshMulti();
         }
 
         /// <summary>멀티 화면을 지금 상태로 다시 그린다. 목록·방·참가자가 한 번에 맞춰진다.</summary>
@@ -1385,6 +1400,7 @@ namespace SnailPet
 
             _ui.SetSnail(snail.Name, snail.Rarity, snail.Growth.Level);
             _ui.SetGauges((float)snail.Growth.FullPercent, (float)snail.Growth.HappyPercent);
+            _ui.SetEggQuota(snail.EggsLeftToday, Config.CreateEggCount);
 
             // 입은 모습으로 찍는다. 목록 썸네일과 같은 기준이다.
             var dressed = snail.Dressed();
@@ -1407,6 +1423,7 @@ namespace SnailPet
 
             RefreshSnail(reshoot: false);
             _ui.SetGauges((float)_growth.FullPercent, (float)_growth.HappyPercent);
+            _shownEggsLeft = -1;      // 화면의 달팽이 값으로 다시 그리게 한다
             if (_portrait != null) _ui.SetPortrait(_portrait.Texture);
         }
 
@@ -1702,7 +1719,7 @@ namespace SnailPet
                 _viewPortrait?.Dispose();
                 _viewPortrait = null;
                 _ui.ResetPick();
-                _shownFull = _shownHappy = -1f;
+                _shownFull = _shownHappy = -1f; _shownEggsLeft = -1;
             }
 
             RefreshSnail();
@@ -1749,7 +1766,7 @@ namespace SnailPet
 
             ActivateSnail(_player.Snails[listIndex]);
             RefreshSnail();
-            _shownFull = _shownHappy = -1f;      // 게이지를 새 개체 값으로 다시 그리게 한다
+            _shownFull = _shownHappy = -1f; _shownEggsLeft = -1;      // 게이지를 새 개체 값으로 다시 그리게 한다
             Say($"      [UI] {listIndex}번 달팽이로 교체 → {_appearance}");
         }
 
@@ -2096,10 +2113,16 @@ namespace SnailPet
 
         private float _shownFull = -1f, _shownHappy = -1f;
 
+        /// <summary>화면에 떠 있는 「오늘 낳을 수 있는 알」 수. 바뀔 때만 다시 그린다.</summary>
+        private int _shownEggsLeft = -1;
+
         /// <summary>
-        /// 포만도·행복도 막대를 따라가게 한다.
+        /// 포만도·행복도 막대와 오늘 낳을 수 있는 알 수를 따라가게 한다.
         /// 값이 눈에 띄게 바뀔 때만 다시 그린다 — 막대 너비를 매 프레임 건드리면
         /// UGUI 가 레이아웃을 통째로 다시 계산한다.
+        ///
+        /// 알 수도 여기서 본다. 낳을 때만이 아니라 <b>자정이 지나도</b> 늘어나는데,
+        /// 그때 깨워 줄 사람이 없어서다 (OwnedSnail.EggsLeftToday 는 날짜를 같이 본다).
         /// </summary>
         private void RefreshGauges()
         {
@@ -2109,12 +2132,17 @@ namespace SnailPet
 
             float full  = (float)_growth.FullPercent;
             float happy = (float)_growth.HappyPercent;
+            int eggsLeft = _player.Active?.EggsLeftToday ?? 0;
 
-            if (Mathf.Abs(full - _shownFull) < 0.005f && Mathf.Abs(happy - _shownHappy) < 0.005f) return;
+            if (Mathf.Abs(full - _shownFull) < 0.005f && Mathf.Abs(happy - _shownHappy) < 0.005f
+                && eggsLeft == _shownEggsLeft) return;
 
             _shownFull = full;
             _shownHappy = happy;
+            _shownEggsLeft = eggsLeft;
+
             _ui.SetGauges(full, happy);
+            _ui.SetEggQuota(eggsLeft, Config.CreateEggCount);
         }
 
         private void Update()
@@ -2643,9 +2671,62 @@ namespace SnailPet
         // 열쇠를 둔다. 창이 포커스를 갖지 않아 Unity 의 Input 이 안 되므로 마우스와 같이
         // 전역 키 상태를 읽는다 — 다른 창을 쓰는 중에도 눌리니 흔치 않은 키를 골랐다.
 
-        private const int VK_F6 = 0x75, VK_F7 = 0x76, VK_F8 = 0x77, VK_F9 = 0x78, VK_F10 = 0x79, VK_F11 = 0x7A;
+        private const int VK_F5 = 0x74, VK_F6 = 0x75, VK_F7 = 0x76, VK_F8 = 0x77, VK_F9 = 0x78, VK_F10 = 0x79, VK_F11 = 0x7A;
 
-        private bool _f6Was, _f7Was, _f8Was, _f9Was, _f10Was, _f11Was;
+        private bool _f5Was, _f6Was, _f7Was, _f8Was, _f9Was, _f10Was, _f11Was;
+
+        /// <summary>지금 미리보고 있는 이펙트 번호. 프리팹 수와 같으면 「끔」이다.</summary>
+        private int _previewFx = -1;
+
+        /// <summary>
+        /// 확인용(F5). <c>Resources/Effects</c> 의 프리팹을 한 바퀴 돌며 <b>껍질</b>에 하나씩 붙여 본다.
+        ///
+        /// 붙이는 자리·따라다니는 방법이 파츠 이펙트와 <b>완전히 같은 길</b>이라(SparkField.AnchorOf ·
+        /// Place), 여기서 보이는 모습이 곧 출시본이다. 걷고 벽을 타는 동안 그대로 볼 수 있다.
+        ///
+        /// 폴더를 그때그때 읽으므로 <b>프리팹을 새로 임포트하면 코드를 안 고쳐도 목록에 들어온다.</b>
+        /// 한 바퀴 돌면 한 번은 아무것도 안 붙인 상태(끔)를 지나간다.
+        /// </summary>
+        private void PreviewEffectCheat()
+        {
+            var prefabs = Resources.LoadAll<GameObject>("Effects");
+            if (prefabs == null || prefabs.Length == 0)
+            {
+                Say("      [이펙트] Resources/Effects 에 프리팹이 없습니다 (F5)");
+                return;
+            }
+
+            SparkField.Detach(_testEffect);
+            _previewFx = (_previewFx + 1) % (prefabs.Length + 1);
+
+            if (_previewFx == prefabs.Length)
+            {
+                Say("      [이펙트] 미리보기 끔 (F5)");
+                _ui?.ShowNotice("이펙트 미리보기 끔");
+                return;
+            }
+
+            string key = prefabs[_previewFx].name;
+
+            if (_appearance == null || _sparks == null || _snail == null) return;
+            if (!SparkField.AnchorOf(_appearance, Data.PartsType.Shell, out var local))
+            {
+                Say("      [이펙트] 껍질 자리를 못 찾았습니다 (F5)");
+                return;
+            }
+
+            var go = _sparks.Play(key, _snail.TransformPoint(local));
+            if (go == null)
+            {
+                Say($"      [이펙트] 프리팹을 못 불렀습니다: {key} (F5)");
+                return;
+            }
+
+            _testEffect.Add(new SparkField.Attached { Root = go.transform, Local = local });
+
+            Say($"      [이펙트] 미리보기 {_previewFx + 1}/{prefabs.Length}: {key} → 껍질 (F5)");
+            _ui?.ShowNotice($"{_previewFx + 1}/{prefabs.Length}  {key}");
+        }
 
         /// <summary>
         /// 확인용. 아직 안 채운 첫 도감 칸을 지금 화면의 달팽이 모습으로 채운다.
@@ -2709,6 +2790,12 @@ namespace SnailPet
             bool f7 = TransparentWindow.IsKeyDown(VK_F7);
             if (f7 && !_f7Was) FakeGuestCheat();
 
+            // 이펙트 미리보기. Resources/Effects 를 한 바퀴 돌며 껍질에 하나씩 붙여 본다.
+            bool f5 = TransparentWindow.IsKeyDown(VK_F5);
+            if (f5 && !_f5Was) PreviewEffectCheat();
+
+            _f5Was = f5;
+
             // 이펙트를 눈으로 보려면 터뜨려 봐야 한다. 자리는 달팽이 몸 한가운데.
             bool f6 = TransparentWindow.IsKeyDown(VK_F6);
             if (f6 && !_f6Was) SparkOnSnail("star01", 12);
@@ -2749,8 +2836,7 @@ namespace SnailPet
         }
 
         /// <summary>
-        /// 구석에 하나 놓는다. 좌우 중 한 곳을 골라 바닥에 붙이고,
-        /// 이미 놓인 것이 있으면 그만큼 안쪽으로 밀어 겹치지 않게 한다.
+        /// 바닥 아무 데나 하나 놓는다. 이미 놓인 알과 겹치지 않는 자리를 고른다.
         /// </summary>
         private void DropEgg(OwnedEgg due, float px)
         {
@@ -2762,18 +2848,53 @@ namespace SnailPet
             float size = row.ResourceSize > 0 ? (float)row.ResourceSize : 1f;
             float pixels = Mathf.Max(EggMinPixels, bodyPx * EggFraction) * size;
 
-            // 반지름을 알아야 자리를 정할 수 있어서, 놓고 나서 민다
+            // 반지름을 알아야 자리를 정할 수 있어서, 먼저 만들고 나서 자리를 잡는다
             var egg = _eggs.Spawn(due.EggId, row.ResourceKey, due.Gene, Vector2.zero, pixels);
             if (egg == null) return;
 
-            bool left = _rng.Next(2) == 0;
-            float step = (egg.Half.x * 2f + 4f) * (_eggs.Count - 1);
-            float x = left ? _box.Left + EggMargin + egg.Half.x + step
-                           : _box.Right - EggMargin - egg.Half.x - step;
-
-            egg.Screen = new Vector2(x, _box.Bottom - EggMargin - egg.Half.y);
+            egg.Screen = new Vector2(PickEggX(egg), _box.Bottom - EggMargin - egg.Half.y);
             Say($"      [알] 화면에 놓았습니다: {GameData.TokenById[due.EggId]} " +
                 $"@({egg.Screen.x:0},{egg.Screen.y:0}) 크기 {pixels:0}px (ResourceSize {size:0.##})");
+        }
+
+        /// <summary>알끼리 띄우는 최소 간격(px)과, 안 겹치는 자리를 몇 번까지 다시 뽑을지.</summary>
+        private const float EggGap = 4f;
+        private const int EggPlaceTries = 12;
+
+        /// <summary>
+        /// 바닥 어디에 놓을지 고른다.
+        ///
+        /// 예전에는 좌우 구석에서부터 한 줄로 밀어 놓았다. 늘 같은 자리라 알이 생긴 것을
+        /// 알아채기 어려웠다. 지금은 바닥 전체에서 뽑는다 — <b>높이는 그대로</b>다.
+        /// 알은 바닥에 놓이는 것이라 위로 띄우면 떠 있는 것처럼 보인다.
+        ///
+        /// 이미 놓인 알과 겹치면 다시 뽑고, <see cref="EggPlaceTries"/> 번 안에 못 찾으면
+        /// 마지막 것을 그냥 쓴다 — 바닥이 좁을 때 영영 도는 것보다 낫다.
+        /// </summary>
+        private float PickEggX(EggField.Egg egg)
+        {
+            float min = _box.Left + EggMargin + egg.Half.x;
+            float max = _box.Right - EggMargin - egg.Half.x;
+            if (max <= min) return min;
+
+            float x = min;
+            for (int i = 0; i < EggPlaceTries; i++)
+            {
+                x = min + (float)_rng.NextDouble() * (max - min);
+                if (!EggOverlaps(egg, x)) break;
+            }
+            return x;
+        }
+
+        /// <summary>그 자리에 놓으면 이미 있는 알과 겹치는가. 자기 자신은 뺀다.</summary>
+        private bool EggOverlaps(EggField.Egg egg, float x)
+        {
+            foreach (var other in _eggs.Items)
+            {
+                if (other == egg) continue;
+                if (Mathf.Abs(other.Screen.x - x) < other.Half.x + egg.Half.x + EggGap) return true;
+            }
+            return false;
         }
 
         /// <summary>

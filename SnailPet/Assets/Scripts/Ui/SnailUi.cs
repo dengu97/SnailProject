@@ -68,6 +68,12 @@ namespace SnailPet.Ui
             public const string UiScale      = "[UI크기]";      // "UI크기(x{0})"
             public const string AlwaysMax    = "[UI최대화]";
             public const string EggSection   = "[알관련]";
+
+            /// <summary>오늘 낳을 수 있는 알. "{0}/{1}" — 남은 수 / 전체 수.</summary>
+            public const string EggCount     = "[알개수]";
+
+            /// <summary>알 칸을 눌렀을 때 뜨는 설명.</summary>
+            public const string EggInfo      = "[알안내]";
             public const string NoEggs       = "[알생성금지]";
             public const string BubbleSection = "[말풍선알림]";
             public const string HungryBubble = "[배고픔알림]";
@@ -192,11 +198,20 @@ namespace SnailPet.Ui
         [SerializeField] private Image _rarityBadge, _rarityIcon;
         [SerializeField] private RectTransform _fullFill, _happyFill;
 
+        /// <summary>게이지 오른쪽 「오늘 낳을 수 있는 알」 칸의 숫자.</summary>
+        [SerializeField] private Text _eggQuota;
+
+        /// <summary>그 칸을 눌러 보는 설명. 칸 자체가 버튼이다.</summary>
+        [SerializeField] private Button _eggQuotaBtn;
+
         public event Action Rename, Detail, Wardrobe, Gene, Sell, Settings, Close, Maximize;
 
         /// <summary>파츠(외형) 도감 버튼. 달팽이 도감 옆에 있다.</summary>
         public event Action PartsBook;
         public event Action<int> TabChanged, SwapTo;
+
+        /// <summary>파티(멀티플레이어) 탭의 번호. 목록을 채우는 쪽에서도 이 값으로 가려낸다.</summary>
+        public const int MultiTab = 4;
 
         [SerializeField] private Image[] _tabs;
 
@@ -301,6 +316,7 @@ namespace SnailPet.Ui
 
             // 상품 상세 판은 프리팹에 있으므로, 거기 새로 붙는 「확률」만 따로 짓는다.
             if (_shopRatesBtn == null && _shopItemPanel != null) BuildRatesButton();
+            if (_shopRatesLabel == null) _shopRatesLabel = FindRatesLabel();
 
             // 파츠 도감도 프리팹에 없다. 목록은 상세보기와 같은 판에, 버튼은 상세 판에 붙는다.
             if (_partsBookBtn == null && _panel != null) BuildPartsBookButton();
@@ -364,6 +380,33 @@ namespace SnailPet.Ui
             if (_multiRoot == null && _geneRoot != null) BuildMultiList((RectTransform)_geneRoot.parent);
             if (_multiPanel == null) BuildMultiPanel();
 
+            // 게이지는 알 칸이 들어오면서 짧아졌다. 프리팹에는 예전 길이로 굳어 있다.
+            PlaceGauge("FullTrack",  _fullFill,  At.FullBar);
+            PlaceGauge("HappyTrack", _happyFill, At.HappyBar);
+
+            // 그 오른쪽의 「오늘 낳을 수 있는 알」 칸도 프리팹에 없다.
+            if (_eggQuota == null) BuildEggQuota();
+
+            // 왼쪽 목록 판은 제본이 달린 그림으로 바뀌었고 그만큼 넓어졌다.
+            ApplyListPanelArt();
+
+            // 빈 부화 칸의 + 는 프리팹에 예전 크기로 굳어 있다. 글꼴이 바뀌며 커 보였다.
+            for (int i = 0; i < Count(_hatchSlots); i++)
+                if (_hatchSlots[i]?.Plus != null) _hatchSlots[i].Plus.fontSize = HatchPlusSize;
+
+            // 하단 버튼 다섯의 간격이 프리팹에서 31·31·27·27 로 어긋나 있다(높이도 0.4px 다르다).
+            // 표의 고른 값으로 다시 놓는다. 배율(1.2배)은 Place 가 안 건드리므로 그대로 남는다.
+            for (int i = 0; i < Count(_actionBtns); i++)
+                if (_actionBtns[i] != null) Place((RectTransform)_actionBtns[i].transform, At.Actions[i]);
+
+            if (_partsBookBtn != null) Place((RectTransform)_partsBookBtn.transform, At.PartsBook);
+
+            // 도움말 버튼은 물음표 아트가 들어오면서 아이콘으로 바뀌었다.
+            ApplyHelpIcon();
+
+            // 나이 알약은 줄 배경과 같은 색이라 안 보였다. 프리팹에도 그 그림으로 구워져 있다.
+            ApplyAgeBadge(_rows);
+            ApplyAgeBadge(_mateRows);
 
             // 「부화시킬 알이 없습니다」는 프리팹에 부화기 패널에 구워져 있다. 비는 쪽은
             // 왼쪽 목록이므로 그리로 옮긴다. 다시 구우면 처음부터 그 자리에 지어진다.
@@ -798,6 +841,9 @@ namespace SnailPet.Ui
             // 알 등장 확률
             Hook(_shopRatesBtn, () => ShowRates(_ratesEggId));
 
+            // 하루에 낳을 수 있는 알 칸. 눌러 보면 설명이 뜬다.
+            Hook(_eggQuotaBtn, () => ShowNotice(SnailPet.Data.Loc.Text(Keys.EggInfo)));
+
             // 파츠 도감
             Hook(_partsBookBtn, () => PartsBook?.Invoke());
             for (int i = 0; i < Count(_partsTypes); i++) { int k = i; Hook(_partsTypes[i]?.Button, () => PickPartsType(k)); }
@@ -1071,6 +1117,152 @@ namespace SnailPet.Ui
                                UiSprites.Shape.Fill,      "Full");
             _happyFill = Gauge(At.HappyBar, At.HappyIcon, "icon_happy", UiTheme.GaugeHappy,
                                UiSprites.Shape.FillHappy, "Happy");
+
+            BuildEggQuota();
+        }
+
+        /// <summary>
+        /// 목록 줄의 나이 알약을 badge2 로 갈아 끼운다.
+        ///
+        /// levelbadge 는 줄 배경과 거의 같은 연한 색이라 알약이 안 보이고 글자만 떠 있었다.
+        /// 프리팹에는 그 그림으로 구워져 있어 여기서 바꾼다.
+        ///
+        /// <b>이름으로 찾는다.</b> 프리팹의 <see cref="UiShapeRef"/> 값은 믿을 수 없다 —
+        /// enum 가운데에 항목이 끼어들어 밀린 탓에 줄 썸네일까지 LevelBadge 로 읽힌다.
+        /// </summary>
+        private void ApplyAgeBadge(ListRow[] rows)
+        {
+            var art = UiSprites.Of(UiSprites.Shape.Badge2);
+            if (art == null) return;
+
+            for (int i = 0; i < Count(rows); i++)
+            {
+                var badge = rows[i]?.Root != null ? rows[i].Root.Find("AgeBadge") : null;
+                var img = badge != null ? badge.GetComponent<Image>() : null;
+                if (img == null) continue;
+
+                img.sprite = art;
+                img.type = Image.Type.Sliced;
+                img.color = Color.white;
+
+                var shape = img.GetComponent<UiShapeRef>();
+                if (shape != null) shape.Shape = UiSprites.Shape.Badge2;
+            }
+        }
+
+        /// <summary>
+        /// 도움말 버튼을 아이콘으로 갈아 끼운다.
+        ///
+        /// 예전에는 물음표 아트가 없어 <b>버튼 도형 위에 「?」 글자</b>를 얹었다.
+        /// icon_help 에는 동그란 배경까지 들어 있어 도형이 필요 없다.
+        /// 프리팹에는 예전 모양으로 구워져 있어 여기서 바꾼다.
+        ///
+        /// <see cref="UiShapeRef"/> 도 떼야 한다 — 남겨 두면 살아날 때 도형 그림으로 되돌아간다.
+        /// 「?」 글자는 버튼의 <b>형제</b>라 따로 꺼야 한다(StepButton 참고).
+        /// </summary>
+        private void ApplyHelpIcon()
+        {
+            if (_mateHelpBtn == null) return;
+
+            var art = Resources.Load<Sprite>("Ui/Icon/icon_help");
+            if (art == null) return;
+
+            if (_mateHelpBtn.targetGraphic is Image img)
+            {
+                img.sprite = art;
+                img.type = Image.Type.Simple;
+                img.color = Color.white;
+
+                var shape = img.GetComponent<UiShapeRef>();
+                if (shape != null) Destroy(shape);
+            }
+
+            var parent = _mateHelpBtn.transform.parent;
+            if (parent == null) return;
+
+            foreach (var t in parent.GetComponentsInChildren<Text>(true))
+                if (t.text == "?") t.gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// 왼쪽 목록 판을 제본이 달린 그림(panel2)으로, 그만큼 넓게 되돌린다.
+        /// 프리팹에는 예전 그림·폭으로 굳어 있다.
+        ///
+        /// 제본은 <b>오른쪽 판 위로</b> 와야 노트처럼 보인다. 프리팹에는 목록이 상세보다
+        /// 먼저 지어져 있어 그대로 두면 상세 판이 제본을 덮는다. 형제 순서를 상세 <b>뒤</b>로
+        /// 옮기되 그 이상은 올리지 않는다 — 팝업·닫기 버튼은 목록보다 위에 있어야 한다.
+        /// </summary>
+        private void ApplyListPanelArt()
+        {
+            if (_listRoot == null) return;
+
+            if (_listRoot.Find("Panel") is RectTransform panel)
+            {
+                Place(panel, new RectInt(0, -At.Coin.y, UiTheme.ListPanelW, UiTheme.PanelH));
+
+                var img = panel.GetComponent<Image>();
+                if (img != null)
+                {
+                    img.sprite = UiSprites.Of(UiSprites.Shape.Panel2);
+
+                    // 넓어진 만큼 클릭 판정이 오른쪽 판 위로 넘어간다. 제본 그림은 거의 비어 있는데
+                    // 판정은 네모 전체라, 그대로 두면 상세 판 첫 버튼의 왼쪽 4px 을 삼킨다.
+                    img.raycastPadding = new Vector4(0, 0, UiTheme.ListPanelW - UiTheme.PanelW, 0);
+                }
+
+                var shape = panel.GetComponent<UiShapeRef>();
+                if (shape != null) shape.Shape = UiSprites.Shape.Panel2;
+            }
+
+            if (_detailRoot != null && _listRoot.GetSiblingIndex() < _detailRoot.GetSiblingIndex())
+                _listRoot.SetSiblingIndex(_detailRoot.GetSiblingIndex());
+        }
+
+        /// <summary>
+        /// 프리팹에 예전 길이로 굳어 있는 게이지를 지금 값으로 다시 놓는다.
+        /// 트랙은 이름으로 찾는다 — 필드로 잡아 둔 것은 채우기뿐이다.
+        /// </summary>
+        private void PlaceGauge(string trackName, RectTransform fill, RectInt bar)
+        {
+            var track = _panel != null ? _panel.Find(trackName) : null;
+            if (track != null) Place((RectTransform)track, bar);
+
+            // 채우기는 트랙 안쪽으로 2px 들어가 앉는다 (Gauge 와 같은 값)
+            const int inset = 2;
+            if (fill != null)
+                Place(fill, new RectInt(bar.x + inset, bar.y + inset,
+                                        bar.width - inset * 2, bar.height - inset * 2));
+        }
+
+        /// <summary>
+        /// 게이지 오른쪽의 「오늘 낳을 수 있는 알」 칸.
+        ///
+        /// 하루에 <c>GameConfig.CreateEggCount</c> 번까지 낳고 자정에 다시 찬다.
+        /// 세는 것은 개체마다 따로다(<see cref="SnailPet.Snail.OwnedSnail.EggsLeftToday"/>) —
+        /// 그래서 목록에서 다른 달팽이를 고르면 그 달팽이의 수가 뜬다.
+        ///
+        /// 프리팹에는 없으므로 <see cref="Bind"/> 의 「없으면 짓기」에서도 부른다.
+        /// </summary>
+        private void BuildEggQuota()
+        {
+            var box = Box(_panel, At.EggBox, UiTheme.Slot, UiSprites.Shape.Square, "EggQuotaBox");
+            Icon(_panel, At.EggIcon, "egg", Color.white, "EggQuotaIcon").raycastTarget = false;
+
+            _eggQuota = Label(_panel, At.EggCount, "", 9, UiTheme.Ink);
+
+            // 눌러서 설명을 보는 칸이다. 클릭 판정은 바탕이 받는다 —
+            // 아이콘·숫자는 raycastTarget 이 아니라 그 위를 눌러도 바탕까지 내려온다.
+            box.raycastTarget = true;
+            _eggQuotaBtn = box.gameObject.AddComponent<Button>();
+            _eggQuotaBtn.targetGraphic = box;
+            // 누르는 것을 잇는 곳은 Rewire 다 — 프리팹에서 온 칸도 거기서 이어져야 한다.
+        }
+
+        /// <summary>오늘 낳을 수 있는 알. <paramref name="left"/> 는 남은 수, <paramref name="total"/> 은 전체.</summary>
+        public void SetEggQuota(int left, int total)
+        {
+            if (_eggQuota == null) return;
+            _eggQuota.text = SnailPet.Data.Loc.Format(Keys.EggCount, left, total);
         }
 
         /// <summary>
@@ -1518,6 +1710,18 @@ namespace SnailPet.Ui
                 // 탭 아트에는 종이 모양 배경이 들어 있어 Button 도형을 따로 깔지 않는다.
                 btns[i] = IconButton(parent, Above(Max.Tabs[i]), TabArt(i, false), TabNames[i]);
                 arts[i] = btns[i].transform.Find("Glyph").GetComponent<Image>();
+
+                // 프리팹의 탭들은 손으로 1.2배 키워 둔 상태다. 표의 값 그대로 지으면
+                // 새 탭만 혼자 작아 보이므로 앞 탭의 배율·크기를 그대로 물려받는다.
+                // (자리는 표의 값이 이미 맞다 — 피벗이 왼쪽 위라 키워도 안 밀린다)
+                if (i > 0 && btns[i - 1] != null)
+                {
+                    var self = (RectTransform)btns[i].transform;
+                    var prev = (RectTransform)btns[i - 1].transform;
+
+                    self.localScale = prev.localScale;
+                    self.sizeDelta  = prev.sizeDelta;
+                }
             }
 
             _tabBtns = btns;
@@ -1548,7 +1752,8 @@ namespace SnailPet.Ui
             _tabBtns = new Button[Max.Tabs.Length];
             FitTabs();
 
-            var panel = Panel(_listRoot, new RectInt(0, -At.Coin.y, UiTheme.PanelW, UiTheme.PanelH));
+            var panel = Panel(_listRoot, new RectInt(0, -At.Coin.y, UiTheme.ListPanelW, UiTheme.PanelH),
+                              UiSprites.Shape.Panel2);
             _listTitle = Label(panel, new RectInt(0, 8, UiTheme.PanelW, 16), "", 12, UiTheme.Ink);
 
             BuildFoodGrid(panel);
@@ -2122,6 +2327,15 @@ namespace SnailPet.Ui
             _eggShopBtn = IconButton(_eggPanel, UiTheme.Egg.Buy, "btn_shop", "BuyEgg");
         }
 
+        /// <summary>
+        /// 빈 부화 칸에 그리는 + 의 글자 크기.
+        ///
+        /// <b>글꼴을 바꾸면 다시 봐야 한다.</b> 온글잎 밑미의 + 는 예전 글꼴보다 크고 두꺼워서,
+        /// 26 그대로 두었더니 칸이 갑자기 커진 것처럼 보였다(2026-08-27).
+        /// 프리팹에도 예전 값으로 구워져 있어 <see cref="Bind"/> 에서 다시 맞춘다.
+        /// </summary>
+        private const int HatchPlusSize = 22;
+
         private HatchSlot BuildHatchSlot(int index)
         {
             var at = UiTheme.Egg.Slots[index];
@@ -2134,7 +2348,7 @@ namespace SnailPet.Ui
 
             // 빈 칸의 +. 아이콘이 따로 없어 글자로 그린다.
             // 스프라이트 없는 Image 를 쓰면 색으로 꽉 찬 사각형이 나온다.
-            slot.Plus = Label(root, new RectInt(0, 0, at.width, at.height), "+", 26, UiTheme.Slot);
+            slot.Plus = Label(root, new RectInt(0, 0, at.width, at.height), "+", HatchPlusSize, UiTheme.Slot);
 
             slot.Egg = Icon(root, new RectInt((at.width - 26) / 2, 8, 26, 26), null, Color.white, "Egg");
             slot.Egg.raycastTarget = false;
@@ -2331,7 +2545,7 @@ namespace SnailPet.Ui
             row.RarityIcon.raycastTarget = false;
             BakeRarity(row.RarityIcon, row.RarityBadge, row.Rarity);
 
-            Box(rowRt, Max.RowAge, UiTheme.Slot, UiSprites.Shape.LevelBadge, "AgeBadge");
+            Box(rowRt, Max.RowAge, UiTheme.Slot, UiSprites.Shape.Badge2, "AgeBadge");
             row.Age = Label(rowRt, Max.RowAge, "", 8, UiTheme.Ink);
 
             int captured = index;
@@ -2426,7 +2640,7 @@ namespace SnailPet.Ui
 
             // 탭이 왼쪽 목록과 오른쪽 상세를 함께 바꾼다. 둘은 항상 같은 것을 보여 줘야 한다.
             // 파티(멀티플레이어)는 다섯째 탭이다 — 옷장·도감처럼 얹히는 화면이 아니라 탭 자신이다.
-            bool food = _tab == 1, egg = _tab == 2, shop = _tab == 3, multi = _tab == 4;
+            bool food = _tab == 1, egg = _tab == 2, shop = _tab == 3, multi = _tab == MultiTab;
             _inMulti = multi;
 
             if (_foodGridRoot != null) _foodGridRoot.gameObject.SetActive(food);
@@ -2494,6 +2708,9 @@ namespace SnailPet.Ui
 
         /// <summary>알 상세의 「확률」 버튼. 알이 아닌 상품에서는 숨는다.</summary>
         [SerializeField] private Button _shopRatesBtn;
+
+        /// <summary>확률 버튼의 글자. 버튼의 형제라 따로 껐다 켜야 한다.</summary>
+        [SerializeField] private Text _shopRatesLabel;
 
         /// <summary>-1 이면 카테고리 목록, 아니면 그 카테고리의 상품 그리드.</summary>
         private int _shopCat = -1;
@@ -2889,7 +3106,7 @@ namespace SnailPet.Ui
             // 「확률」은 알에만 붙는다. 무엇이 나오는지가 정해져 있지 않은 상품은 알뿐이다.
             bool isEgg = row.CategoryType == SnailPet.Data.CategoryType.Egg;
             _ratesEggId = isEgg ? row.Id : 0;
-            if (_shopRatesBtn != null) _shopRatesBtn.gameObject.SetActive(isEgg);
+            ShowRatesButton(isEgg);
             if (isFood)
             {
                 var f = SnailPet.Data.GameData.FoodDataById[row.Id];
@@ -5510,8 +5727,8 @@ namespace SnailPet.Ui
 
             LocLabel(_mateGroup, Pop.MateTitle, Keys.MateTitle, 12, UiTheme.Ink);
 
-            // 도움말. 아직 물음표 아트가 없어 +/- 와 같은 글자 버튼으로 그린다.
-            _mateHelpBtn = StepButton(_mateGroup, Pop.MateHelp, "?", "MateHelp");
+            // 도움말. 아트에 동그란 배경까지 들어 있어 버튼 도형을 따로 깔지 않는다.
+            _mateHelpBtn = IconButton(_mateGroup, Pop.MateHelp, "icon_help", "MateHelp");
 
             // 두 안내 글은 「{0}살 이상」 꼴이다. 자리표시자는 팝업을 열 때 채운다.
             _mateInfoText = LocLabel(_mateGroup, Pop.MateInfo, Keys.MateInfo, 8, UiTheme.Ink);
@@ -5827,11 +6044,37 @@ namespace SnailPet.Ui
         /// <summary>
         /// 알 상세의 「확률」 버튼. 음식의 포만·행복이 앉는 자리가 알에서는 비어 있다.
         /// 상품 상세 판은 프리팹에 이미 있으므로, 이 버튼만 따로 지어 붙인다.
+        ///
+        /// 글자는 버튼의 <b>자식이 아니라 형제</b>다(<see cref="TextButton"/> 참고).
+        /// 그래서 버튼만 끄면 <b>흰 글자가 남는다</b> — 음식 상세의 포만·행복 알약 위에
+        /// 흰 「확률」이 얹혀 있었다. 둘을 늘 같이 껐다 켠다.
         /// </summary>
         private void BuildRatesButton()
         {
-            _shopRatesBtn = TextButton(_shopItemPanel, Sh.Rates, Keys.Rates, "RatesButton");
-            _shopRatesBtn.gameObject.SetActive(false);
+            _shopRatesBtn = TextButton(_shopItemPanel, Sh.Rates, Keys.Rates, "RatesButton",
+                                       out _shopRatesLabel);
+            ShowRatesButton(false);
+        }
+
+        /// <summary>확률 버튼을 글자까지 함께 껐다 켠다.</summary>
+        private void ShowRatesButton(bool on)
+        {
+            if (_shopRatesBtn != null)   _shopRatesBtn.gameObject.SetActive(on);
+            if (_shopRatesLabel != null) _shopRatesLabel.gameObject.SetActive(on);
+        }
+
+        /// <summary>
+        /// 프리팹에서 온 확률 글자를 찾는다. 글자 오브젝트는 이름이 전부 「Text」라
+        /// 이름으로는 못 고른다 — <see cref="UiTextRef"/> 에 남은 토큰으로 찾는다.
+        /// </summary>
+        private Text FindRatesLabel()
+        {
+            if (_shopItemPanel == null) return null;
+
+            foreach (var r in _shopItemPanel.GetComponentsInChildren<UiTextRef>(true))
+                if (r.Token == Keys.Rates) return r.GetComponent<Text>();
+
+            return null;
         }
 
         private void BuildRatesGroup()
@@ -6213,16 +6456,23 @@ namespace SnailPet.Ui
             _notice.anchoredPosition = UiTheme.Notice.Offset;
 
             // 알림일 뿐이므로 클릭을 먹지 않는다. 뒤의 버튼이 그대로 눌려야 한다.
-            Backdrop(_notice.gameObject, UiSprites.Shape.Notice, UiTheme.PanelFill).raycastTarget = false;
+            // 바탕이 어두우므로(notice2) 글자는 밝은 색이다 — 색을 넘기는 값도 같이 맞춰 둔다
+            // (아트를 못 찾았을 때 쓰는 대비책이라, 밝은 색으로 두면 글자가 묻힌다).
+            Backdrop(_notice.gameObject, UiSprites.Shape.Notice2, UiTheme.BadgeDark).raycastTarget = false;
 
             _noticeText = Label(_notice, new RectInt(0, 0, UiTheme.Notice.MinWidth, UiTheme.Notice.Height),
-                                "", UiTheme.Notice.FontSize, UiTheme.Ink);
+                                "", UiTheme.Notice.FontSize, UiTheme.OnButton);
 
-            // 글자는 띠와 함께 늘어나야 하므로 네 귀퉁이에 매어 둔다
+            // 길면 두 줄로 접힌다. 접히는 폭은 위의 좌우 여백이 정한다.
+            _noticeText.horizontalOverflow = HorizontalWrapMode.Wrap;
+
+            // 글자는 띠와 함께 늘어나야 하므로 네 귀퉁이에 매어 둔다.
+            // 좌우는 여백만큼 들여 둔다 — 접히는 자리가 그 안쪽 폭으로 정해진다.
             var rt = (RectTransform)_noticeText.transform;
             rt.anchorMin = Vector2.zero;
             rt.anchorMax = Vector2.one;
-            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            rt.offsetMin = new Vector2(UiTheme.Notice.PadX, 0f);
+            rt.offsetMax = new Vector2(-UiTheme.Notice.PadX, 0f);
 
             _noticeFade = _notice.gameObject.AddComponent<CanvasGroup>();
             _notice.gameObject.SetActive(false);
@@ -6231,6 +6481,9 @@ namespace SnailPet.Ui
         /// <summary>
         /// 안내 문구를 잠깐 띄운다. 띠는 글자 길이에 맞춰 늘어난다.
         /// 이미 떠 있으면 그 자리에서 글자만 바뀌고 시간이 다시 흐른다.
+
+        /// <summary>안내 띠가 넓게 설 수 있는 상태인가. 펼쳐져 있고 최소화가 아닐 때다.</summary>
+        private bool Wide => Maximized && !Minimized;
         /// </summary>
         public void ShowNotice(string message)
         {
@@ -6238,11 +6491,26 @@ namespace SnailPet.Ui
 
             _noticeText.text = message ?? "";
 
-            // preferredWidth 는 레이아웃을 기다리지 않고 그 자리에서 재 준다
-            float w = _noticeText.preferredWidth + UiTheme.Notice.PadX * 2;
+            // 쓸 수 있는 폭은 상태에 따라 다르다 — 접었을 때는 띠가 오른쪽 판에 붙어 있어
+            // 좁게 잡아야 화면 밖으로 안 나간다.
+            float max = Wide ? UiTheme.Notice.MaxWidth : UiTheme.Notice.MaxWidthFolded;
+
+            // preferredWidth 는 레이아웃을 기다리지 않고 그 자리에서 재 준다.
+            // 한 줄로 폈을 때의 너비이므로, 띠 안쪽 폭으로 나누면 몇 줄이 될지가 나온다.
+            float one = _noticeText.preferredWidth;
+            float inner = max - UiTheme.Notice.PadX * 2;
+
+            int lines = Mathf.Clamp(Mathf.CeilToInt(one / Mathf.Max(1f, inner)),
+                                    1, UiTheme.Notice.MaxLines);
+
+            // 두 줄부터는 폭을 끝까지 쓴다. 한 줄이면 글자에 맞춰 줄인다.
+            float w = lines > 1 ? max
+                                : Mathf.Clamp(one + UiTheme.Notice.PadX * 2,
+                                              UiTheme.Notice.MinWidth, max);
+
             _notice.sizeDelta = new Vector2(
-                Mathf.Round(Mathf.Clamp(w, UiTheme.Notice.MinWidth, UiTheme.Notice.MaxWidth)),
-                UiTheme.Notice.Height);
+                Mathf.Round(w),
+                UiTheme.Notice.Height + (lines - 1) * UiTheme.Notice.LineStep);
 
             _notice.gameObject.SetActive(true);
             _notice.SetAsLastSibling();      // 팝업 위에도 떠야 한다
@@ -6253,6 +6521,11 @@ namespace SnailPet.Ui
         private void ApplyNotice()
         {
             if (_notice == null) return;
+
+            // 펼쳤을 때는 두 판 사이(노트 제본)로, 접거나 최소화하면 상세 판 한가운데로.
+            // 매 프레임 두는 이유: 띠가 떠 있는 동안 최대화·접기를 눌러도 자리는 따라가야 한다
+            // (폭은 띄울 때 정해지므로 그대로 남는다 — 잠깐 뜨는 것이라 거기까지는 안 맞춘다).
+            _notice.anchoredPosition = Wide ? UiTheme.Notice.OffsetMax : UiTheme.Notice.Offset;
 
             // 팝업과 같은 곡선으로 스르륵 커진다
             float s = Mathf.LerpUnclamped(0.88f, 1f, EaseOutBack(Mathf.Clamp01(_noticeTime / NoticeGrow)));
@@ -6475,7 +6748,7 @@ namespace SnailPet.Ui
             _askGroup = Fill(NewRect("AskGroup", _popup));
             _askGroup.gameObject.SetActive(false);
 
-            _askText = Label(_askGroup, Pop.Title, "", 11, UiTheme.Ink);
+            _askText = Label(_askGroup, Pop.Ask, "", 11, UiTheme.Ink);
             _askText.horizontalOverflow = HorizontalWrapMode.Wrap;
 
             // 자리는 구매 팝업의 예/아니오와 같다
@@ -6873,13 +7146,18 @@ namespace SnailPet.Ui
             return img;
         }
 
-        private RectTransform Panel(RectTransform parent, RectInt r)
+        /// <summary>
+        /// 판 하나. <paramref name="shape"/> 로 그림을 갈아 끼울 수 있다 —
+        /// 왼쪽 목록만 제본이 달린 <see cref="UiSprites.Shape.Panel2"/> 를 쓴다.
+        /// </summary>
+        private RectTransform Panel(RectTransform parent, RectInt r,
+                                    UiSprites.Shape shape = UiSprites.Shape.Panel)
         {
-            var fill = Box(parent, r, UiTheme.PanelFill, UiSprites.Shape.Panel, "Panel");
+            var fill = Box(parent, r, UiTheme.PanelFill, shape, "Panel");
             fill.raycastTarget = true;      // 패널 위에서는 클릭이 바탕화면으로 새면 안 된다
 
             // 아트 판에는 테두리가 이미 그려져 있다. 위에 또 얹으면 두 겹이 된다.
-            if (UiSprites.IsArt(UiSprites.Shape.Panel)) return (RectTransform)fill.transform;
+            if (UiSprites.IsArt(shape)) return (RectTransform)fill.transform;
 
             var line = NewRect("Border", (RectTransform)fill.transform);
             line.anchorMin = Vector2.zero; line.anchorMax = Vector2.one;

@@ -471,9 +471,10 @@ namespace SnailPet.Data
         public readonly double CreateEggCount;
         public readonly double MutationWeight2;
         public readonly double MateSlotLevel;
+        public readonly double CreateEggCount2;
         public readonly string Info;
 
-        public GameConfigRow(int mutationWeight, double fullDecayPerTick, double happyDecayPerTick, double pixelsPerSpeed, double pixelsPerSize, double foodGravity, double createEggCooltime, double createEggPercent, double createEggPlusPercent, double createEggCount, double mutationWeight2, double mateSlotLevel, string info)
+        public GameConfigRow(int mutationWeight, double fullDecayPerTick, double happyDecayPerTick, double pixelsPerSpeed, double pixelsPerSize, double foodGravity, double createEggCooltime, double createEggPercent, double createEggPlusPercent, double createEggCount, double mutationWeight2, double mateSlotLevel, double createEggCount2, string info)
         {
             MutationWeight = mutationWeight;
             FullDecayPerTick = fullDecayPerTick;
@@ -487,6 +488,7 @@ namespace SnailPet.Data
             CreateEggCount = createEggCount;
             MutationWeight2 = mutationWeight2;
             MateSlotLevel = mateSlotLevel;
+            CreateEggCount2 = createEggCount2;
             Info = info;
         }
     }
@@ -588,6 +590,7 @@ namespace SnailPet.Data
             new PartsDataRow(176, 176, 2, RarityType.Common, PartsType.Eyes, "commoneyes06", false, System.Array.Empty<string>(), 10, 177, 36, 5d, null, 320, 5, null, 36, 5, null, null, null, null),
             new PartsDataRow(197, 197, 2, RarityType.Common, PartsType.Eyes, "commoneyes07", false, System.Array.Empty<string>(), 10, 198, 36, 5d, null, 320, 5, null, 36, 5, null, null, null, null),
             new PartsDataRow(206, 206, 2, RarityType.Common, PartsType.Eyes, "commoneyes08", false, System.Array.Empty<string>(), 10, 207, 36, 5d, null, 320, 5, null, 36, 5, null, null, null, null),
+            new PartsDataRow(410, 410, 2, RarityType.Common, PartsType.Eyes, "commoneyes09", false, System.Array.Empty<string>(), 10, 411, 36, 5d, null, 320, 5, null, 36, 5, null, null, null, null),
             new PartsDataRow(363, 363, 2, RarityType.Common, PartsType.Eyes, "commoneyes12", false, System.Array.Empty<string>(), 10, 364, 36, 5d, null, 320, 5, null, 36, 5, null, null, null, null),
             new PartsDataRow(178, 178, 169, RarityType.Epic, PartsType.Eyes, "epiceyes01", false, System.Array.Empty<string>(), 5, 179, 36, 20d, null, 321, 5, null, 36, 5, null, null, null, null),
             new PartsDataRow(26, 26, 2, RarityType.Common, PartsType.Feeler, "commonfeeler01", true, new string[] { "commonfeeler01_c01" }, 10, 81, 36, 5d, null, 322, 5, null, 36, 5, null, null, null, null),
@@ -651,6 +654,7 @@ namespace SnailPet.Data
             new PartsDataRow(399, 399, 169, RarityType.Epic, PartsType.Body, "epicbody06", false, System.Array.Empty<string>(), 5, 398, 36, 20d, null, 319, 5, null, 36, 5, null, null, null, null),
             new PartsDataRow(400, 400, 169, RarityType.Epic, PartsType.Shell, "heart", true, new string[] { "heart_c01" }, 5, 401, 36, 20d, null, 326, 5, null, 36, 5, null, null, null, null),
             new PartsDataRow(402, 402, 169, RarityType.Epic, PartsType.Shell, "heart", true, new string[] { "heart_c01" }, 5, 401, 36, 20d, null, 326, 5, null, 36, 5, null, null, null, null),
+            new PartsDataRow(412, 412, 169, RarityType.Epic, PartsType.Shell, "snailbaby", false, System.Array.Empty<string>(), 5, 413, 36, 20d, null, 326, 5, null, 36, 5, null, null, null, null),
         };
 
         public static readonly FoodDataRow[] FoodData = new FoodDataRow[]
@@ -964,8 +968,10 @@ namespace SnailPet.Data
             new LanguageDataRow(225, "등 뒤에 있는 식물은 어느정도 자라면 먹으면서 크기를 유지한답니다."),
             new LanguageDataRow(208, "초롱아귀 더듬이"),
             new LanguageDataRow(209, "누군가를 유인하려는걸까?"),
-            new LanguageDataRow(206, "앵두 입술"),
-            new LanguageDataRow(207, "도돔하니 귀여운 입술입니다."),
+            new LanguageDataRow(410, "앵두 입술"),
+            new LanguageDataRow(411, "도돔하니 귀여운 입술입니다."),
+            new LanguageDataRow(206, "피곤한 얼굴"),
+            new LanguageDataRow(207, "눈꺼풀이 점점 닫히고 있습니다."),
             new LanguageDataRow(210, "오리 얼굴"),
             new LanguageDataRow(211, "물을 좋아한다는 점은 닮았네요!"),
             new LanguageDataRow(212, "물개 얼굴"),
@@ -1135,6 +1141,10 @@ namespace SnailPet.Data
             new LanguageDataRow(400, "하트 껍질(분홍색)"),
             new LanguageDataRow(402, "하트 껍질(파란색)"),
             new LanguageDataRow(401, "사랑을 듬뿍받아 집으로 만들었나봐요"),
+            new LanguageDataRow(409, "{0}/{1}"),
+            new LanguageDataRow(412, "동생 달팽이"),
+            new LanguageDataRow(413, "동생 목마를 태워주고 있습니다. 착하네요!"),
+            new LanguageDataRow(414, "달팽이마다 하루에 낳을 수 있는 알의 개수가 정해져 있습니다. (멀티 포함)"),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -1144,7 +1154,7 @@ namespace SnailPet.Data
 
         public static readonly GameConfigRow[] GameConfig = new GameConfigRow[]
         {
-            new GameConfigRow(5, 1d, 1d, 10d, 10d, 1600d, 1800d, 0.5d, 0.1d, 3d, 5d, 5d, null),
+            new GameConfigRow(5, 1d, 1d, 10d, 10d, 1600d, 1800d, 0.5d, 0.1d, 3d, 5d, 5d, 3d, null),
         };
 
         public static readonly ContentsGuideRow[] ContentsGuide = new ContentsGuideRow[]
@@ -1660,6 +1670,12 @@ namespace SnailPet.Data
             { "[넥타이01정보]", 406 },
             { "[외형도감]", 407 },
             { "[외형도감안내]", 408 },
+            { "[알개수]", 409 },
+            { "[일반달팽이_눈09]", 410 },
+            { "[일반달팽이_눈09정보]", 411 },
+            { "[에픽_동생껍질]", 412 },
+            { "[에픽_동생껍질정보]", 413 },
+            { "[알안내]", 414 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();
