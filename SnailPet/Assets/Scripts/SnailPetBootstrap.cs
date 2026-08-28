@@ -2724,7 +2724,13 @@ namespace SnailPet
 
             _testEffect.Add(new SparkField.Attached { Root = go.transform, Local = local });
 
-            Say($"      [이펙트] 미리보기 {_previewFx + 1}/{prefabs.Length}: {key} → 껍질 (F5)");
+            // 확인할 때 어디를 봐야 하는지 같이 찍는다. 월드 좌표를 가상 화면으로 되돌린 값이다.
+            float halfH = _cam.orthographicSize, halfW = halfH * _cam.aspect;
+            float sx = _vLeft + (_snail.position.x + halfW) / (2f * halfW) * _vWidth;
+            float sy = _vTop  + (halfH - _snail.position.y) / (2f * halfH) * _vHeight;
+
+            Say($"      [이펙트] 미리보기 {_previewFx + 1}/{prefabs.Length}: {key} → 껍질 " +
+                $"@({sx:0},{sy:0}) (F5)");
             _ui?.ShowNotice($"{_previewFx + 1}/{prefabs.Length}  {key}");
         }
 

@@ -172,11 +172,19 @@ namespace SnailPet.Snail
             var go = Object.Instantiate(src, world, Quaternion.identity, _parent);
             go.transform.position = world;      // 부모가 안 움직이므로 월드 그대로 둔다
 
-            // 그리는 순서를 안 정해 둔 프리팹은 달팽이 위로 올린다.
-            // 스토어에서 받은 이펙트는 대개 0 이라 그대로 두면 몸에 가려 안 보인다.
-            // 0 이 아닌 것은 만든 사람이 정한 값이므로 건드리지 않는다.
+            // 남의 프로젝트에서 온 이펙트를 여기서 돌게 만드는 두 손질.
             foreach (var r in go.GetComponentsInChildren<ParticleSystemRenderer>(true))
+            {
+                // UI 파티클로 만든 것(fx_ui_*)은 <b>렌더러가 꺼져 있다</b> — 캔버스에 직접
+                // 그리는 부품(UIParticle 계열)이 대신 그렸기 때문이다. 그 부품은 이 프로젝트에
+                // 없고 필요도 없다(여기는 월드에 그린다). 꺼진 채로 두면 아무것도 안 보인다.
+                if (!r.enabled) r.enabled = true;
+
+                // 그리는 순서를 안 정해 둔 프리팹은 달팽이 위로 올린다.
+                // 스토어에서 받은 이펙트는 대개 0 이라 그대로 두면 몸에 가려 안 보인다.
+                // 0 이 아닌 것은 만든 사람이 정한 값이므로 건드리지 않는다.
                 if (r.sortingOrder == 0) r.sortingOrder = DefaultOrder;
+            }
 
             return go;
         }
