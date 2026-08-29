@@ -336,7 +336,7 @@ namespace SnailPet.Ui
         /// <summary>음식 탭의 오른쪽 상세 패널. 패널 왼쪽 위가 원점.</summary>
         public static class Food
         {
-            public static readonly RectInt Favorite = new RectInt( 15,   8,  15, 15);   // 9 는 스프링에 물렸다
+            public static readonly RectInt Favorite = new RectInt( 20,   8,  15, 15);   // 9 는 스프링에 물렸다
             public static readonly RectInt Name     = new RectInt(  0,   4, PanelW, 21);
             public static readonly RectInt Rarity   = new RectInt( 69,  28,  35, 12);
             public static readonly RectInt Preview  = new RectInt( 48,  40,  78, 71);
