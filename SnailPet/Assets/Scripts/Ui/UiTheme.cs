@@ -336,7 +336,7 @@ namespace SnailPet.Ui
         /// <summary>음식 탭의 오른쪽 상세 패널. 패널 왼쪽 위가 원점.</summary>
         public static class Food
         {
-            public static readonly RectInt Favorite = new RectInt(  9,   8,  15, 15);
+            public static readonly RectInt Favorite = new RectInt( 15,   8,  15, 15);   // 9 는 스프링에 물렸다
             public static readonly RectInt Name     = new RectInt(  0,   4, PanelW, 21);
             public static readonly RectInt Rarity   = new RectInt( 69,  28,  35, 12);
             public static readonly RectInt Preview  = new RectInt( 48,  40,  78, 71);
@@ -449,12 +449,18 @@ namespace SnailPet.Ui
         {
             public static readonly RectInt Title = new RectInt(0, 4, PanelW, 21);
 
-            /// <summary>부화 칸. 지금은 3개, 나중에 UnlockData 로 늘어난다.</summary>
+            /// <summary>
+            /// 부화 칸. 지금은 3개, 나중에 UnlockData 로 늘어난다.
+            ///
+            /// 왼쪽 끝은 공책 스프링이 지나가는 자리라 비워 둔다 — 12 에 두었더니 첫 칸이
+            /// 스프링에 물렸다. 칸을 조금 줄이고 안쪽으로 밀어 스프링을 피한다(2026-08-29).
+            /// 프리팹에는 예전 자리로 구워져 있어 SnailUi 가 살아날 때 다시 놓는다.
+            /// </summary>
             public static readonly RectInt[] Slots =
             {
-                new RectInt( 12, 34, 47, 46),
-                new RectInt( 64, 34, 47, 46),
-                new RectInt(116, 34, 47, 46),
+                new RectInt( 25, 34, 42, 41),
+                new RectInt( 72, 34, 42, 41),
+                new RectInt(119, 34, 42, 41),
             };
 
             /// <summary>

@@ -397,6 +397,14 @@ namespace SnailPet.Ui
             for (int i = 0; i < Count(_hatchSlots); i++)
                 if (_hatchSlots[i]?.Plus != null) _hatchSlots[i].Plus.fontSize = HatchPlusSize;
 
+            // 부화 칸의 자리·크기도 프리팹에는 예전 값으로 굳어 있다. 스프링을 피해
+            // 조금 줄이고 안쪽으로 옮겼으므로 여기서 다시 놓는다 (자식까지 함께 움직인다).
+            for (int i = 0; i < Count(_hatchSlots) && i < UiTheme.Egg.Slots.Length; i++)
+                PlaceHatchSlot(_hatchSlots[i], UiTheme.Egg.Slots[i]);
+
+            // 즐겨찾기 별도 스프링에 물려 있었다. 같은 이유로 다시 놓는다.
+            if (_favoriteBtn != null) Place((RectTransform)_favoriteBtn.transform, Fd.Favorite);
+
             // 하단 버튼 다섯의 간격이 프리팹에서 31·31·27·27 로 어긋나 있다(높이도 0.4px 다르다).
             // 표의 고른 값으로 다시 놓는다. 배율(1.2배)은 Place 가 안 건드리므로 그대로 남는다.
             for (int i = 0; i < Count(_actionBtns); i++)
@@ -789,9 +797,18 @@ namespace SnailPet.Ui
             Hook(_closeBtn,    () =>
             {
                 // 달팽이 화면에서는 X 가 아니라 최소화 버튼이다 (ShrinksOnClose).
-                // 나가는 것이므로 여기서도 골라 둔 달팽이는 푼다.
                 if (ShrinksOnClose)
                 {
+                    // 펼쳐 뒀으면 한 걸음만 접는다. 두 장에서 곧장 제일 작아지면 한 장을
+                    // 건너뛰어, 되돌릴 때 목록이 어디로 갔는지 알기 어렵다.
+                    // 나가는 것이 아니라 접는 것이므로 골라 둔 달팽이는 그대로 둔다.
+                    if (Maximized)
+                    {
+                        SetMaximized(false);
+                        return;
+                    }
+
+                    // 여기서부터가 나가는 것이다. 골라 둔 달팽이도 푼다.
                     ResetPick();
                     SetMinimized(true);
                     Close?.Invoke();
@@ -2354,7 +2371,6 @@ namespace SnailPet.Ui
         {
             var at = UiTheme.Egg.Slots[index];
             var root = NewRect("Hatch" + index, _eggPanel);
-            Place(root, at);
 
             var bg = Backdrop(root.gameObject, UiSprites.Shape.Button, UiTheme.Slot);
 
@@ -2362,16 +2378,43 @@ namespace SnailPet.Ui
 
             // 빈 칸의 +. 아이콘이 따로 없어 글자로 그린다.
             // 스프라이트 없는 Image 를 쓰면 색으로 꽉 찬 사각형이 나온다.
-            slot.Plus = Label(root, new RectInt(0, 0, at.width, at.height), "+", HatchPlusSize, UiTheme.Slot);
+            slot.Plus = Label(root, default, "+", HatchPlusSize, UiTheme.Slot);
 
-            slot.Egg = Icon(root, new RectInt((at.width - 26) / 2, 8, 26, 26), null, Color.white, "Egg");
+            slot.Egg = Icon(root, default, null, Color.white, "Egg");
             slot.Egg.raycastTarget = false;
 
-            slot.Timer = Label(root, new RectInt(0, at.height - 16, at.width, 14), "", 9, UiTheme.OnButton);
+            slot.Timer = Label(root, default, "", 9, UiTheme.OnButton);
 
             slot.Button = root.gameObject.AddComponent<Button>();
             slot.Button.targetGraphic = bg;
+
+            PlaceHatchSlot(slot, at);
             return slot;
+        }
+
+        /// <summary>알 그림 한 변. 칸보다 작아야 아래의 남은 시간이 눌리지 않는다.</summary>
+        private const int HatchEggArt = 23;
+
+        /// <summary>
+        /// 부화 칸 하나를 놓는다. 자식들의 자리가 칸 크기에서 나오므로 함께 놓는다 —
+        /// 짓는 길과 <see cref="Bind"/> 두 곳에서 지나므로 한 곳에 모아 둔다.
+        /// (프리팹에는 예전 자리·크기로 구워져 있다.)
+        /// </summary>
+        private static void PlaceHatchSlot(HatchSlot slot, RectInt at)
+        {
+            if (slot?.Root == null) return;
+
+            Place(slot.Root, at);
+
+            if (slot.Plus != null)
+                Place((RectTransform)slot.Plus.transform, new RectInt(0, 0, at.width, at.height));
+
+            if (slot.Egg != null)
+                PlaceCentered((RectTransform)slot.Egg.transform,
+                              new RectInt((at.width - HatchEggArt) / 2, 7, HatchEggArt, HatchEggArt));
+
+            if (slot.Timer != null)
+                Place((RectTransform)slot.Timer.transform, new RectInt(0, at.height - 16, at.width, 14));
         }
 
         /// <summary>보유 알. 같은 등급이어도 낱개로 나열한다 — 뭐가 나올지 모르니 하나씩 봐야 한다.</summary>
@@ -5275,6 +5318,9 @@ namespace SnailPet.Ui
         ///
         /// 처음에는 접혀 있을 때만 최소화로 뒀는데, 다른 탭에 갔다가 달팽이 탭으로 돌아오면
         /// 목록이 펼쳐진 채라 X 가 그대로 남아 있었다. 「화면」이 기준이지 크기가 기준이 아니다.
+        ///
+        /// <b>그림이 기준일 뿐 한 번에 최소화되지는 않는다.</b> 펼쳐 뒀으면 먼저 목록만 접고,
+        /// 한 장인 상태에서 한 번 더 눌러야 최소화된다 (<see cref="Rewire"/> 의 배선).
         /// </summary>
         private bool ShrinksOnClose => !InOverlay && _tab == 0;
 
