@@ -269,15 +269,18 @@ namespace SnailPet.Pipeline
                 }
             }
 
-            // PartsGroupId 는 별도 네임스페이스
+            // PartsGroupIds 는 별도 네임스페이스.
+            // 파츠 하나가 여러 그룹에 들 수 있어 한 칸에 쉼표로 적힌다 — 쪼개서 다 모은다.
             var groups = new HashSet<string>(StringComparer.Ordinal);
             var parts = tables.Find(x => x.Name == "PartsData");
-            var gCol = parts?.Columns.Find(c => c.Name == "PartsGroupId");
+            var gCol = parts?.Columns.Find(c => c.Name == "PartsGroupIds");
             if (gCol != null)
                 foreach (var row in parts.Rows)
                 {
                     string v = Program.Get(row, gCol.Index);
-                    if (!string.IsNullOrEmpty(v)) groups.Add(v);
+                    if (string.IsNullOrEmpty(v)) continue;
+
+                    foreach (var item in Values.SplitList(v)) groups.Add(item);
                 }
 
             void CheckRef(string table, string column, HashSet<string> pool, string poolDesc)
@@ -311,7 +314,7 @@ namespace SnailPet.Pipeline
             CheckRef("GachaData", "Id2",            defined, ItemDef);
             CheckRef("EventData", "ShopItemIds",    defined, ItemDef);
             CheckRef("FoodData",  "BuffId",         defined, ItemDef);
-            CheckRef("EggData",   "PartsGroupIds",  groups,  "PartsData.PartsGroupId 정의");
+            CheckRef("EggData",   "PartsGroupIds",  groups,  "PartsData.PartsGroupIds 정의");
         }
 
         /// <summary>ResourceKey 가 가리키는 파일이 실제로 있는지.</summary>

@@ -8,6 +8,9 @@ namespace SnailPet.Snail
     ///
     /// EggData.PartsGroupIds 에 적힌 <b>모든 그룹의 파츠를 하나의 풀로 합친다</b> (union).
     /// 그룹은 누적 해금 개념이라, 레어 그룹에 껍질만 있어도 몸·눈·더듬이는 일반 그룹에서 채워진다.
+    ///
+    /// 파츠도 여러 그룹에 들 수 있다(PartsData.PartsGroupIds). 알과 파츠의 그룹이 몇 개가
+    /// 겹치든 풀에는 <b>한 번만</b> 들어가므로, 그 파츠의 확률은 그대로다.
     /// (기획서 「개발 명세」의 "1개 ID 무작위 선택" 문구는 실제 사양과 다르다)
     /// </summary>
     public static class SnailHatchery
@@ -32,7 +35,7 @@ namespace SnailPet.Snail
             var byType = new Dictionary<PartsType, List<PartsDataRow>>();
             foreach (var p in GameData.PartsData)
             {
-                if (!Contains(groupIds, p.PartsGroupId)) continue;
+                if (!Overlaps(groupIds, p.PartsGroupIds)) continue;
                 if (!byType.TryGetValue(p.PartsType, out var list))
                     byType[p.PartsType] = list = new List<PartsDataRow>();
                 list.Add(p);
@@ -71,7 +74,7 @@ namespace SnailPet.Snail
 
             var pool = new List<PartsDataRow>();
             foreach (var p in GameData.PartsData)
-                if (p.PartsType == type && Contains(egg.PartsGroupIds, p.PartsGroupId)) pool.Add(p);
+                if (p.PartsType == type && Overlaps(egg.PartsGroupIds, p.PartsGroupIds)) pool.Add(p);
 
             if (pool.Count == 0) return list;
 
@@ -96,10 +99,20 @@ namespace SnailPet.Snail
             return list;
         }
 
-        private static bool Contains(IReadOnlyList<int> ids, int value)
+        /// <summary>
+        /// 두 그룹 목록이 <b>하나라도 겹치는가</b>.
+        ///
+        /// 파츠 하나가 여러 그룹에 들 수 있으므로 알의 그룹과 맞대어 본다. 몇 개가 겹치든
+        /// <b>한 번만</b> 센다 — 겹친 수만큼 풀에 넣으면 그 파츠만 확률이 배로 뛴다.
+        /// </summary>
+        private static bool Overlaps(IReadOnlyList<int> egg, IReadOnlyList<int> part)
         {
-            if (ids == null) return false;
-            for (int i = 0; i < ids.Count; i++) if (ids[i] == value) return true;
+            if (egg == null || part == null) return false;
+
+            for (int i = 0; i < egg.Count; i++)
+                for (int j = 0; j < part.Count; j++)
+                    if (egg[i] == part[j]) return true;
+
             return false;
         }
 

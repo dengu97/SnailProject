@@ -2148,6 +2148,21 @@ namespace SnailPet
             _ui.SetEggQuota(eggsLeft, Config.CreateEggCount);
         }
 
+        /// <summary>
+        /// 부화 이펙트는 팝업 위에 얹은 그림이라 전용 카메라를 꺼 두고 여기서 찍는다.
+        ///
+        /// <b>Update 가 아니라 여기여야 한다.</b> 파티클은 LateUpdate 직전에 한 걸음 나아가므로,
+        /// Update 에서 찍으면 늘 한 프레임 전 모습이 나가 뚝뚝 끊겨 보인다.
+        /// 팝업이 닫히면 카메라와 렌더 텍스처째로 치운다.
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (_ui == null) return;
+
+            if (_ui.HatchOpen) _hatchGlow?.Redraw();
+            else               DropHatchGlow();
+        }
+
         private void Update()
         {
             _t += Time.deltaTime;
@@ -2161,11 +2176,6 @@ namespace SnailPet
             }
 
             RefreshGauges();
-
-            // 부화 이펙트는 팝업 위에 얹은 그림이다. 전용 카메라를 꺼 뒀으므로 떠 있는 동안
-            // 여기서 매 프레임 다시 찍어야 움직인다. 닫히면 카메라와 텍스처째로 치운다.
-            if (_ui.HatchOpen) _hatchGlow?.Redraw();
-            else               DropHatchGlow();
 
             // 버프가 걸리고 풀리는 순간을 놓치지 않게 변화만 기록한다
             string buffs = _growth.Buffs.Signature;
@@ -3055,11 +3065,17 @@ namespace SnailPet
         private const string HatchGlow = "glow";
 
         /// <summary>
-        /// 이펙트를 세로로 몇 월드 유닛 담아 보여 줄지. <b>크기를 정하는 손잡이다</b> —
-        /// 줄이면 당겨 찍어 크게 나온다. glow 의 가장 큰 알갱이가 30 유닛 남짓이라
-        /// 40 이면 칸을 거의 채운다. 이펙트 프리팹은 안 건드리고 여기서 맞춘다.
+        /// 이펙트를 세로로 몇 월드 유닛 담아 보여 줄지. <b>무엇까지 담을지</b>를 정한다.
+        /// 이펙트 프리팹은 안 건드린다.
+        ///
+        /// glow 에서 가장 큰 알갱이(circle)는 300 유닛인데, 그 그림은 <b>가장자리가 거의
+        /// 투명하다</b> — 알파가 눈에 띄는 범위는 200 유닛, 짙은 가운데는 132 유닛뿐이다.
+        /// 그래서 300 을 다 담으면 정작 짙은 부분이 달팽이 칸보다 작아진다.
+        /// 200 으로 잡으면 보이는 범위(200 유닛)가 칸 세로에 딱 맞고, 잘려 나가는 것은
+        /// 알파가 32 도 안 되는 가장자리뿐이다. <b>크기는 여기 말고 Pop.HatchFx 로 키운다</b> —
+        /// 이 값을 줄여 키우면 그만큼 바깥이 잘린다.
         /// </summary>
-        private const float HatchGlowView = 40f;
+        private const float HatchGlowView = 200f;
 
         /// <summary>덮고 있는 이펙트. 팝업이 닫히면 버린다.</summary>
         private EffectView _hatchGlow;

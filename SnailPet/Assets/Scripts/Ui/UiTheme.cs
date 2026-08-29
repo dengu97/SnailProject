@@ -672,11 +672,16 @@ namespace SnailPet.Ui
             public static readonly RectInt HatchSnail  = new RectInt( 93,  36, 60, 51);
 
             /// <summary>
-            /// 부화 연출 이펙트가 그려지는 자리. 달팽이 칸(HatchSnail)을 넉넉히 덮어야 해서
-            /// 그보다 크고, 같은 한가운데에 놓인다. 파티클은 캔버스 위로 못 올라와서
-            /// 렌더 텍스처로 받아 이 칸에 그린다 — 팝업에서 맨 위에 온다.
+            /// 부화 연출 이펙트가 그려지는 자리. 파티클은 캔버스 위로 못 올라와서 렌더
+            /// 텍스처로 받아 이 칸에 그린다 — 팝업에서 맨 위에 온다.
+            ///
+            /// <b>이 칸이 곧 이펙트 크기다</b> — 키우면 같은 비율로 커진다. 달팽이를 덮는 것이
+            /// 목적이라 판(241x145)보다 크게 잡아 가장자리로 넘치게 둔다. 넘친 부분은 알파가
+            /// 옅어 빛이 판 밖으로 번지는 것처럼 보인다(팝업에는 마스크가 없다).
+            ///
+            /// 한가운데는 달팽이 칸(HatchSnail)과 같은 (123, 61.5) 다.
             /// </summary>
-            public static readonly RectInt HatchFx     = new RectInt( 63,  22, 120, 80);
+            public static readonly RectInt HatchFx     = new RectInt(-172, -92, 590, 308);
             public static readonly RectInt HatchRarity = new RectInt(105,  90, 35, 12);
         }
 
