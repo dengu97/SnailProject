@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-29 18:16:03",
+  "generatedAt": "2026-08-29 19:58:15",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -492,7 +492,17 @@
     "[도감_고양이달팽이01정보]": 479,
     "[도감_고양이달팽이02]": 480,
     "[도감_폐기물]": 481,
-    "[도감_폐기물정보]": 482
+    "[도감_폐기물정보]": 482,
+    "[일반_삐진눈]": 483,
+    "[일반_삐진눈정보]": 484,
+    "[일반_네모눈]": 485,
+    "[일반_네모눈정보]": 486,
+    "[레어_오드아이눈]": 487,
+    "[레어_오드아이눈정보]": 488,
+    "[레어_노란눈]": 489,
+    "[레어_노란눈정보]": 490,
+    "[에픽_사이렌더듬이]": 491,
+    "[에픽_사이렌더듬이정보]": 492
   },
   "tables": {
     "EnumData": [
@@ -668,7 +678,12 @@
       {"Id": 469, "NameId": 469, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "noticefeeler", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 470, "SellItem": 36, "SellCount": 5, "AnimFps": null, "MutationGroup": 322, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 471, "NameId": 471, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "clockfeeler", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 472, "SellItem": 36, "SellCount": 5, "AnimFps": null, "MutationGroup": 322, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 473, "NameId": 473, "PartsGroupId": 169, "RarityType": "Epic", "PartsType": "Shell", "ResourceKey": "music01", "IsUseColor": false, "Colors": [], "AppearWeight": 5, "InfoId": 474, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 326, "MutationWeight": 5, "EffectPath": "music", "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
-      {"Id": 475, "NameId": 475, "PartsGroupId": 169, "RarityType": "Epic", "PartsType": "Shell", "ResourceKey": "music01", "IsUseColor": false, "Colors": [], "AppearWeight": 5, "InfoId": 474, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 326, "MutationWeight": 5, "EffectPath": "music", "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null}
+      {"Id": 475, "NameId": 475, "PartsGroupId": 169, "RarityType": "Epic", "PartsType": "Shell", "ResourceKey": "music01", "IsUseColor": false, "Colors": [], "AppearWeight": 5, "InfoId": 474, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 326, "MutationWeight": 5, "EffectPath": "music", "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
+      {"Id": 483, "NameId": 483, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "salty", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 484, "SellItem": 36, "SellCount": 5, "AnimFps": null, "MutationGroup": 320, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
+      {"Id": 485, "NameId": 485, "PartsGroupId": 2, "RarityType": "Common", "PartsType": "Eyes", "ResourceKey": "squre", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 486, "SellItem": 36, "SellCount": 5, "AnimFps": null, "MutationGroup": 320, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
+      {"Id": 487, "NameId": 487, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Eyes", "ResourceKey": "oddeye", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 488, "SellItem": 36, "SellCount": 7, "AnimFps": null, "MutationGroup": 325, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
+      {"Id": 489, "NameId": 489, "PartsGroupId": 17, "RarityType": "Rare", "PartsType": "Eyes", "ResourceKey": "yellow", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 490, "SellItem": 36, "SellCount": 7, "AnimFps": null, "MutationGroup": 325, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
+      {"Id": 491, "NameId": 491, "PartsGroupId": 169, "RarityType": "Epic", "PartsType": "Feeler", "ResourceKey": "danger", "IsUseColor": false, "Colors": [], "AppearWeight": 5, "InfoId": 492, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 323, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null}
     ],
     "FoodData": [
       {"Id": 31, "FoodType": "vegetable", "NameId": 31, "RarityType": "Common", "FullPoint": 5, "HappyPoint": 3, "EatTime": 2, "BuffId": 0, "InfoId": 124, "ResourceKey": "food_lettuce", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 1, "PoopTime": 20, "ResourceSize": 1},
@@ -1040,8 +1055,8 @@
       {"Id": 293, "Kr": "거대한 버섯이 등에 자라났습니다!"},
       {"Id": 295, "Kr": "웃는 얼굴"},
       {"Id": 296, "Kr": "살짝 웃음기를 띤 얼굴입니다."},
-      {"Id": 297, "Kr": "초롱초롱한 눈"},
-      {"Id": 298, "Kr": "상대를 방심시킬만큼 초롱초롱합니다."},
+      {"Id": 297, "Kr": "꿈뻑눈"},
+      {"Id": 298, "Kr": "꿈뻑꿈뻑.. 눈을 꿈뻑이고 있습니다."},
       {"Id": 188, "Kr": "에픽 알"},
       {"Id": 189, "Kr": "에픽 알. 온기가 느껴집니다."},
       {"Id": 299, "Kr": "보석 껍질(파란색)"},
@@ -1203,13 +1218,23 @@
       {"Id": 472, "Kr": "째깍거리지는 않습니다."},
       {"Id": 473, "Kr": "턴테이블(파란색)"},
       {"Id": 475, "Kr": "턴테이블(갈색)"},
-      {"Id": 474, "Kr": "달팽이가 좋아하는 음악이 작게 흘러나오고 있어요. 사람에게는 들리지 않나봐요."}
+      {"Id": 474, "Kr": "달팽이가 좋아하는 음악이 작게 흘러나오고 있어요. 사람에게는 들리지 않나봐요."},
+      {"Id": 483, "Kr": "삐진 눈"},
+      {"Id": 485, "Kr": "네모 눈"},
+      {"Id": 487, "Kr": "오드아이 눈"},
+      {"Id": 489, "Kr": "노란 눈"},
+      {"Id": 484, "Kr": "잔뜩 삐져있는 얼굴입니다."},
+      {"Id": 486, "Kr": "네모네모 눈 빔~"},
+      {"Id": 488, "Kr": "한쪽은 노란색, 한쪽은 파란색인 아름다운 눈입니다."},
+      {"Id": 490, "Kr": "샛노란색을 가진 눈입니다."},
+      {"Id": 491, "Kr": "사이렌"},
+      {"Id": 492, "Kr": "삐용삐용! 달팽이가 지나갑니다 비켜주세요!"}
     ],
     "UnlockData": [
       {"Id": 101, "ConditionType": "SnailLevel", "NeedConditionValue": 2, "CostItem": null, "CostCount": null}
     ],
     "GameConfig": [
-      {"MutationWeight": 5, "FullDecayPerTick": 1, "HappyDecayPerTick": 1, "PixelsPerSpeed": 10, "PixelsPerSize": 10, "FoodGravity": 1600, "CreateEggCooltime": 1800, "CreateEggPercent": 0.5, "CreateEggPlusPercent": 0.1, "CreateEggCount": 3, "MutationWeight2": 5, "MateSlotLevel": 5, "CreateEggCount2": 3, "Info": null}
+      {"MutationWeight": 5, "FullDecayPerTick": 1, "HappyDecayPerTick": 1, "PixelsPerSpeed": 10, "PixelsPerSize": 10, "FoodGravity": 1600, "CreateEggCooltime": 1800, "CreateEggPercent": 0.5, "CreateEggPlusPercent": 0.1, "CreateEggCount": 3, "MutationWeight2": 5, "MateSlotLevel": 5, "CreateEggCount2": 3, "AnimationSec": 1, "Info": null}
     ],
     "ContentsGuide": [
       {"GroupId": 347, "MainTitleId": 347, "SubTitleId": 348, "InfoId": 349},

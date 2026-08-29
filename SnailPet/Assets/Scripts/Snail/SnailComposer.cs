@@ -141,6 +141,9 @@ namespace SnailPet.Snail
             var parts = new List<SnailPartRef>(appearance.Parts);
             parts.Sort((a, b) => a.SortOrder.CompareTo(b.SortOrder));
 
+            // 선화와 색은 같은 속도로 같이 돌아야 한다. 속도는 시트가 한 벌로 들고 있다.
+            float fps = Fps;
+
             foreach (var p in parts)
             {
                 int group = p.DeformGroup;
@@ -150,9 +153,6 @@ namespace SnailPet.Snail
                 // 색상과 선화가 같은 순서 공간을 쓰되 항상 색상이 아래로 가도록 2칸씩 벌린다
                 int baseOrder = p.SortOrder * 2;
                 string label = p.Accessory?.ToString() ?? p.Type.ToString();
-
-                // 애니메이션 파츠면 선화와 색이 같은 속도로 같이 돌아야 한다
-                float fps = AnimFpsOf(p);
 
                 if (!string.IsNullOrEmpty(p.ColorKey))
                     AddLayer(composed, parent, soft, ColorPath(p.Folder, p.ColorKey), baseOrder, label + "_color", fps);
@@ -173,17 +173,19 @@ namespace SnailPet.Snail
         }
 
         /// <summary>
-        /// 이 파츠를 초당 몇 칸으로 돌릴지. <c>PartsData.AnimFps</c> 가 비어 있으면 기본값이다.
-        /// 악세서리에는 그 칸이 없으므로 늘 기본값이 된다.
+        /// 애니메이션 시트를 초당 몇 칸으로 돌릴지.
+        ///
+        /// 시트에는 <c>GameConfig.AnimationSec</c> — <b>다음 칸까지 몇 초</b> — 로 적혀 있어
+        /// 여기서 뒤집는다. 0 이하면 나눌 수 없으므로 <see cref="DefaultFps"/> 로 버틴다.
+        /// 파츠마다 다르게 주지 않는다. 전부 한 속도로 돈다.
         /// </summary>
-        private static float AnimFpsOf(SnailPartRef part)
+        private static float Fps
         {
-            if (!part.Accessory.HasValue
-                && GameData.PartsDataById.TryGetValue(part.PartsId, out var row)
-                && row.AnimFps.HasValue && row.AnimFps.Value > 0)
-                return (float)row.AnimFps.Value;
-
-            return DefaultFps;
+            get
+            {
+                double sec = Config.AnimationSec;
+                return sec > 0.0 ? (float)(1.0 / sec) : DefaultFps;
+            }
         }
 
         /// <summary>

@@ -489,6 +489,9 @@ namespace SnailPet
 
                 Say($"      [UI] 이름 변경: {snail.Name ?? "(없음)"}");
             };
+
+            _ui.HatchRevealed += ShowHatchGlow;
+
             _ui.Detail      += OpenGuide;
             _ui.GuidePicked += PickGuide;
             _ui.GuideDoneConfirmed += TakeGuideReward;
@@ -2159,6 +2162,11 @@ namespace SnailPet
 
             RefreshGauges();
 
+            // 부화 이펙트는 팝업 위에 얹은 그림이다. 전용 카메라를 꺼 뒀으므로 떠 있는 동안
+            // 여기서 매 프레임 다시 찍어야 움직인다. 닫히면 카메라와 텍스처째로 치운다.
+            if (_ui.HatchOpen) _hatchGlow?.Redraw();
+            else               DropHatchGlow();
+
             // 버프가 걸리고 풀리는 순간을 놓치지 않게 변화만 기록한다
             string buffs = _growth.Buffs.Signature;
             if (buffs != _lastBuffs)
@@ -3041,6 +3049,48 @@ namespace SnailPet
             Application.Quit();
         }
 
+        /// <summary>
+        /// 부화 팝업에서 달팽이를 덮는 이펙트. Resources/Effects 아래의 프리팹 이름이다.
+        /// </summary>
+        private const string HatchGlow = "glow";
+
+        /// <summary>
+        /// 이펙트를 세로로 몇 월드 유닛 담아 보여 줄지. <b>크기를 정하는 손잡이다</b> —
+        /// 줄이면 당겨 찍어 크게 나온다. glow 의 가장 큰 알갱이가 30 유닛 남짓이라
+        /// 40 이면 칸을 거의 채운다. 이펙트 프리팹은 안 건드리고 여기서 맞춘다.
+        /// </summary>
+        private const float HatchGlowView = 40f;
+
+        /// <summary>덮고 있는 이펙트. 팝업이 닫히면 버린다.</summary>
+        private EffectView _hatchGlow;
+
+        /// <summary>
+        /// 갓 태어난 달팽이가 드러나는 순간에 이펙트를 세운다.
+        ///
+        /// 파티클은 캔버스 위로 못 올라오므로 따로 찍어 그림으로 넘긴다. 팝업이 뜨는 순간에
+        /// 세우면 안 된다 — 알이 2.4초 떠는 동안 한 번짜리 이펙트가 이미 끝나 버린다.
+        /// </summary>
+        private void ShowHatchGlow()
+        {
+            _hatchGlow?.Dispose();
+
+            var box = SnailUi.HatchFxSize;
+            _hatchGlow = new EffectView(transform, _sparks.Play(HatchGlow, Vector3.zero),
+                                        box.x, box.y, HatchGlowView);
+
+            _ui.SetHatchFx(_hatchGlow.Texture);
+        }
+
+        /// <summary>팝업이 닫혔으면 이펙트를 치운다. 렌더 텍스처와 카메라가 딸려 있다.</summary>
+        private void DropHatchGlow()
+        {
+            if (_hatchGlow == null) return;
+
+            _ui.SetHatchFx(null);
+            _hatchGlow.Dispose();
+            _hatchGlow = null;
+        }
+
         /// <summary>부화 팝업에 비추는 갓 태어난 개체. 받을 때마다 새로 찍는다.</summary>
         private SnailPortrait _hatchView;
 
@@ -3074,6 +3124,7 @@ namespace SnailPet
             var hatchSize = SnailUi.HatchSnailSize;
             _hatchView = new SnailPortrait(transform, born.Appearance, SnailMetrics.Measure(born.Appearance),
                                            hatchSize.x, hatchSize.y);
+
             _ui.ShowHatch(eggId, born.Rarity, _hatchView.Texture);
 
             Say($"      [UI] 부화! {GameData.TokenById[eggId]} → {born.Appearance}");

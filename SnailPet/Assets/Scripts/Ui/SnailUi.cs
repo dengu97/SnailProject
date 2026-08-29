@@ -539,6 +539,12 @@ namespace SnailPet.Ui
             // 줄에 얹은 <b>뒤라야</b> 한다 — 먼저 붙이면 나중에 지어진 얼굴에 가린다.
             AddSlotFrames();
 
+            // 고른 칸의 테두리도 칸 테두리(SlotFrame)와 같은 만큼 커야 한다. 프리팹에는 칸에
+            // 딱 맞게 구워져 있어, 고르면 둘레가 한 겹 안쪽에 그어져 어긋나 보였다.
+            foreach (var s in GetComponentsInChildren<UiShapeRef>(true))
+                if (s.Shape == UiSprites.Shape.Selection)
+                    InflateFill((RectTransform)s.transform, SlotFramePad);
+
             // 개수 배지는 테두리보다 앞이라야 읽힌다. 테두리가 칸의 형제라 칸 안에서는
             // 이길 수가 없어, 배지를 테두리의 자식으로 옮긴다.
             LiftCountBadges(_foodSlots, _eggSlots, _shopSlots, _wardrobeSlots, _wornSlots,
@@ -1915,12 +1921,21 @@ namespace SnailPet.Ui
             root.gameObject.AddComponent<UiSmoothScroll>();
         }
 
-        /// <summary>내용 높이를 줄 수에 맞춘다. 이게 스크롤 범위를 정한다.</summary>
-        private static void FitContent(RectTransform content, int count)
+        /// <summary>
+        /// 내용 높이를 줄 수에 맞춘다. 이게 스크롤 범위를 정한다.
+        ///
+        /// 두 가지를 지켜야 끝에서 더 안 굴러간다.
+        ///  · 칸 수는 <b>실제로 만들어 둔 칸 수</b>로 잡는다. 더 잡으면 칸이 없는 빈 곳까지 굴러간다
+        ///  · 바닥은 그 목록의 <b>보이는 영역</b>이다. 옷장은 음식보다 12px 짧아,
+        ///    음식 값으로 잡으면 아무것도 없는데 그만큼 굴러갔다
+        /// </summary>
+        private static void FitContent(RectTransform content, int count, int pool = Max.FoodSlotPool)
         {
-            int rows = Mathf.CeilToInt(count / (float)Max.FoodCols);
+            int rows = Mathf.CeilToInt(Mathf.Min(count, pool) / (float)Max.FoodCols);
+            float view = content.parent is RectTransform vp ? vp.rect.height : Max.FoodView.height;
+
             content.sizeDelta = new Vector2(UiTheme.PanelW,
-                Mathf.Max(Max.FoodView.height, Max.FoodSlot.y + rows * Max.FoodStepY));
+                Mathf.Max(view, Max.FoodSlot.y + rows * Max.FoodStepY));
         }
 
         /// <summary>
@@ -2062,6 +2077,18 @@ namespace SnailPet.Ui
         }
 
         /// <summary>
+        /// 부모를 꽉 채우는(<see cref="Fill"/>) 자식을 사방으로 <paramref name="pad"/> 만큼 키운다.
+        ///
+        /// <see cref="Inflate"/> 와 달리 <b>절대값으로 적으므로 두 번 불러도 같은 크기다</b> —
+        /// <see cref="Bind"/> 는 두 번 지날 수 있어서, 더해 나가는 방식이면 점점 커진다.
+        /// </summary>
+        private static void InflateFill(RectTransform rt, int pad)
+        {
+            rt.offsetMin = new Vector2(-pad, -pad);
+            rt.offsetMax = new Vector2(pad, pad);
+        }
+
+        /// <summary>
         /// 개수 배지(바탕 + 숫자)를 테두리 위로 올린다.
         ///
         /// 테두리는 칸의 <b>형제</b>라 칸보다 나중에 그려진다. 그래서 칸 안에 있는 배지는
@@ -2143,9 +2170,13 @@ namespace SnailPet.Ui
             slot.Icon = Icon(root, new RectInt(2, 2, s.width - 4, s.height - 4), null, Color.white, "Icon");
             slot.Icon.raycastTarget = false;
 
-            // 고른 칸에 덧그리는 테두리(slotline). 칸 위에 같은 크기로 겹친다.
+            // 고른 칸에 덧그리는 테두리(slotline). 칸 테두리와 같은 자리에 겹친다.
             slot.Frame = NewRect("Frame", root).gameObject.AddComponent<Image>();
             Fill((RectTransform)slot.Frame.transform);
+
+            // 칸 테두리(SlotFrame)가 칸보다 SlotFramePad 만큼 크다. 여기도 같이 키워야 둘이 겹친다.
+            InflateFill((RectTransform)slot.Frame.transform, SlotFramePad);
+
             slot.Frame.sprite = UiSprites.Of(UiSprites.Shape.Selection);
             slot.Frame.type = Image.Type.Sliced;
             slot.Frame.gameObject.AddComponent<UiShapeRef>().Shape = UiSprites.Shape.Selection;
@@ -2243,9 +2274,7 @@ namespace SnailPet.Ui
             ShowFoodDetail(!empty);
 
             // 내용 높이를 줄 수에 맞춘다. 이게 스크롤 범위를 정한다.
-            int rows = Mathf.CeilToInt((_foodIds.Length) / (float)Max.FoodCols);
-            _foodContent.sizeDelta = new Vector2(UiTheme.PanelW,
-                Mathf.Max(Max.FoodView.height, Max.FoodSlot.y + rows * Max.FoodStepY));
+            FitContent(_foodContent, _foodIds.Length);
 
             SelectFood(_foodIds.Length > 0 ? 0 : -1);
         }
@@ -4166,6 +4195,7 @@ namespace SnailPet.Ui
         }
 
         [SerializeField] private RectTransform _guideRoot, _guidePanel, _guideBasic, _guideDetail;
+        [SerializeField] private RectTransform _guideView, _guideContent;
         [SerializeField] private GuideRow[] _guideRows, _guideParts;
         [SerializeField] private GridSlot[] _guideRewards;
         [SerializeField] private Button _guideToggle;
@@ -4190,13 +4220,21 @@ namespace SnailPet.Ui
             Place(_guideRoot, new RectInt(0, 0, UiTheme.PanelW, UiTheme.PanelH));
             _guideRoot.gameObject.SetActive(false);
 
+            // 줄이 판보다 길다(열 칸이면 429px, 판은 220px). 굴려서 봐야 하므로 목록을
+            // 스크롤 영역 안에 넣는다 — 달팽이·파츠 목록과 같은 방식이다.
+            BuildScrollView(_guideRoot, "GuideList", UiTheme.Guide.View, out _guideView, out _guideContent);
+            _guideView.gameObject.SetActive(true);
+
             _guideRows = new GuideRow[UiTheme.Guide.RowPool];
             for (int i = 0; i < _guideRows.Length; i++)
             {
                 var g = UiTheme.Guide.Row;
-                var at = new RectInt(g.x, g.y + i * UiTheme.Guide.RowStep, g.width, g.height);
 
-                var root = NewRect("Guide" + i, _guideRoot);
+                // 자리는 이제 <b>스크롤 내용 기준</b>이다. 영역이 판 위쪽에서 내려와 있는 만큼 뺀다.
+                var at = new RectInt(g.x, g.y - UiTheme.Guide.View.y + i * UiTheme.Guide.RowStep,
+                                     g.width, g.height);
+
+                var root = NewRect("Guide" + i, _guideContent);
                 Place(root, at);
 
                 var bg = Backdrop(root.gameObject, UiSprites.Shape.Slot, UiTheme.Slot);
@@ -4374,6 +4412,17 @@ namespace SnailPet.Ui
         public void SetGuides((string name, SnailPet.Data.RarityType rarity, bool done)[] rows)
         {
             int count = rows?.Length ?? 0;
+            if (count > Count(_guideRows))
+                Debug.LogWarning($"[SnailPet] 도감 {count}칸 중 {Count(_guideRows)}칸만 나옵니다 " +
+                                 $"(UiTheme.Guide.RowPool)");
+
+            // 내용 높이가 스크롤 범위를 정한다. <b>줄 수가 아니라 실제로 만들어 둔 줄 수</b>로
+            // 잡아야 한다 — 없는 줄까지 잡으면 빈 곳까지 굴러가 목록이 사라진 것처럼 보인다.
+            int shown = Mathf.Min(count, Count(_guideRows));
+            if (_guideContent != null)
+                _guideContent.sizeDelta = new Vector2(UiTheme.PanelW,
+                    Mathf.Max(UiTheme.Guide.View.height,
+                              UiTheme.Guide.Row.y - UiTheme.Guide.View.y + shown * UiTheme.Guide.RowStep));
 
             for (int i = 0; i < Count(_guideRows); i++)
             {
@@ -5023,10 +5072,13 @@ namespace SnailPet.Ui
                 if (_partsRows[i].Dot != null) _partsRows[i].Dot.enabled = r.claim;
             }
 
+            // 줄 수가 아니라 <b>실제로 만들어 둔 줄 수</b>로 잡는다. 위 경고가 뜨는 상황에서
+            // 파츠 수로 잡으면 줄이 없는 빈 곳까지 굴러가 목록이 사라진 것처럼 보인다.
             if (_partsContent != null)
                 _partsContent.sizeDelta = new Vector2(UiTheme.PanelW,
                     Mathf.Max(UiTheme.PartsGuide.View.height,
-                              UiTheme.PartsGuide.Row.y + count * UiTheme.PartsGuide.RowStep));
+                              UiTheme.PartsGuide.Row.y
+                              + Mathf.Min(count, Count(_partsRows)) * UiTheme.PartsGuide.RowStep));
         }
 
         /// <summary>
@@ -5133,29 +5185,35 @@ namespace SnailPet.Ui
             LocLabel(_settingsPanel, new RectInt(0, 4, UiTheme.PanelW, 21), Keys.Setting, 12, UiTheme.Ink);
 
             // 언어는 지금 한글뿐이라 눌러도 바뀌지 않는다. 목업의 「나중에 추가」가 이것이다.
-            _langBtn = SettingRow(_settingsPanel, Set.RightX, Set.RightRows[0], Keys.Korean, out _, "Language");
-            Chevron(_settingsPanel, Set.RightX, Set.RightRows[0]);
+            // 오른쪽 행은 스프링을 피해 짧다 — 너비를 빼먹으면 체크·▾ 가 행 밖으로 나간다.
+            _langBtn = SettingRow(_settingsPanel, Set.RightX, Set.RightRows[0], Keys.Korean, out _, "Language",
+                                  w: Set.RightW);
+            Chevron(_settingsPanel, Set.RightX, Set.RightRows[0], Set.RightW);
 
-            _updateBtn = SettingRow(_settingsPanel, Set.RightX, Set.RightRows[1], Keys.Update, out _, "Update");
+            _updateBtn = SettingRow(_settingsPanel, Set.RightX, Set.RightRows[1], Keys.Update, out _, "Update",
+                                    w: Set.RightW);
 
             // UI 크기는 배수가 글자에 들어가므로 언어 키가 아니라 코드가 채운다.
-            _scaleBtn = SettingRow(_settingsPanel, Set.RightX, Set.RightRows[2], null, out _scaleLabel, "UiScale");
-            Chevron(_settingsPanel, Set.RightX, Set.RightRows[2]);
+            _scaleBtn = SettingRow(_settingsPanel, Set.RightX, Set.RightRows[2], null, out _scaleLabel, "UiScale",
+                                   w: Set.RightW);
+            Chevron(_settingsPanel, Set.RightX, Set.RightRows[2], Set.RightW);
 
             _alwaysMaxBtn = ToggleRow(_settingsPanel, Set.RightX, Set.RightRows[3], Keys.AlwaysMax,
-                                      out _alwaysMaxMark, "AlwaysMax");
+                                      out _alwaysMaxMark, "AlwaysMax", Set.RightW);
 
-            _quitBtn = SettingRow(_settingsPanel, Set.RightX, Set.RightRows[4], Keys.Quit, out _, "Quit", centered: true);
+            _quitBtn = SettingRow(_settingsPanel, Set.RightX, Set.RightRows[4], Keys.Quit, out _, "Quit",
+                                  centered: true, w: Set.RightW);
         }
 
         /// <summary>
         /// 설정 행 하나. 가로로 긴 홈에 글자를 얹고 행 전체를 누를 수 있게 한다.
         /// <paramref name="token"/> 이 null 이면 값이 바뀌는 글자라 코드가 채운다.
         /// </summary>
+        /// <param name="w">행 너비. 오른쪽 판은 스프링을 피해 짧다(<see cref="UiTheme.Setting.RightW"/>).</param>
         private Button SettingRow(RectTransform parent, int x, int y, string token,
-                                  out Text label, string name, bool centered = false)
+                                  out Text label, string name, bool centered = false, int w = Set.RowW)
         {
-            var at = new RectInt(x, y, Set.RowW, Set.RowH);
+            var at = new RectInt(x, y, w, Set.RowH);
             var box = Box(parent, at, UiTheme.Slot, UiSprites.Shape.Slot, name);
             box.raycastTarget = true;
 
@@ -5173,21 +5231,25 @@ namespace SnailPet.Ui
         }
 
         /// <summary>켜고 끄는 행. 오른쪽 끝에 네모와 체크를 얹는다.</summary>
-        private Button ToggleRow(RectTransform parent, int x, int y, string token, out Text mark, string name)
+        private Button ToggleRow(RectTransform parent, int x, int y, string token, out Text mark, string name,
+                                 int w = Set.RowW)
         {
-            var btn = SettingRow(parent, x, y, token, out _, name);
+            var btn = SettingRow(parent, x, y, token, out _, name, w: w);
 
-            Box(parent, new RectInt(x + Set.Check.x, y + Set.Check.y, Set.Check.width, Set.Check.height),
+            // 체크는 행 오른쪽 끝에서 잰다 (Set.Check.x 가 음수다)
+            int cx = x + w + Set.Check.x;
+
+            Box(parent, new RectInt(cx, y + Set.Check.y, Set.Check.width, Set.Check.height),
                 UiTheme.RowSlot, UiSprites.Shape.Slot2, name + "Box");
 
-            mark = Label(parent, new RectInt(x + Set.Check.x, y + Set.Check.y - 1, Set.Check.width, Set.Check.height),
+            mark = Label(parent, new RectInt(cx, y + Set.Check.y - 1, Set.Check.width, Set.Check.height),
                          "✓", 11, UiTheme.Ink);
             return btn;
         }
 
         /// <summary>고르는 행 오른쪽의 ▾.</summary>
-        private void Chevron(RectTransform parent, int x, int y) =>
-            Label(parent, new RectInt(x + Set.Arrow.x, y + Set.Arrow.y, Set.Arrow.width, Set.Arrow.height),
+        private void Chevron(RectTransform parent, int x, int y, int w = Set.RowW) =>
+            Label(parent, new RectInt(x + w + Set.Arrow.x, y + Set.Arrow.y, Set.Arrow.width, Set.Arrow.height),
                   "▾", 10, UiTheme.Ink);
 
         /// <summary>설정 화면에 들어가거나 나온다.</summary>
@@ -5611,6 +5673,7 @@ namespace SnailPet.Ui
         [SerializeField] private RectTransform _hatchGroup, _hatchLight;
         [SerializeField] private Image _hatchEgg, _hatchLightFill, _hatchRarityBadge, _hatchRarityIcon;
         [SerializeField] private RawImage _hatchSnail;
+        [SerializeField] private RawImage _hatchFx;
         [SerializeField] private Text _hatchRarityText;
         [SerializeField] private Button _hatchOk;
 
@@ -5665,6 +5728,13 @@ namespace SnailPet.Ui
             _hatchLightFill = glow.gameObject.AddComponent<Image>();
             _hatchLightFill.color = new Color(1f, 1f, 1f, 0f);
             _hatchLightFill.raycastTarget = false;
+
+            // 부화 이펙트. 파티클은 캔버스 위로 못 올라와 렌더 텍스처로 받아 여기에 그린다.
+            // <b>빛보다 나중에 지어야</b> 맨 위에 온다 — 달팽이를 덮었다가 사라지면서 드러낸다.
+            _hatchFx = NewRect("Fx", _hatchGroup).gameObject.AddComponent<RawImage>();
+            Place((RectTransform)_hatchFx.transform, Pop.HatchFx);
+            _hatchFx.raycastTarget = false;
+            _hatchFx.enabled = false;
         }
 
         // ── 도감 완성·보상 팝업 ──
@@ -6409,8 +6479,41 @@ namespace SnailPet.Ui
         public static Vector2Int HatchSnailSize =>
             new Vector2Int(Pop.HatchSnail.width, Pop.HatchSnail.height);
 
+        /// <summary>부화 이펙트를 몇 픽셀로 찍을지. 달팽이 칸보다 넉넉하다.</summary>
+        public static Vector2Int HatchFxSize =>
+            new Vector2Int(Pop.HatchFx.width, Pop.HatchFx.height);
+
         /// <summary>연출이 아직 도는 중인가. 도는 동안에는 닫을 수 없다.</summary>
         public bool HatchPlaying => _hatchPhase == HatchPhase.Wobble || _hatchPhase == HatchPhase.Flash;
+
+        /// <summary>
+        /// 부화 연출 이펙트를 갈아 끼운다. null 이면 뗀다.
+        ///
+        /// 이펙트는 밖에서 렌더 텍스처로 찍어 넘겨 준다 — 파티클은 캔버스 위로 못 올라온다.
+        /// </summary>
+        public void SetHatchFx(Texture fx)
+        {
+            if (_hatchFx == null) return;
+
+            _hatchFx.texture = fx;
+            _hatchFx.enabled = fx != null;
+        }
+
+        /// <summary>
+        /// 빛이 다 덮여 <b>갓 태어난 달팽이가 드러나는 순간</b>. 한 번만 온다.
+        ///
+        /// 이때 이펙트를 세우라고 알린다. 팝업이 뜨는 순간(ShowHatch)에 세우면 알이
+        /// 2.4초 떠는 동안 한 번짜리 이펙트가 이미 끝나 버린다.
+        /// </summary>
+        public event Action HatchRevealed;
+
+        /// <summary>
+        /// 부화 팝업이 떠 있는가.
+        ///
+        /// 초상은 카메라를 꺼 두고 한 번만 찍는데, 이 팝업에는 이펙트가 붙어 움직인다.
+        /// 그래서 떠 있는 동안만 받는 쪽이 초상을 매 프레임 다시 찍는다.
+        /// </summary>
+        public bool HatchOpen => _hatchGroup != null && _hatchGroup.gameObject.activeSelf;
 
         /// <summary>
         /// 알 부화 팝업을 띄우고 연출을 시작한다.
@@ -6661,7 +6764,11 @@ namespace SnailPet.Ui
                 return;
             }
 
-            if (_hatchEgg.gameObject.activeSelf) ShowHatchResult(true);
+            if (_hatchEgg.gameObject.activeSelf)
+            {
+                ShowHatchResult(true);
+                HatchRevealed?.Invoke();      // 이제야 달팽이가 보인다. 이펙트도 여기서 시작한다
+            }
 
             float t = (_hatchTime - HatchFlashIn) / HatchFlashOut;
             SetLight(1f - t);
@@ -6705,6 +6812,7 @@ namespace SnailPet.Ui
 
             if (_hatchGroup != null) _hatchGroup.gameObject.SetActive(false);
             if (_hatchLightFill != null) SetLight(0f);
+            SetHatchFx(null);      // 렌더 텍스처는 띄운 쪽이 버린다. 여기서는 그림만 뗀다
 
             if (_popupClose != null)
             {

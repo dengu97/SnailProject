@@ -194,17 +194,20 @@ namespace SnailPet.Ui
             public static readonly RectInt RowButton = new RectInt(126, 3,  20, 20);
 
             // ── 오른쪽: 「방」 ──
+            //
+            // 왼쪽 끝은 공책 스프링이 지나가는 자리다. 14 에서 시작하면 물리므로
+            // 22 로 밀고 그만큼 짧게 잡는다 — 오른쪽 끝(159)은 그대로다(2026-08-29).
             public static readonly RectInt Title  = new RectInt(0, 8, PanelW, 21);
-            public static readonly RectInt Button = new RectInt(14, 40, 145, 23);
+            public static readonly RectInt Button = new RectInt(22, 40, 137, 23);
             public const int ButtonStep = 29;
 
             // ── 오른쪽: 방에 들어간 뒤 ──
             /// <summary>방 이름 줄과 그 오른쪽의 나가기.</summary>
-            public static readonly RectInt RoomName = new RectInt(14, 8, 118, 23);
+            public static readonly RectInt RoomName = new RectInt(22, 8, 110, 23);
             public static readonly RectInt RoomOut  = new RectInt(136, 8, 23, 23);
 
             /// <summary>방 이름을 고치는 연필. 이름칸 안 왼쪽에 얹는다 (달팽이 이름칸과 같은 꼴).</summary>
-            public static readonly RectInt RoomRename = new RectInt(17, 11, 16, 16);
+            public static readonly RectInt RoomRename = new RectInt(25, 11, 16, 16);
 
             /// <summary>
             /// 방 코드. 이름 바로 밑에 가운데로 놓는다. 누르면 복사되므로 손가락이 닿을 만큼은 둔다.
@@ -216,15 +219,15 @@ namespace SnailPet.Ui
             /// <b>방 코드(RoomCode) 아래에서 시작해야 한다</b> — 예전에는 코드 위로 올라와 가렸다.
             /// 다섯 줄이 패널 안에 들어오도록 간격도 같이 좁혔다.
             /// </summary>
-            public static readonly RectInt Member     = new RectInt(14, 54, 145, 32);
+            public static readonly RectInt Member     = new RectInt(22, 54, 137, 32);
             public const int MemberStep = 33, MemberCount = 5;
 
             // 아래는 줄 왼쪽 위가 원점이다.
             // 이름은 두 줄이다 — 위가 스팀 닉네임(작게), 아래가 달팽이 이름.
             public static readonly RectInt MemberFace  = new RectInt(  4, 2, 28, 28);
-            public static readonly RectInt MemberSteam = new RectInt( 38, 3, 78, 13);
-            public static readonly RectInt MemberName  = new RectInt( 38, 15, 78, 15);
-            public static readonly RectInt MemberZoom  = new RectInt(120, 6, 20, 20);
+            public static readonly RectInt MemberSteam = new RectInt( 38, 3, 70, 13);
+            public static readonly RectInt MemberName  = new RectInt( 38, 15, 70, 15);
+            public static readonly RectInt MemberZoom  = new RectInt(112, 6, 20, 20);
         }
 
         /// <summary>
@@ -667,6 +670,13 @@ namespace SnailPet.Ui
             /// 가운데는 그대로 두고 크기만 줄인 값이다.
             /// </summary>
             public static readonly RectInt HatchSnail  = new RectInt( 93,  36, 60, 51);
+
+            /// <summary>
+            /// 부화 연출 이펙트가 그려지는 자리. 달팽이 칸(HatchSnail)을 넉넉히 덮어야 해서
+            /// 그보다 크고, 같은 한가운데에 놓인다. 파티클은 캔버스 위로 못 올라와서
+            /// 렌더 텍스처로 받아 이 칸에 그린다 — 팝업에서 맨 위에 온다.
+            /// </summary>
+            public static readonly RectInt HatchFx     = new RectInt( 63,  22, 120, 80);
             public static readonly RectInt HatchRarity = new RectInt(105,  90, 35, 12);
         }
 
@@ -677,6 +687,14 @@ namespace SnailPet.Ui
         public static class Guide
         {
             // ── 왼쪽: 목록 ──
+
+            /// <summary>
+            /// 목록이 보이는 영역. 제목 아래부터 패널 끝까지다.
+            /// 줄이 이 안에 다 안 들어가면 스크롤된다 — 도감이 열 칸을 넘으면서 필요해졌다.
+            /// (자리는 달팽이 목록과 같다. 같은 판을 나눠 쓰므로 어긋나면 눈에 띈다)
+            /// </summary>
+            public static readonly RectInt View = new RectInt(0, 25, PanelW, PanelH - 25);
+
             public static readonly RectInt Row = new RectInt(11, 29, 151, 32);
             public const int RowStep = 40;
 
@@ -814,7 +832,14 @@ namespace SnailPet.Ui
         public static class Setting
         {
             public const int RowW = 155, RowH = 28;
-            public const int LeftX = 10, RightX = 9;
+            public const int LeftX = 10, RightX = 20;
+
+            /// <summary>
+            /// 오른쪽 행의 너비. 스프링을 피해 안쪽으로 밀었으므로 그만큼 짧다 —
+            /// 오른쪽 끝(20+143=163)은 왼쪽 행(10+155=165)과 거의 같은 자리에 남는다.
+            /// 왼쪽 행은 스프링에 안 닿아 예전 그대로다(RightX 가 9 였을 때 오른쪽만 물렸다).
+            /// </summary>
+            public const int RightW = 143;
 
             /// <summary>왼쪽은 구역이 둘이라 행 간격이 일정하지 않다. 그래서 y 를 그대로 적는다.</summary>
             public static readonly RectInt EggTitle    = new RectInt(7, 29, 98, 19);
@@ -824,9 +849,12 @@ namespace SnailPet.Ui
             public static readonly int[] RightRows = { 33, 68, 102, 137, 171 };
 
             // 행 안쪽 (행 왼쪽 위가 원점)
-            public static readonly RectInt Label = new RectInt(  6, 4, 119, 19);
-            public static readonly RectInt Check = new RectInt(133, 8,  13, 13);
-            public static readonly RectInt Arrow = new RectInt(134, 9,   8, 11);
+            public static readonly RectInt Label = new RectInt(6, 4, 119, 19);
+
+            // 아래 둘만 <b>행 오른쪽 끝</b>에서 잰다(x 가 음수). 행 너비가 좌우로 다르므로
+            // 왼쪽 끝에서 재면 너비를 바꿀 때마다 같이 고쳐야 한다.
+            public static readonly RectInt Check = new RectInt(-22, 8, 13, 13);
+            public static readonly RectInt Arrow = new RectInt(-21, 9,  8, 11);
         }
 
         /// <summary>화면 모서리에서 띄우는 여백.</summary>

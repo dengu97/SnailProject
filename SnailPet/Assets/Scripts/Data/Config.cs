@@ -60,5 +60,12 @@ namespace SnailPet.Data
 
         /// <summary>짝꿍 슬롯에 놓을 수 있는 최소 레벨(=나이). 이보다 어린 개체는 못 놓는다.</summary>
         public static int MateSlotLevel => (int)Of(Row?.MateSlotLevel ?? 0, 10.0, nameof(MateSlotLevel));
+
+        /// <summary>
+        /// 애니메이션 파츠가 <b>다음 칸으로 넘어가기까지의 시간</b>(초).
+        /// 그리는 쪽은 초당 칸(fps)으로 도므로 SnailComposer 가 뒤집어 쓴다.
+        /// 파츠마다 다르게 주지 않는다 — 애니메이션 파츠는 전부 이 속도로 돈다.
+        /// </summary>
+        public static double AnimationSec => Of(Row?.AnimationSec ?? 0, 1.0 / 14.0, nameof(AnimationSec));
     }
 }
