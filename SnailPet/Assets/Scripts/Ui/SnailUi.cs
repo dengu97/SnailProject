@@ -323,6 +323,9 @@ namespace SnailPet.Ui
             if (_partsRoot == null && _geneRoot != null) BuildPartsList((RectTransform)_geneRoot.parent);
             if (_partsPanel == null) BuildPartsPanel();
 
+            // 줄 풀을 키우면 프리팹에 구워진 48줄로는 모자라다. 모자란 만큼만 뒤에 붙인다.
+            EnsurePartsRows();
+
             // 레드닷은 나중에 더한 것이라 구워진 프리팹에는 없다. 없는 곳에만 붙인다.
             EnsurePartsDots();
 
@@ -4572,6 +4575,28 @@ namespace SnailPet.Ui
 
             root.gameObject.SetActive(false);
             return row;
+        }
+
+        /// <summary>
+        /// 구워진 줄이 <see cref="UiTheme.PartsGuide.RowPool"/> 보다 적으면 모자란 만큼 뒤에 붙인다.
+        ///
+        /// 줄이 모자라면 넘치는 파츠는 목록에 <b>아예 안 나오고</b>, 안 나오면 고를 수도 없어
+        /// 보상을 받을 길이 없다 — 껍질이 52개로 늘었을 때 48번째 뒤의 파츠에 걸린 레드닷이
+        /// 영영 꺼지지 않았다. 풀만 키우면 프리팹에 구워진 줄 수는 그대로라 여기서 채운다.
+        /// 다시 구우면 이 조건은 저절로 거짓이 된다.
+        /// </summary>
+        private void EnsurePartsRows()
+        {
+            if (_partsContent == null) return;
+
+            int have = Count(_partsRows);
+            if (have >= UiTheme.PartsGuide.RowPool) return;
+
+            var grown = new PartsRow[UiTheme.PartsGuide.RowPool];
+            for (int i = 0; i < have; i++) grown[i] = _partsRows[i];
+            for (int i = have; i < grown.Length; i++) grown[i] = BuildPartsRow(i);
+
+            _partsRows = grown;
         }
 
         /// <summary>파츠 뒤에 까는 실루엣. 도감(달팽이) 쪽과 다른 그림을 쓴다.</summary>

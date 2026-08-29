@@ -753,8 +753,14 @@ namespace SnailPet.Ui
             public static readonly RectInt Row = new RectInt(11, 4, 151, 24);
             public const int RowStep = 28;
 
-            /// <summary>미리 만들어 두는 줄 수. 지금 가장 많은 부위(껍질)가 39개다.</summary>
-            public const int RowPool = 48;
+            /// <summary>
+            /// 미리 만들어 두는 줄 수. 지금 가장 많은 부위(껍질)가 52개다.
+            ///
+            /// <b>모자라면 남는 파츠는 목록에 아예 안 나온다.</b> 안 나오면 고를 수도 없어
+            /// 그 파츠의 보상을 받을 길이 없고, 레드닷은 켜진 채로 남는다 — 48줄이던 때
+            /// 껍질이 52개로 늘어 실제로 이 일이 있었다. 시트가 커지면 여기도 키울 것.
+            /// </summary>
+            public const int RowPool = 56;
 
             // 아래 셋은 줄 왼쪽 위가 원점
             public static readonly RectInt RowName   = new RectInt(  8, 3, 100, 18);
