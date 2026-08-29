@@ -408,6 +408,14 @@ namespace SnailPet.Ui
             ApplyAgeBadge(_rows);
             ApplyAgeBadge(_mateRows);
 
+            // 휠 스크롤을 부드럽게. 프리팹에 구워진 목록에도 붙여야 한다 —
+            // ScrollRect 의 휠은 한 칸마다 내용이 즉시 튀어 뻑뻑하게 느껴진다.
+            foreach (var s in GetComponentsInChildren<ScrollRect>(true))
+            {
+                s.scrollSensitivity = 0f;
+                if (s.GetComponent<UiSmoothScroll>() == null) s.gameObject.AddComponent<UiSmoothScroll>();
+            }
+
             // 「부화시킬 알이 없습니다」는 프리팹에 부화기 패널에 구워져 있다. 비는 쪽은
             // 왼쪽 목록이므로 그리로 옮긴다. 다시 구우면 처음부터 그 자리에 지어진다.
             if (_eggEmpty != null && _eggGridRoot != null && _eggEmpty.transform.parent != _eggGridRoot)
@@ -1881,7 +1889,10 @@ namespace SnailPet.Ui
             scroll.viewport = root;
             scroll.horizontal = false;
             scroll.movementType = ScrollRect.MovementType.Clamped;
-            scroll.scrollSensitivity = 20f;
+
+            // 휠은 UiSmoothScroll 이 맡는다. ScrollRect 의 휠은 한 칸마다 즉시 튀어 뻑뻑하다.
+            scroll.scrollSensitivity = 0f;
+            root.gameObject.AddComponent<UiSmoothScroll>();
         }
 
         /// <summary>내용 높이를 줄 수에 맞춘다. 이게 스크롤 범위를 정한다.</summary>
