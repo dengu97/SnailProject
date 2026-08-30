@@ -393,6 +393,9 @@ namespace SnailPet.Ui
             // 왼쪽 목록 판은 제본이 달린 그림으로 바뀌었고 그만큼 넓어졌다.
             ApplyListPanelArt();
 
+            // 떠 있는 팝업의 판도 납작한 그림으로 바뀌었다. 프리팹에는 예전 것이 굳어 있다.
+            ApplyPopupPanelArt();
+
             // 빈 부화 칸의 + 는 프리팹에 예전 크기로 굳어 있다. 글꼴이 바뀌며 커 보였다.
             for (int i = 0; i < Count(_hatchSlots); i++)
                 if (_hatchSlots[i]?.Plus != null) _hatchSlots[i].Plus.fontSize = HatchPlusSize;
@@ -1216,6 +1219,24 @@ namespace SnailPet.Ui
 
             foreach (var t in parent.GetComponentsInChildren<Text>(true))
                 if (t.text == "?") t.gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// 떠 있는 팝업의 판을 납작한 그림(panel3)으로 바꾼다.
+        ///
+        /// 프리팹에는 <see cref="UiSprites.Shape.Panel"/> 로 굳어 있다. 도형을 갈아 끼울 때는
+        /// <see cref="UiShapeRef"/> 도 같이 고쳐야 한다 — 그게 살아날 때 그림을 되채우는 표라,
+        /// 안 고치면 다음에 켤 때 예전 그림으로 돌아간다.
+        /// </summary>
+        private void ApplyPopupPanelArt()
+        {
+            if (_popup == null) return;
+
+            var img = _popup.GetComponent<Image>();
+            if (img != null) img.sprite = UiSprites.Of(UiSprites.Shape.Panel3);
+
+            var shape = _popup.GetComponent<UiShapeRef>();
+            if (shape != null) shape.Shape = UiSprites.Shape.Panel3;
         }
 
         /// <summary>
@@ -5484,7 +5505,7 @@ namespace SnailPet.Ui
             _popup.sizeDelta = new Vector2(Pop.W, Pop.H);
             _popup.anchoredPosition = Vector2.zero;
 
-            var bg = Backdrop(_popup.gameObject, UiSprites.Shape.Panel, UiTheme.PanelFill);
+            var bg = Backdrop(_popup.gameObject, UiSprites.Shape.Panel3, UiTheme.PanelFill);
             bg.raycastTarget = true;
 
             // 닫기는 두 모습이 공유한다. 나머지는 묶음별로 갈아 끼운다.
@@ -5730,11 +5751,15 @@ namespace SnailPet.Ui
             _hatchLightFill.raycastTarget = false;
 
             // 부화 이펙트. 파티클은 캔버스 위로 못 올라와 렌더 텍스처로 받아 여기에 그린다.
-            // <b>빛보다 나중에 지어야</b> 맨 위에 온다 — 달팽이를 덮었다가 사라지면서 드러낸다.
+            //
+            // 그리는 순서는 <b>판 < 글로우 < 내용(달팽이·등급·버튼) < 빛</b> 이다.
+            // UGUI 는 형제 차례대로 그리므로, 맨 앞으로 보내면 이 묶음의 무엇보다도 뒤에 깔린다.
+            // 판 그림은 이 묶음의 부모(_popup)에 있어 그보다는 위다.
             _hatchFx = NewRect("Fx", _hatchGroup).gameObject.AddComponent<RawImage>();
             Place((RectTransform)_hatchFx.transform, Pop.HatchFx);
             _hatchFx.raycastTarget = false;
             _hatchFx.enabled = false;
+            _hatchFx.transform.SetAsFirstSibling();
         }
 
         // ── 도감 완성·보상 팝업 ──

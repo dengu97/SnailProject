@@ -283,7 +283,8 @@ namespace SnailPet
             _status = "달팽이·먹이를 끌어 옮길 수 있습니다. 놓으면 아래로 떨어집니다.";
             Say("");
             Say("→ 끄려면 설정 화면의 「종료」를 누르세요. (에디터에서는 ESC)");
-            Say("→ 확인용 치트: F6 = 별 이펙트 · F7 = 가짜 손님 · F8 = 알 낳기(가짜 짝) · F9 = 선물 바로 준비 · F10 = 포만도 0");
+            Say("→ 확인용 치트: F6 = 별 이펙트 · F7 = 가짜 손님 · F8 = 알 낳기(가짜 짝) · " +
+                "F9 = 선물 바로 준비 · F10 = 포만도 0 · F12 = 부화 팝업");
             WriteReport();
         }
 
@@ -580,6 +581,10 @@ namespace SnailPet
 
             // 이미 가지고 있던 개체도 도감을 채운다. 세이브를 읽은 직후 한 번 훑는다.
             ScanGuides();
+
+            // 채웠는데 아직 못 받은 칸도 다시 세운다. 지난 판에서 팝업이 묻혔을 수 있다.
+            QueuePendingGuides();
+            ShowNextGuideDone();
             RefreshPartsAfterChange();   // 켤 때부터 받을 것이 있으면 표시가 뜬다
 
             // 세이브에서 읽은 설정을 UI 에 넣는다. 이 호출은 OptionsChanged 를 내지 않으므로
@@ -1302,7 +1307,28 @@ namespace SnailPet
         /// <summary>채운 것을 하나씩 알린다. 여러 칸이 한꺼번에 채워질 수 있어 줄을 세운다.</summary>
         private readonly Queue<int> _guideQueue = new Queue<int>();
 
+        /// <summary>
+        /// 채웠는데 <b>보상을 아직 못 받은</b> 칸을 줄에 세운다.
+        ///
+        /// 채우는 순간 완성 팝업이 뜨지만, 그때 다른 팝업(부화 등)이 덮으면 그대로 묻힌다.
+        /// 세이브에는 「채움 · 보상 안 받음」으로 남으므로 켤 때 다시 세워 준다 —
+        /// 안 그러면 그 보상은 영영 받을 길이 없다. 줄에 이미 있는 것은 건너뛴다.
+        /// </summary>
+        private void QueuePendingGuides()
+        {
+            if (_player == null) return;
+
+            foreach (var g in _player.Guides)
+            {
+                if (g.RewardTaken || _guideQueue.Contains(g.GuideId)) continue;
+                _guideQueue.Enqueue(g.GuideId);
+            }
+        }
+
         private SnailPortrait _doneView;
+
+        /// <summary>지난 프레임에 팝업이 떠 있었는가. 닫히는 순간을 잡는 데 쓴다.</summary>
+        private bool _popupWasOpen;
 
         private void ShowNextGuideDone()
         {
@@ -2177,6 +2203,15 @@ namespace SnailPet
 
             RefreshGauges();
 
+            // 팝업이 닫히는 순간, 기다리던 도감 완성 팝업을 그제야 띄운다.
+            //
+            // ShowNextGuideDone 은 「다른 팝업이 떠 있으면 기다린다」인데 여태 다시 부르는
+            // 데가 없었다. 그래서 부화하면서 채워진 칸은 부화 팝업에 덮여 그대로 묻혔고,
+            // 세이브에는 「채움 · 보상 안 받음」으로 남아 보상을 받을 길이 없었다.
+            bool popupOpen = _ui.PopupOpen;
+            if (_popupWasOpen && !popupOpen) ShowNextGuideDone();
+            _popupWasOpen = popupOpen;
+
             // 버프가 걸리고 풀리는 순간을 놓치지 않게 변화만 기록한다
             string buffs = _growth.Buffs.Signature;
             if (buffs != _lastBuffs)
@@ -2689,9 +2724,9 @@ namespace SnailPet
         // 열쇠를 둔다. 창이 포커스를 갖지 않아 Unity 의 Input 이 안 되므로 마우스와 같이
         // 전역 키 상태를 읽는다 — 다른 창을 쓰는 중에도 눌리니 흔치 않은 키를 골랐다.
 
-        private const int VK_F5 = 0x74, VK_F6 = 0x75, VK_F7 = 0x76, VK_F8 = 0x77, VK_F9 = 0x78, VK_F10 = 0x79, VK_F11 = 0x7A;
+        private const int VK_F5 = 0x74, VK_F6 = 0x75, VK_F7 = 0x76, VK_F8 = 0x77, VK_F9 = 0x78, VK_F10 = 0x79, VK_F11 = 0x7A, VK_F12 = 0x7B;
 
-        private bool _f5Was, _f6Was, _f7Was, _f8Was, _f9Was, _f10Was, _f11Was;
+        private bool _f5Was, _f6Was, _f7Was, _f8Was, _f9Was, _f10Was, _f11Was, _f12Was;
 
         /// <summary>지금 미리보고 있는 이펙트 번호. 프리팹 수와 같으면 「끔」이다.</summary>
         private int _previewFx = -1;
@@ -2780,6 +2815,37 @@ namespace SnailPet
             Say("      [치트] 채울 도감 칸이 없습니다 (F11)");
         }
 
+        /// <summary>
+        /// 치트(F12). 부화 팝업을 그 자리에서 띄운다.
+        ///
+        /// 알을 넣고 부화 시간을 다 기다려야 한 번 볼 수 있는 연출이라, 이펙트나 배치를
+        /// 확인하기가 어렵다. 아무 알이나 하나 골라 그 자리에서 굴린 결과를 보여 준다.
+        ///
+        /// <b>보유 달팽이를 늘리지는 않는다.</b> 연출만 보는 것이므로 여러 번 눌러도
+        /// 세이브가 불어나지 않는다 — 대신 도감·파츠 수집도 안 채워진다.
+        /// </summary>
+        private void HatchPopupCheat()
+        {
+            if (GameData.EggData == null || GameData.EggData.Length == 0)
+            {
+                Say("      [치트] 알 데이터가 없습니다 (F12)");
+                return;
+            }
+
+            var egg = GameData.EggData[UnityEngine.Random.Range(0, GameData.EggData.Length)];
+            var look = SnailHatchery.Hatch(egg.Id);
+
+            // 실제 부화와 같은 길로 찍는다. 경계는 그 모습으로 다시 재야 한다.
+            _hatchView?.Dispose();
+            var size = SnailUi.HatchSnailSize;
+            _hatchView = new SnailPortrait(transform, look, SnailMetrics.Measure(look), size.x, size.y);
+
+            // 등급은 알이 아니라 <b>나온 파츠</b>에서 읽는다 — 실제 부화와 같아야 한다.
+            _ui.ShowHatch(egg.Id, SnailBreeding.RarityOf(look), _hatchView.Texture);
+
+            Say($"      [치트] 부화 팝업 (F12): {GameData.TokenById[egg.Id]} → {look}");
+        }
+
         private void StepCheats()
         {
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
@@ -2804,6 +2870,10 @@ namespace SnailPet
             // 첫 빈 칸을 지금 달팽이 모습으로 채워 완성 팝업까지 보게 한다.
             bool f11 = TransparentWindow.IsKeyDown(VK_F11);
             if (f11 && !_f11Was) FillGuideCheat();
+
+            // 부화 연출은 알을 넣고 다 기다려야 한 번 나온다. 그 자리에서 띄워 본다.
+            bool f12 = TransparentWindow.IsKeyDown(VK_F12);
+            if (f12 && !_f12Was) HatchPopupCheat();
 
             // 알 낳기는 방에 남이 있어야 해서 혼자서는 볼 수가 없다.
             // 가짜 짝을 하나 세워 섞은 결과만이라도 확인한다.
@@ -2831,6 +2901,7 @@ namespace SnailPet
             _f9Was = f9;
             _f10Was = f10;
             _f11Was = f11;
+            _f12Was = f12;
 #endif
         }
 

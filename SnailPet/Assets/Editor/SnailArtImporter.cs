@@ -74,6 +74,7 @@ namespace SnailPet.EditorTools
             int m = name switch
             {
                 "panel" or "panelborder" => 32,   // 714x911 → 화면 8px
+                "panel3" => 32,      // 714x555 → 화면 8px (판과 같은 손그림 테두리다)
                 "slot" or "badge" or "button" => 24,   // 634x171 → 화면 6px
                 "fill" or "fill_happy" => 6,       // 481x36 → 화면 1.5px
 
