@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: b6a6cb5c00c24784493cdac4f603c5d5
+guid: 192954af23ec32642930f3cbfc4e6d3f
 TrueTypeFontImporter:
   externalObjects: {}
   serializedVersion: 4
@@ -9,7 +9,7 @@ TrueTypeFontImporter:
   characterPadding: 1
   includeFontData: 1
   fontNames:
-  - Ownglyph meetme
+  - iceHimchan
   fallbackFontReferences: []
   customCharacters: 
   fontRenderingMode: 0

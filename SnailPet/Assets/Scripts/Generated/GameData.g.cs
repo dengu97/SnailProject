@@ -796,26 +796,26 @@ namespace SnailPet.Data
 
         public static readonly LevelDataRow[] LevelData = new LevelDataRow[]
         {
-            new LevelDataRow(1, 0d, 10d, 10d, 60d, 60d, 1d, 4d, 120d, 36, 10, 1d),
-            new LevelDataRow(2, 3600d, 15d, 15d, 60d, 60d, 1.5d, 4d, 120d, 36, 12, 1.1d),
-            new LevelDataRow(3, 3600d, 20d, 20d, 60d, 60d, 2d, 5d, 120d, 36, 15, 1.2d),
-            new LevelDataRow(4, 3600d, 25d, 25d, 60d, 60d, 2.5d, 5d, 120d, 36, 17, 1.3d),
-            new LevelDataRow(5, 3600d, 30d, 30d, 80d, 80d, 3d, 6d, 120d, 36, 20, 1.4d),
-            new LevelDataRow(6, 3600d, 35d, 35d, 80d, 80d, 3.5d, 6d, 120d, 36, 22, 1.5d),
-            new LevelDataRow(7, 3600d, 40d, 40d, 80d, 80d, 4d, 6d, 120d, 36, 25, 1.6d),
-            new LevelDataRow(8, 3600d, 45d, 45d, 80d, 80d, 4.5d, 7d, 120d, 36, 30, 1.7d),
-            new LevelDataRow(9, 3600d, 50d, 50d, 100d, 100d, 5d, 7d, 120d, 36, 35, 1.8d),
-            new LevelDataRow(10, 3600d, 55d, 55d, 100d, 100d, 5.5d, 7d, 120d, 36, 40, 1.9d),
-            new LevelDataRow(11, 3600d, 60d, 60d, 100d, 100d, 6d, 8d, 120d, 36, 45, 2d),
-            new LevelDataRow(12, 3600d, 65d, 65d, 100d, 100d, 6.5d, 8d, 120d, 36, 50, 2.1d),
-            new LevelDataRow(13, 3600d, 70d, 70d, 120d, 120d, 7d, 8d, 120d, 36, 55, 2.2d),
-            new LevelDataRow(14, 3600d, 75d, 75d, 120d, 120d, 7.5d, 9d, 120d, 36, 60, 2.3d),
-            new LevelDataRow(15, 3600d, 80d, 80d, 120d, 120d, 8d, 9d, 120d, 36, 65, 2.4d),
-            new LevelDataRow(16, 3600d, 85d, 85d, 120d, 120d, 8.5d, 9d, 120d, 36, 70, 2.5d),
-            new LevelDataRow(17, 3600d, 90d, 90d, 120d, 120d, 9d, 10d, 120d, 36, 75, 2.6d),
-            new LevelDataRow(18, 3600d, 95d, 95d, 120d, 120d, 9.5d, 10d, 120d, 36, 80, 2.7d),
-            new LevelDataRow(19, 3600d, 100d, 100d, 120d, 120d, 10d, 10d, 120d, 36, 85, 2.8d),
-            new LevelDataRow(20, 3600d, 105d, 105d, 120d, 120d, 10.5d, 11d, 120d, 36, 90, 3d),
+            new LevelDataRow(1, 0d, 10d, 10d, 60d, 60d, 1d, 3d, 120d, 36, 10, 1d),
+            new LevelDataRow(2, 3600d, 15d, 15d, 60d, 60d, 1.2d, 3d, 120d, 36, 12, 1.1d),
+            new LevelDataRow(3, 3600d, 20d, 20d, 60d, 60d, 1.4d, 4d, 120d, 36, 15, 1.2d),
+            new LevelDataRow(4, 3600d, 25d, 25d, 60d, 60d, 1.6d, 4d, 120d, 36, 17, 1.3d),
+            new LevelDataRow(5, 3600d, 30d, 30d, 80d, 80d, 1.8d, 4.5d, 120d, 36, 20, 1.4d),
+            new LevelDataRow(6, 3600d, 35d, 35d, 80d, 80d, 2d, 4.5d, 120d, 36, 22, 1.5d),
+            new LevelDataRow(7, 3600d, 40d, 40d, 80d, 80d, 2.2d, 5d, 120d, 36, 25, 1.6d),
+            new LevelDataRow(8, 3600d, 45d, 45d, 80d, 80d, 2.4d, 5d, 120d, 36, 30, 1.7d),
+            new LevelDataRow(9, 3600d, 50d, 50d, 100d, 100d, 2.6d, 5.5d, 120d, 36, 35, 1.8d),
+            new LevelDataRow(10, 3600d, 55d, 55d, 100d, 100d, 2.8d, 5.5d, 120d, 36, 40, 1.9d),
+            new LevelDataRow(11, 3600d, 60d, 60d, 100d, 100d, 3d, 6d, 120d, 36, 45, 2d),
+            new LevelDataRow(12, 3600d, 65d, 65d, 100d, 100d, 3.2d, 6d, 120d, 36, 50, 2.1d),
+            new LevelDataRow(13, 3600d, 70d, 70d, 120d, 120d, 3.4d, 6.5d, 120d, 36, 55, 2.2d),
+            new LevelDataRow(14, 3600d, 75d, 75d, 120d, 120d, 3.6d, 6.5d, 120d, 36, 60, 2.3d),
+            new LevelDataRow(15, 3600d, 80d, 80d, 120d, 120d, 3.8d, 7d, 120d, 36, 65, 2.4d),
+            new LevelDataRow(16, 3600d, 85d, 85d, 120d, 120d, 4d, 7d, 120d, 36, 70, 2.5d),
+            new LevelDataRow(17, 3600d, 90d, 90d, 120d, 120d, 4.2d, 7.5d, 120d, 36, 75, 2.6d),
+            new LevelDataRow(18, 3600d, 95d, 95d, 120d, 120d, 4.4d, 7.5d, 120d, 36, 80, 2.7d),
+            new LevelDataRow(19, 3600d, 100d, 100d, 120d, 120d, 4.6d, 8d, 120d, 36, 85, 2.8d),
+            new LevelDataRow(20, 3600d, 105d, 105d, 120d, 120d, 4.8d, 8d, 120d, 36, 90, 3d),
         };
 
         public static readonly BubbleDataRow[] BubbleData = new BubbleDataRow[]
@@ -1426,6 +1426,8 @@ namespace SnailPet.Data
             new LanguageDataRow(556, "금방 부러질 것 같이 생겼지만, 실제로는 말랑하답니다.", "Looks crisp and fragile, but is actually quite soft."),
             new LanguageDataRow(557, "사탕 껍질", "Candy Shell"),
             new LanguageDataRow(558, "달달한 맛이 날 것만 같은 껍질입니다.", "A shell that looks like it tastes sweet."),
+            new LanguageDataRow(560, "친구를 방으로 초대할까요?", null),
+            new LanguageDataRow(561, "방에 들어가 있는 상태에서 초대할 수 있습니다.", null),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -2133,6 +2135,8 @@ namespace SnailPet.Data
             { "[레어_사탕껍질]", 557 },
             { "[레어_사탕껍질정보]", 558 },
             { "[영어]", 559 },
+            { "[친구방초대]", 560 },
+            { "[방생성요청]", 561 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

@@ -335,14 +335,19 @@ namespace SnailPet.Desktop
             SteamMatchmaking.SetLobbyData(_lobby, CodeKey, MakeCode());
 
             // 더미 방 자리로 연 것이면 그 번호를 박아 둔다. 남이 같은 줄을 누르면 이리로 온다.
-            if (_pendingDummy != 0)
+            bool asDummy = _pendingDummy != 0;
+            if (asDummy)
                 SteamMatchmaking.SetLobbyData(_lobby, DummyKey, _pendingDummy.ToString());
 
             _pendingName = null;
             _pendingDummy = 0;
 
-            Note?.Invoke("방을 만들었습니다: " + LobbyName + " (" + _lobby.m_SteamID + ")");
-            Entered?.Invoke(true);
+            Note?.Invoke((asDummy ? "더미 방 자리를 열었습니다: " : "방을 만들었습니다: ")
+                         + LobbyName + " (" + _lobby.m_SteamID + ")");
+
+            // 「만들었다」는 <b>유저가 방 만들기를 눌렀을 때</b>만이다. 더미 방은 목록에 이미 있던
+            // 방으로 들어간 것이라, 그 자리를 여느라 로비가 새로 생긴 것은 속사정일 뿐이다.
+            Entered?.Invoke(!asDummy);
             Changed?.Invoke();
         }
 

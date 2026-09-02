@@ -408,6 +408,32 @@ namespace SnailPet.Snail
         }
 
         /// <summary>보유 악세서리를 옷장이 쓰는 (아이템, 개수) 목록으로. 0개는 빼고 낸다.</summary>
+        /// <summary>
+        /// 그 악세서리를 <paramref name="except"/> 말고 다른 달팽이가 <b>몇 개</b> 끼고 있나.
+        ///
+        /// 개수로 세는 것은 같은 것을 여러 개 가질 수 있기 때문이다 — 모자를 둘 사면
+        /// 두 마리가 하나씩 쓸 수 있어야 한다.
+        /// </summary>
+        public int WornByOthers(int accessoryId, OwnedSnail except)
+        {
+            int worn = 0;
+            foreach (var s in Snails)
+            {
+                if (s == null || s == except) continue;
+                foreach (int id in s.Equipped) if (id == accessoryId) worn++;
+            }
+            return worn;
+        }
+
+        /// <summary>
+        /// 그 달팽이가 지금 낄 수 있는가. 가진 수보다 남이 끼고 있는 수가 적어야 한다.
+        /// 이미 끼고 있는 것은 벗는 길이므로 언제나 참이다.
+        /// </summary>
+        public bool CanEquip(OwnedSnail snail, int accessoryId) =>
+            snail != null
+            && (snail.Equipped.Contains(accessoryId)
+                || WornByOthers(accessoryId, snail) < Items.CountOf(accessoryId));
+
         public (int accessoryId, int count)[] OwnedAccessories()
         {
             var list = new List<(int, int)>();

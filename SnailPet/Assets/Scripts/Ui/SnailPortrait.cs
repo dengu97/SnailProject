@@ -53,6 +53,16 @@ namespace SnailPet.Ui
         /// <summary>몸 주위 여백. 0.04 이면 4% 띄운다.</summary>
         private const float Margin = 0.04f;
 
+        /// <summary>
+        /// 머리 위에 늘 비워 두는 자리. 몸 높이에 대한 비율이다.
+        ///
+        /// 악세서리를 써도 안 써도 같은 자리를 비우려는 것이라, <b>있는 모자 중 제일 높은 것</b>
+        /// 기준으로 잡는다. 1200 캔버스에서 파츠 최상단은 보통 y=193 쯤이고 모자는 100~172,
+        /// 제일 높은 아이스크림 모자가 29 다 — 몸 높이(약 860px)의 20% 를 비우면 다 들어온다.
+        /// 대신 아무것도 안 쓴 달팽이도 그만큼 작게 나온다. 둘 중 하나는 내줘야 한다.
+        /// </summary>
+        private const float Headroom = 0.20f;
+
         public RenderTexture Texture { get; private set; }
 
         private readonly GameObject _root;
@@ -115,7 +125,7 @@ namespace SnailPet.Ui
             _camera.enabled = false;
 
             if (headOnly) FrameHead(appearance, bounds);
-            else          Frame(bounds, widthPx / (float)heightPx);
+            else          Frame(appearance, bounds, widthPx / (float)heightPx);
 
             Redraw();
         }
@@ -143,11 +153,23 @@ namespace SnailPet.Ui
             Redraw();
         }
 
-        /// <summary>몸이 화면에 꽉 차되 잘리지 않게 카메라를 맞춘다.</summary>
-        private void Frame(SnailBounds b, float aspect)
+        /// <summary>
+        /// 몸이 화면에 꽉 차되 잘리지 않게 카메라를 맞춘다.
+        ///
+        /// <b>악세서리는 크기 계산에서 뺀다.</b> 넣으면 모자를 씌우는 순간 몸이 그만큼 위로
+        /// 커져 초상이 줄여 잡고, 달팽이가 갑자기 작아진 것처럼 보인다(2026-09-02).
+        /// 대신 머리 위에 <see cref="Headroom"/> 만큼을 <b>늘</b> 비워 둔다 — 쓰든 안 쓰든
+        /// 자리가 같으니 갈아입어도 크기가 안 변한다.
+        /// </summary>
+        private void Frame(SnailAppearance look, SnailBounds dressed, float aspect)
         {
+            // 악세서리를 뺀 몸만. 못 재면(파츠가 없으면) 받은 값을 그대로 쓴다.
+            var b = SnailMetrics.Measure(look, withAccessories: false);
+            if (!b.Measured) b = dressed;
+
             float w = Mathf.Max(1f, b.Right - b.Left);
-            float h = Mathf.Max(1f, b.Top - b.Foot);
+            float h = Mathf.Max(1f, b.Top - b.Foot) * (1f + Headroom);
+            b.Top = b.Foot + h;
 
             // 가로가 모자라면 가로가, 세로가 모자라면 세로가 기준이 된다
             float half = Mathf.Max(h * 0.5f, w * 0.5f / Mathf.Max(0.0001f, aspect));

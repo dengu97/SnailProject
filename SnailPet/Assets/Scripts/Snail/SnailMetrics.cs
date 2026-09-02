@@ -37,13 +37,20 @@ namespace SnailPet.Snail
         /// <summary>먹이 등 달팽이가 아닌 스프라이트도 같은 방식으로 잰다.</summary>
         public static bool TryMeasure(Sprite sprite, out Extents extents) => TryGetExtents(sprite, out extents);
 
-        public static SnailBounds Measure(SnailAppearance appearance)
+        /// <param name="withAccessories">
+        /// 모자·가방까지 넣어 잴지. 화면의 달팽이는 넣어야 가방이 화면 끝에서 안 잘리고,
+        /// <b>초상은 빼고 재야</b> 악세서리를 갈아입을 때마다 크기가 튀지 않는다
+        /// (<see cref="Ui.SnailPortrait"/> 가 대신 늘 자리를 비워 둔다).
+        /// </param>
+        public static SnailBounds Measure(SnailAppearance appearance, bool withAccessories = true)
         {
             var result = new SnailBounds { Left = float.MaxValue, Right = float.MinValue, Top = float.MinValue };
             bool anyPart = false, footFound = false;
 
             foreach (var p in appearance.Parts)
             {
+                if (!withAccessories && p.Accessory.HasValue) continue;
+
                 // 가로·위쪽은 색상 레이어까지 포함해도 선화와 실루엣이 같으므로 선화만 보면 된다.
                 //
                 // 폴더는 <b>Folder 로 물어야 한다</b>. 악세서리는 PartsType 이 아니라

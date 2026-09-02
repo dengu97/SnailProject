@@ -638,6 +638,14 @@ namespace SnailPet
                 _publishedCard = null;
                 PublishMySnail();
 
+                // 더미 방에서 초대를 누른 것이면, 방이 열린 지금 초대장을 보낸다.
+                if (_inviteWhenOpen >= 0)
+                {
+                    SteamHub.Invite(_inviteWhenOpen);
+                    Say($"      [스팀] 방을 열고 {_inviteWhenOpen}번 친구를 불렀습니다");
+                    _inviteWhenOpen = -1;
+                }
+
                 // 만든 것과 들어간 것은 문구가 다르다
                 if (made) _ui.NoticeRoomMade();
                 else      _ui.NoticeRoomJoined();
@@ -645,6 +653,10 @@ namespace SnailPet
 
             SteamHub.Left += () =>
             {
+                // 방을 여는 데 실패했거나 그새 나왔으면 기다리던 초대는 없던 일이다 —
+                // 안 지우면 한참 뒤 엉뚱한 방에 들어갈 때 초대장이 나간다.
+                _inviteWhenOpen = -1;
+
                 _ui.NoticeRoomLeft();
 
                 // 나가기 버튼이 아니라 끊겨서 나온 경우도 여기로 온다. 손님도 같이 치운다.
@@ -653,7 +665,22 @@ namespace SnailPet
 
             _ui.MultiTabChanged += _ => EnterMulti();
 
-            _ui.InviteFriend += i => SteamHub.Invite(i);
+            // 친구를 부르려면 초대장에 담을 <b>진짜 로비</b>가 있어야 한다.
+            _ui.InviteFriend += i =>
+            {
+                if (SteamHub.InLobby) { _ui.AskInviteFriend(() => SteamHub.Invite(i)); return; }
+
+                // 더미 방에 있으면 그 자리를 진짜 로비로 올리고 부른다.
+                // 방은 콜백으로 열리므로 초대장은 열린 뒤에 나간다(아래 Entered).
+                if (_dummyRoom != 0 && SteamHub.Available)
+                {
+                    int room = _dummyRoom;
+                    _ui.AskInviteFriend(() => { _inviteWhenOpen = i; OpenDummyRoom(room); });
+                    return;
+                }
+
+                _ui.NoticeNeedRoom();
+            };
             SteamHub.SameRoom += () => _ui.NoticeSameRoom();
             SteamHub.NoSuchRoom += () => _ui.NoticeNoSuchRoom();
 
@@ -820,6 +847,12 @@ namespace SnailPet
 
         /// <summary>스팀 없이 혼자 들어가 있는 더미 방의 RoomNumber. 0 이면 안 들어가 있다.</summary>
         private int _dummyRoom;
+
+        /// <summary>
+        /// 방이 열리면 부를 친구의 줄 번호. -1 이면 없다.
+        /// 더미 방에서 초대를 누르면 방부터 열어야 하는데 그게 콜백이라, 여기 적어 두고 기다린다.
+        /// </summary>
+        private int _inviteWhenOpen = -1;
 
         /// <summary>어느 쪽으로든 방 안에 있는가.</summary>
         private bool InRoom => _dummyRoom != 0 || SteamHub.InLobby;
@@ -1716,7 +1749,13 @@ namespace SnailPet
             var snail = Viewing;
             if (snail == null) return;
 
-            _ui.SetWardrobe(snail.Name, snail.Rarity, _player.OwnedAccessories(), snail.Equipped.ToArray());
+            // 남이 쓰고 있어 못 끼는 것들. 여러 개 가진 것은 남은 것이 있으면 낄 수 있다.
+            var owned = _player.OwnedAccessories();
+            var locked = new List<int>();
+            foreach (var (id, _) in owned)
+                if (!_player.CanEquip(snail, id)) locked.Add(id);
+
+            _ui.SetWardrobe(snail.Name, snail.Rarity, owned, snail.Equipped.ToArray(), locked.ToArray());
             ReshootPreview();
         }
 
@@ -1750,7 +1789,13 @@ namespace SnailPet
         private void EquipAccessory(int accessoryId)
         {
             var snail = Viewing;
-            if (snail == null || !snail.ToggleEquip(accessoryId)) return;
+            if (snail == null) return;
+
+            // 하나를 두 마리가 나눠 낄 수는 없다. 옷장에서 이미 흐리게 막아 두지만,
+            // 낄 수 있는가를 정하는 것은 상태 쪽이다 — 규칙은 한 곳에만 둔다.
+            if (!_player.CanEquip(snail, accessoryId)) return;
+
+            if (!snail.ToggleEquip(accessoryId)) return;
 
             DropThumb(snail.Id);     // 목록 썸네일도 갈아입은 모습으로 다시 찍는다
 

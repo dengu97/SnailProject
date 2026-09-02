@@ -71,6 +71,12 @@ namespace SnailPet.Ui
 
             /// <summary>영어 줄. 시트에 이 행이 없으면 화면에 토큰이 그대로 나온다.</summary>
             public const string English      = "[영어]";
+
+            /// <summary>친구를 지금 방으로 부를까 묻는 말.</summary>
+            public const string AskInvite    = "[친구방초대]";
+
+            /// <summary>방에 안 들어가 있어서 부를 수 없을 때.</summary>
+            public const string NeedRoom     = "[방생성요청]";
             public const string Update       = "[업데이트]";
             public const string UiScale      = "[UI크기]";      // "UI크기(x{0})"
             public const string AlwaysMax    = "[UI최대화]";
@@ -1805,6 +1811,12 @@ namespace SnailPet.Ui
         public void NoticeRoomLeft()   => ShowNotice(SnailPet.Data.Loc.Text(Keys.RoomLeft));
         public void NoticeRoomJoined() => ShowNotice(SnailPet.Data.Loc.Text(Keys.RoomJoined));
 
+        /// <summary>방에 안 들어가 있어서 친구를 못 부른다고 알린다.</summary>
+        public void NoticeNeedRoom() => ShowNotice(SnailPet.Data.Loc.Text(Keys.NeedRoom));
+
+        /// <summary>친구를 지금 방으로 부를지 묻는다. 「예」를 누르면 부르는 일은 받는 쪽이 한다.</summary>
+        public void AskInviteFriend(Action onYes) => ShowAsk(SnailPet.Data.Loc.Text(Keys.AskInvite), onYes);
+
         /// <summary>위젯 상자 기준 좌표로 옮긴다. 목업은 패널 왼쪽 위가 원점이라 코인 줄만큼 내려 준다.</summary>
         private static RectInt Above(RectInt r) => new RectInt(r.x, r.y - At.Coin.y, r.width, r.height);
 
@@ -1864,6 +1876,24 @@ namespace SnailPet.Ui
         /// 배경이 들어 있어 색으로 물들이면 탭 전체가 그 색이 되기 때문이다.
         /// 아직 <c>_on</c> 아트가 없으면 그냥 같은 그림을 쓴다. 그동안은 선택이 안 보인다.
         /// </summary>
+        /// <summary>
+        /// 탭 다섯 개를 칠한다. <paramref name="on"/> 이 -1 이면 <b>아무것도 안 골린 상태</b>다 —
+        /// 설정처럼 탭이 아닌 화면에 들어갔을 때, 마지막에 눌렀던 탭이 계속 켜져 있으면
+        /// 지금 그 탭을 보고 있는 것처럼 보인다.
+        /// </summary>
+        private void PaintTabs(int on)
+        {
+            // 아트가 배경까지 들고 있어 색으로는 구분할 수 없다. 그림을 갈아 끼운다.
+            for (int i = 0; i < _tabs.Length; i++)
+            {
+                if (_tabs[i] == null) continue;
+
+                var sprite = Resources.Load<Sprite>("Ui/Icon/" + TabArt(i, i == on));
+                if (sprite != null) { _tabs[i].sprite = sprite; _tabs[i].color = Color.white; }
+                else _tabs[i].color = i == on ? UiTheme.TabOn : UiTheme.TabOff;
+            }
+        }
+
         private static string TabArt(int index, bool on)
         {
             if (index < 0 || index >= TabKeys.Length) return null;
@@ -2871,17 +2901,9 @@ namespace SnailPet.Ui
             // 상점은 들어올 때마다 카테고리 목록에서 시작한다
             _shopCat = -1;
             ApplyShopStage();
-            // 아트가 배경까지 들고 있어 색으로는 구분할 수 없다. 그림을 갈아 끼운다.
-            for (int i = 0; i < _tabs.Length; i++)
-            {
-                if (_tabs[i] == null) continue;
-                var sprite = Resources.Load<Sprite>("Ui/Icon/" + TabArt(i, i == _tab));
-                if (sprite != null) { _tabs[i].sprite = sprite; _tabs[i].color = Color.white; }
-                else _tabs[i].color = i == _tab ? UiTheme.TabOn : UiTheme.TabOff;
-            }
+            PaintTabs(_tab);
 
-            string[] titles = { Keys.SnailList, Keys.FoodList, Keys.EggList, Keys.Shop, Keys.Multiplayer };
-            _listTitle.text = SnailPet.Data.Loc.Text(titles[_tab]);
+            _listTitle.text = SnailPet.Data.Loc.Text(TabTitles[_tab]);
 
             RefreshSlotCount();
 
@@ -3702,8 +3724,13 @@ namespace SnailPet.Ui
         /// 옷장 내용을 채운다.
         /// <paramref name="owned"/> 는 (악세서리 Id, 개수), <paramref name="equipped"/> 는 낀 것들.
         /// </summary>
+        /// <param name="locked">
+        /// 다른 달팽이가 이미 쓰고 있어 못 끼는 것들. 목록에서 빼지 않고 <b>흐리게</b> 두고
+        /// 못 누르게 한다 — 감추면 「내 모자가 어디 갔지」가 된다.
+        /// </param>
         public void SetWardrobe(string name, SnailPet.Data.RarityType rarity,
-                                (int accessoryId, int count)[] owned, int[] equipped)
+                                (int accessoryId, int count)[] owned, int[] equipped,
+                                int[] locked = null)
         {
             _wardrobeName.text = string.IsNullOrWhiteSpace(name)
                                ? SnailPet.Data.Loc.Text(Keys.NoName) : name;
@@ -3738,6 +3765,11 @@ namespace SnailPet.Ui
                 _wardrobeSlots[i].Frame.enabled = worn;
                 SetSlotCount(_wardrobeSlots[i], worn ? SnailPet.Data.Loc.Text(Keys.Worn) : "");
                 _wardrobeSlots[i].Count.alignment = TextAnchor.MiddleCenter;
+
+                // 남이 쓰고 있는 것은 흐리게 두고 못 누르게 한다.
+                bool taken = locked != null && Array.IndexOf(locked, id) >= 0;
+                _wardrobeSlots[i].Icon.color = taken ? UiTheme.Faded : Color.white;
+                if (_wardrobeSlots[i].Button != null) _wardrobeSlots[i].Button.interactable = !taken;
             }
             FitContent(_wardrobeContent, _wardrobeIds.Length);
 
@@ -4035,7 +4067,8 @@ namespace SnailPet.Ui
 
             // 줄 오른쪽 버튼은 탭에 따라 하는 일이 다르다. 그림도 같이 바꾼다.
             for (int i = 0; i < Count(_multiRows); i++)
-                SetGlyph(_multiRows[i]?.Action, _onLobbyTab ? "btn_enter" : "icon_swap");
+                // 친구 줄은 「내 방으로 부르기」다. 로비 줄의 「들어가기」와 그림을 갈라 둔다.
+                SetGlyph(_multiRows[i]?.Action, _onLobbyTab ? "btn_enter" : "btn_maximize");
         }
 
         /// <summary>목록을 채운다. 친구든 로비든 이름 하나짜리 줄이라 같은 것을 쓴다.</summary>
@@ -5464,6 +5497,10 @@ namespace SnailPet.Ui
             _settingsRoot.gameObject.SetActive(true);
             _settingsPanel.gameObject.SetActive(true);
 
+            // 설정은 탭이 아니다. 마지막에 눌렀던 탭을 켜 둔 채로 두면 그 탭을 보고 있는 것처럼
+            // 보이므로, 다섯 개를 모두 안 골린 색으로 되돌린다.
+            PaintTabs(-1);
+
             _listTitle.text = SnailPet.Data.Loc.Text(Keys.SnailSetting);
             PaintSettings();
             RefreshClose();
@@ -5527,6 +5564,54 @@ namespace SnailPet.Ui
         /// 어느 쪽인지 알 수 없으므로 건드리지 않는다 — 그건 프리팹을 다시 구워야 풀린다.
         /// (다시 구우면 <c>LocLabel</c> 이 제대로 붙여 주므로 이 보정은 할 일이 없어진다.)
         /// </summary>
+        /// <summary>탭마다의 왼쪽 제목. <see cref="RefreshListTitle"/> 과 나눠 쓴다.</summary>
+        private static readonly string[] TabTitles =
+            { Keys.SnailList, Keys.FoodList, Keys.EggList, Keys.Shop, Keys.Multiplayer };
+
+        /// <summary>
+        /// 왼쪽 제목을 <b>지금 화면에 맞춰</b> 다시 넣는다.
+        ///
+        /// 이 칸은 화면마다 다른 글이 들어가는 자리라 꼬리표가 없고, 그래서 언어 훑기가
+        /// 못 건드린다. 대신 여기서 지금 무슨 화면인지 보고 그 화면의 글로 다시 채운다.
+        /// 넣는 값은 각 화면이 들어갈 때 넣는 것과 같아야 한다 — 어긋나면 언어를 바꿀 때만
+        /// 제목이 달라진다.
+        /// </summary>
+        private void RefreshListTitle()
+        {
+            if (_listTitle == null) return;
+
+            if (_inSettings) { _listTitle.text = SnailPet.Data.Loc.Text(Keys.SnailSetting); return; }
+            if (_inWardrobe) { _listTitle.text = SnailPet.Data.Loc.Text(Keys.Wardrobe);     return; }
+            if (_inGene)     { _listTitle.text = SnailPet.Data.Loc.Text(Keys.Traits);       return; }
+            if (_inGuide)    { _listTitle.text = SnailPet.Data.Loc.Text(Keys.Guide);        return; }
+            if (_inParts)    { _listTitle.text = "";                                        return; }
+
+            // 상점은 카테고리에 들어가면 그 이름이 제목이 된다.
+            if (_tab == 3 && _shopCat >= 0)
+            {
+                var cats = SnailPet.Snail.Shop.Categories;
+                if (_shopCat < cats.Length)
+                {
+                    _listTitle.text = SnailPet.Data.Loc.Text(Keys.CategoryOf(cats[_shopCat]));
+                    return;
+                }
+            }
+
+            if (_tab >= 0 && _tab < TabTitles.Length)
+                _listTitle.text = SnailPet.Data.Loc.Text(TabTitles[_tab]);
+        }
+
+        /// <summary>
+        /// 코드가 화면마다 갈아 끼우는 <b>자리</b>인가. 이런 글자에는 꼬리표를 달면 안 된다.
+        ///
+        /// 왼쪽 제목은 탭·옷장·도감·설정이 저마다 다른 글을 넣는 한 칸이다. 구울 때 들어 있던
+        /// 글(「달팽이 목록」)로 꼬리표를 달아 버리면, 언어를 바꿀 때 훑기가 그 글로 되돌려
+        /// 놓는다 — 설정 화면에 있는데 제목만 「달팽이 목록」이 된다(2026-09-02).
+        ///
+        /// 언어 줄도 같은 이유다. 지금 쓰는 언어 이름이 들어가는 자리라 고정 글이 아니다.
+        /// </summary>
+        private bool IsValueSlot(Text t) => t == _listTitle || t == _langLabel;
+
         private void AttachMissingTextRefs()
         {
             int added = 0, unknown = 0;
@@ -5535,6 +5620,7 @@ namespace SnailPet.Ui
             {
                 if (t.GetComponent<UiTextRef>() != null) continue;
                 if (string.IsNullOrEmpty(t.text)) continue;
+                if (IsValueSlot(t)) continue;
 
                 string token = SnailPet.Data.Loc.TokenOfKorean(t.text);
                 if (string.IsNullOrEmpty(token)) { unknown++; continue; }
@@ -5561,6 +5647,9 @@ namespace SnailPet.Ui
                 if (text != null && !string.IsNullOrEmpty(t.Token))
                     text.text = SnailPet.Data.Loc.Text(t.Token);
             }
+
+            // 꼬리표가 없는 자리는 훑기가 못 건드린다. 화면 상태를 보고 따로 채운다.
+            RefreshListTitle();
         }
 
         /// <summary>
