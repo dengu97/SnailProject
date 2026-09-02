@@ -18,7 +18,7 @@
          display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
   header h1{margin:0;font-size:17px;letter-spacing:-.2px}
   header .meta{color:var(--muted);font-size:12px}
-  nav{display:flex;gap:2px;padding:0 22px;background:var(--panel);border-bottom:1px solid var(--line)}
+  nav{display:flex;gap:2px;padding:0 22px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
   nav button{border:0;background:none;padding:11px 16px;font:inherit;font-size:13px;color:var(--muted);
              cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
   nav button:hover{color:var(--ink)}
@@ -37,15 +37,17 @@
            linear-gradient(45deg,#f0eee8 25%,transparent 25%,transparent 75%,#f0eee8 75%) 12px 12px,
            #fbfaf7;
          background-size:24px 24px;border-radius:10px;overflow:hidden}
-  .snail img{position:absolute;inset:0;width:100%;height:100%;
-             image-rendering:auto;pointer-events:none}
+  /* 파츠 한 장. 애니메이션 시트는 가로로 늘려 놓고 background-position 을 칸 단위로 민다. */
+  .snail .ly{position:absolute;inset:0;pointer-events:none;
+             background-repeat:no-repeat;background-size:100% 100%;background-position:0 0}
+  @keyframes film{from{background-position-x:0%} to{background-position-x:100%}}
   .stage .cap{margin-top:10px;font-size:12px;color:var(--muted);min-height:2.6em}
 
   .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:18px}
   .card h2{margin:0 0 4px;font-size:14px;letter-spacing:-.2px}
   .card p.hint{margin:0 0 14px;color:var(--muted);font-size:12px}
 
-  .row{display:grid;grid-template-columns:76px 1fr;gap:10px;align-items:center;margin-bottom:9px}
+  .row{display:grid;grid-template-columns:88px 1fr;gap:10px;align-items:center;margin-bottom:9px}
   .row label{font-size:12px;color:var(--muted);font-weight:700}
   select,input[type=number]{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;
          background:#fff;font:inherit;font-size:13px;color:var(--ink)}
@@ -57,21 +59,35 @@
   button.act.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
   button.act.primary:hover{filter:brightness(1.08);color:#fff}
   .btnbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px}
+  .chk{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px}
 
   .order{display:flex;gap:6px;flex-wrap:wrap}
   .order .chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;
                padding:5px 6px 5px 10px;font-size:12px;background:#fff}
   .order .chip b{font-weight:700}
+  .order .chip.acc{background:#faf8f2}
   .order .chip button{border:0;background:#f2f0ea;border-radius:5px;width:20px;height:20px;
                       cursor:pointer;font:inherit;line-height:1;color:var(--muted)}
   .order .chip button:hover{background:var(--accent-weak);color:var(--accent)}
 
   .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+  .gallery.wide{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
   .gcell{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px;cursor:pointer}
   .gcell:hover{border-color:var(--accent)}
   .gcell .snail{border-radius:8px}
   .gcell .lbl{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.45;
               word-break:break-all;min-height:3em}
+  .gcell .lbl b{color:var(--ink)}
+
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:440px}
+  .pair .snail{border-radius:9px}
+  .pair .cap{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.45;min-height:4em}
+
+  .tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+  .tag{font-size:10.5px;background:#f2f0ea;border-radius:5px;padding:1px 6px;color:var(--muted)}
+  .tag.hi{background:var(--accent-weak);color:var(--accent)}
+  .tag.mut{background:var(--warn-weak);color:var(--warn)}
+  .tag.bad{background:var(--err-weak);color:var(--err)}
 
   table{width:100%;border-collapse:collapse;font-size:12.5px}
   th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
@@ -103,7 +119,9 @@
 <nav>
   <button data-tab="composer" class="on">조합기</button>
   <button data-tab="hatch">부화 시뮬</button>
+  <button data-tab="breed">교배 시뮬</button>
   <button data-tab="stats">확률 분포</button>
+  <button data-tab="guide">도감</button>
   <button data-tab="atlas">파츠 아틀라스</button>
   <button data-tab="validate">데이터 검증</button>
 </nav>
@@ -120,15 +138,18 @@
     <div>
       <div class="card">
         <h2>파츠 선택</h2>
-        <p class="hint">색상 목록은 PartsColorData 기준입니다. ★ 표시는 해당 파츠의 Colors 컬럼에 실제로 지정된 색입니다.</p>
+        <p class="hint">
+          색상 목록은 <code>Color/</code> 폴더에 실제로 있는 파일 기준입니다
+          (<code>PartsColorData</code> 시트는 없어졌습니다).
+          ★ 는 그 파츠의 <code>Colors</code> 열에 지정된 색입니다.
+          악세서리는 부화·교배로 나오지 않고 입히는 것이라 기본값이 「없음」입니다.
+        </p>
         <div id="picker"></div>
         <div class="btnbar">
           <button class="act primary" id="btn-random">무작위 조합</button>
           <button class="act" id="btn-reset">초기화</button>
-          <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px">
-            <input type="checkbox" id="cross-color">
-            타입 내 모든 색상 허용
-          </label>
+          <label class="chk"><input type="checkbox" id="cross-color"> 타입 내 모든 색상 허용</label>
+          <label class="chk"><input type="checkbox" id="play" checked> 애니메이션 재생</label>
         </div>
         <p class="hint" style="margin:10px 0 0">
           색상 레이어는 선화 전용입니다. <code>commonshell02_c06</code> 을 <code>commonshell01</code>
@@ -138,7 +159,10 @@
 
       <div class="card">
         <h2>레이어 순서</h2>
-        <p class="hint">뒤 → 앞 순서입니다. 각 파츠는 색상 레이어 위에 선화 레이어가 얹힙니다.</p>
+        <p class="hint">
+          뒤 → 앞 순서입니다. 각 파츠는 색상 레이어 위에 선화 레이어가 얹힙니다.
+          악세서리도 파츠와 <b>같은 SortOrder 축</b>을 쓰므로 한 줄에 같이 섭니다.
+        </p>
         <div class="order" id="order"></div>
         <div id="order-src" style="margin-top:12px"></div>
       </div>
@@ -151,17 +175,19 @@
   <div class="card">
     <h2>부화 추첨</h2>
     <p class="hint">
-      ① EggData 의 PartsGroupIds 에 적힌 <b>모든 그룹의 파츠를 한 풀로 합침</b> →
-      ② PartsType 별로 AppearWeight 비중 추첨 → ③ 뽑힌 파츠의 Colors 중 1개 선택.
+      ① 알의 <code>PartsGroupIds</code> 와 파츠의 <code>PartsGroupIds</code> 가
+      <b>하나라도 겹치면</b> 그 파츠가 풀에 들어갑니다(몇 개가 겹치든 한 번만) →
+      ② PartsType 별 AppearWeight 비중 추첨 → ③ 뽑힌 파츠의 Colors 중 1개 선택.
+      악세서리는 부화로 나오지 않습니다.
     </p>
     <div class="btnbar">
       <span class="pill">알</span>
-      <select id="egg" style="width:auto;min-width:190px"></select>
+      <select id="egg" style="width:auto;min-width:220px"></select>
       <span id="egg-thumb" style="display:inline-flex;align-items:center;gap:6px"></span>
       <span class="pill">그룹 선택</span>
       <select id="mode" style="width:auto">
-        <option value="union">전 그룹 통합 (실제 사양)</option>
-        <option value="pick">그룹 1개 무작위 (구 기획서 문구)</option>
+        <option value="union">겹치는 그룹 전부 (실제 사양)</option>
+        <option value="pick">알 그룹 1개만 무작위 (구 기획서 문구)</option>
       </select>
       <span class="pill">개수</span>
       <input type="number" id="count" value="24" min="1" max="120" style="width:80px">
@@ -171,6 +197,33 @@
   <div class="gallery" id="hatch-out"></div>
 </section>
 
+<!-- ─────────── 교배 시뮬 ─────────── -->
+<section class="tab" id="tab-breed">
+  <div class="card">
+    <h2>교배 추첨</h2>
+    <p class="hint">
+      부위마다 <b>부모 둘의 AppearWeight 옆에 <code>GameConfig.MutationWeight</code> 를 한 칸 더 놓고</b>
+      추첨합니다. 그 칸에 걸리면 부모 어느 쪽도 아닌 파츠가 나오고, 무엇이 나오는지는 부모 파츠의
+      <code>MutationGroup</code> 이 정합니다. 색은 고른 파츠에 딸려 옵니다.
+      악세서리는 타고나는 것이 아니라 유전에서 빠집니다.
+    </p>
+    <div class="btnbar">
+      <span class="pill">부모 A 알</span><select id="b-egg-a" style="width:auto;min-width:190px"></select>
+      <span class="pill">부모 B 알</span><select id="b-egg-b" style="width:auto;min-width:190px"></select>
+      <span class="pill">자식 수</span>
+      <input type="number" id="b-count" value="24" min="1" max="120" style="width:80px">
+      <button class="act primary" id="btn-breed">교배!</button>
+      <button class="act" id="btn-breed-stats">돌연변이율 2만회 집계</button>
+    </div>
+  </div>
+  <div class="card" id="breed-parents" style="display:none">
+    <div class="sec-title">부모</div>
+    <div class="pair" id="breed-pair"></div>
+  </div>
+  <div id="breed-stats"></div>
+  <div class="gallery" id="breed-out"></div>
+</section>
+
 <!-- ─────────── 확률 분포 ─────────── -->
 <section class="tab" id="tab-stats">
   <div class="card">
@@ -178,11 +231,11 @@
     <p class="hint">지정한 알로 대량 추첨을 돌려 파츠별 실제 출현 빈도를 집계합니다. 이론 확률과 비교해 가중치가 의도대로 동작하는지 확인하세요.</p>
     <div class="btnbar">
       <span class="pill">알</span>
-      <select id="s-egg" style="width:auto;min-width:190px"></select>
+      <select id="s-egg" style="width:auto;min-width:220px"></select>
       <span class="pill">그룹 선택</span>
       <select id="s-mode" style="width:auto">
-        <option value="union">전 그룹 통합 (실제 사양)</option>
-        <option value="pick">그룹 1개 무작위 (구 기획서 문구)</option>
+        <option value="union">겹치는 그룹 전부 (실제 사양)</option>
+        <option value="pick">알 그룹 1개만 무작위 (구 기획서 문구)</option>
       </select>
       <span class="pill">시행</span>
       <input type="number" id="s-n" value="20000" min="100" max="500000" step="1000" style="width:110px">
@@ -192,11 +245,24 @@
   <div id="stats-out"></div>
 </section>
 
+<!-- ─────────── 도감 ─────────── -->
+<section class="tab" id="tab-guide">
+  <div class="card">
+    <h2>달팽이 도감</h2>
+    <p class="hint">
+      <code>SnailGuide</code> 의 목표 조합을 그대로 그립니다.
+      지정되지 않은 부위는 비워 둡니다 — 도감은 적힌 파츠만 맞으면 완성이기 때문입니다.
+      각 항목이 어느 알에서 나올 수 있는지와 보상도 같이 봅니다.
+    </p>
+  </div>
+  <div id="guide-out"></div>
+</section>
+
 <!-- ─────────── 파츠 아틀라스 ─────────── -->
 <section class="tab" id="tab-atlas">
   <div class="card">
     <h2>파츠 아틀라스</h2>
-    <p class="hint">PartsData의 모든 행을 지정된 색상으로 단독 렌더링합니다. 리소스 누락과 색상 매핑 오류가 눈으로 바로 보입니다.</p>
+    <p class="hint">PartsData·AccessoriesData 의 모든 행을 지정된 색상으로 단독 렌더링합니다. 리소스 누락과 색상 매핑 오류가 눈으로 바로 보입니다.</p>
   </div>
   <div id="atlas-out"></div>
 </section>
@@ -205,7 +271,7 @@
 <section class="tab" id="tab-validate">
   <div class="card">
     <h2>데이터 검증</h2>
-    <p class="hint">리소스 존재 여부, ID 충돌, 색상 타입 불일치, 그룹 완결성을 점검합니다.</p>
+    <p class="hint">리소스 존재 여부, ID 충돌, 언어 키 참조, 그룹 완결성, 보상·상점 참조를 점검합니다.</p>
   </div>
   <div id="validate-out"></div>
 </section>
@@ -227,46 +293,110 @@ const rowsOf = n => (D.tables[n] ? D.tables[n].rows : []);
 const S = v => (v==null ? "" : String(v).trim());
 const list = v => S(v) ? S(v).split(",").map(s=>s.trim()).filter(Boolean) : [];
 const num = (v,d) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/* ── 리소스 경로 규약: {artRoot}/{PartsType}/{key}.png, 색상은 .../Color/{key}.png ──
-   artRoot 는 익스포터가 넣어준다. 아트가 Unity 프로젝트 안으로 옮겨가도 여기는 그대로. */
+/* ── 리소스 경로 규약: {artRoot}/{폴더}/{key}.png, 색상은 .../Color/{key}.png ──
+   폴더는 파츠면 PartsType, 악세서리면 Accessories 다(런타임 SnailComposer 와 같다). */
 const ART = (D.artRoot || "Resource").replace(/\/+$/, "");
-const baseRel  = (type,key) => `${ART}/${type}/${key}.png`;
-const colorRel = (type,key) => `${ART}/${type}/Color/${key}.png`;
+const baseRel  = (folder,key) => `${ART}/${folder}/${key}.png`;
+const colorRel = (folder,key) => `${ART}/${folder}/Color/${key}.png`;
+const eggRel   = key => `${ART}/Egg/${key}.png`;
 const has = rel => RES.has(rel);
 const url = rel => RES_ROOT + rel;
 
-/* ── 데이터 정리 ── */
+/* ── 언어 ──
+   시트는 이제 이름·설명을 직접 들고 있지 않고 LanguageData 의 Id 를 가리킨다. */
+const LANG = {};
+for(const r of rowsOf("LanguageData")) LANG[S(r.Id)] = S(r.Kr);
+const L      = t => LANG[S(t)] || "";          // 없으면 빈 문자열 (설명용)
+const nameOf = t => LANG[S(t)] || S(t);        // 없으면 토큰 그대로 (이름용)
+const known  = t => S(t) !== "" && (S(t) in LANG);
+
+/* ── 컨피그 ── */
+const CFG = rowsOf("GameConfig")[0] || {};
+/* 시트는 「다음 칸까지 몇 초」로 적는다. 런타임(SnailComposer.Fps)과 같이 뒤집어 쓴다. */
+const ANIM_SEC = num(CFG.AnimationSec, 0);
+const FPS      = ANIM_SEC > 0 ? 1 / ANIM_SEC : 14;
+const MUT_W    = num(CFG.MutationWeight, 5);
+
+/* ── 파츠 ── */
 const PARTS = rowsOf("PartsData").map(r => ({
   uid:        "P" + r._row,
   row:        r._row,
   id:         S(r.Id),
-  groupId:    S(r.PartsGroupId),
+  nameId:     S(r.NameId),
+  infoId:     S(r.InfoId),
+  name:       nameOf(r.NameId),
+  groups:     list(r.PartsGroupIds),
   rarity:     S(r.RarityType),
   type:       S(r.PartsType),
+  folder:     S(r.PartsType),
   resourceKey:S(r.ResourceKey),
   useColor:   S(r.IsUseColor) === "1",
   colors:     list(r.Colors),
   weight:     num(r.AppearWeight, 0),
-  info:       S(r.Info)
+  mutGroup:   S(r.MutationGroup),
+  mutWeight:  r.MutationWeight == null ? null : num(r.MutationWeight, 0),
+  animFps:    r.AnimFps == null ? null : num(r.AnimFps, 0),
+  effect:     S(r.EffectPath),
+  sellItem:   S(r.SellItem),
+  sellCount:  num(r.SellCount, 0),
+  rewards:    [1,2,3].map(i => ({ id:S(r["RewardId0"+i]), n:S(r["RewardCount0"+i]) }))
 }));
 
-const COLORS = rowsOf("PartsColorData").map(r => ({
-  type: S(r.PartsType),
-  key:  S(r.ColorResourceKey),
-  note: S(r["#분류"])
+/* 악세서리는 부화·교배 대상이 아니지만 같은 z-스택에 끼므로 조합기에서는 파츠처럼 다룬다. */
+const ACCS = rowsOf("AccessoriesData").map(r => ({
+  uid:        "A" + r._row,
+  row:        r._row,
+  id:         S(r.Id),
+  nameId:     S(r.NameId),
+  infoId:     S(r.InfoId),
+  name:       nameOf(r.NameId),
+  groups:     [],
+  rarity:     "",
+  type:       S(r.AccessoriesType),
+  folder:     "Accessories",
+  resourceKey:S(r.ResourceKey),
+  useColor:   false,
+  colors:     [],
+  weight:     0
 }));
+const ALL_WEARABLE = PARTS.concat(ACCS);
+const byUid = {};
+for(const p of ALL_WEARABLE) byUid[p.uid] = p;
+const partById = {};
+for(const p of PARTS) if(p.id) partById[p.id] = p;
 
+/* ── 색상 ──
+   PartsColorData 시트가 없어져서 색 목록의 원본은 이제 Color/ 폴더의 파일이다.
+   파일 없이 Colors 열에만 적힌 키도 넣어 둔다 — 검증이 그걸 잡아야 하기 때문이다. */
+const COLORS = [];
+{
+  const seen = new Set();
+  const add = (type, key, fromFile) => {
+    const k = type + "/" + key;
+    if(seen.has(k)) return;
+    seen.add(k);
+    COLORS.push({ type, key, fromFile, file: has(colorRel(type, key)) });
+  };
+  const re = new RegExp("^" + reEsc(ART) + "\\/([^/]+)\\/Color\\/(.+)\\.png$");
+  for(const rel of D.resources){ const m = rel.match(re); if(m) add(m[1], m[2], true); }
+  for(const p of PARTS) for(const ck of p.colors) add(p.type, ck, false);
+}
+
+/* ── 알 ── */
 const EGGS = rowsOf("EggData").map(r => ({
   id:          S(r.Id),
+  nameId:      S(r.NameId),
+  infoId:      S(r.InfoId),
+  name:        nameOf(r.NameId),
   rarity:      S(r.RarityType),
   groups:      list(r.PartsGroupIds),
   resourceKey: S(r.ResourceKey),
-  info:        S(r.Info)
+  hatchTime:   num(r.HatchTime, 0)
 }));
-const eggRel = key => `${ART}/Egg/${key}.png`;
 
-/* 아이템 성격의 Id 는 어느 시트에 정의돼 있든 상점·뽑기·이벤트에서 참조될 수 있다. */
+/* 아이템 성격의 Id 는 어느 시트에 정의돼 있든 상점·뽑기·보상에서 참조될 수 있다. */
 const ITEM_DEFS = {};
 const defineItems = (sheet, label) => {
   for(const r of rowsOf(sheet)){ const id = S(r.Id); if(id) ITEM_DEFS[id] = label; }
@@ -276,51 +406,86 @@ defineItems("EggData", "EggData");
 defineItems("ItemData", "ItemData");
 defineItems("AccessoriesData", "AccessoriesData");
 
-const ENUM_PART_ROWS = rowsOf("EnumData").filter(r => S(r.EnumType) === "PartsType");
-const ENUM_PART_TYPES = ENUM_PART_ROWS.slice()
-  .sort((a,b) => num(a.EnumValue,0) - num(b.EnumValue,0))
-  .map(r => S(r.EnumName));
+/* ── 레이어 축 ── */
+const enumRows  = t => rowsOf("EnumData").filter(r => S(r.EnumType) === t);
+const enumNames = t => enumRows(t).slice().sort((a,b)=>num(a.EnumValue,0)-num(b.EnumValue,0)).map(r=>S(r.EnumName));
 
-/* 실제 PartsData 에 존재하는 타입만 렌더 대상으로 삼는다 */
+const ENUM_PART_TYPES = enumNames("PartsType");
+const ENUM_ACC_TYPES  = enumNames("AccessoriesType");
+
+/* 부화·교배 추첨이 도는 대상. 데이터에 행이 있는 파츠 타입만. */
 const ACTIVE_TYPES = ENUM_PART_TYPES.filter(t => PARTS.some(p => p.type === t));
+const ACC_TYPES    = ENUM_ACC_TYPES.filter(t => ACCS.some(a => a.type === t));
+const LAYER_TYPES  = ACTIVE_TYPES.concat(ACC_TYPES);
+const isAcc = t => ACC_TYPES.includes(t);
 
-/* 레이어 순서(뒤→앞)는 EnumData 의 SortOrder 열에서 읽는다.
-   열이 아직 없으면 아래 폴백을 쓴다: 더듬이 밑동은 몸통 뒤로 숨고,
-   껍질은 몸통 위에 얹히고, 눈은 최상단. */
-const FALLBACK_ORDER = ["Mucus","Feeler","Body","Shell","Eyes"];
+/* 레이어 순서(뒤→앞)는 EnumData 의 SortOrder 열에서 읽는다. 일부만 채워져 있으면
+   절반만 맞는 순서로 조용히 도는 것을 막기 위해 통째로 내장 기본값으로 물러난다. */
+const FALLBACK_ORDER = ["Mucus","Shell","Body","Hat","Mask","Etc","Bag","Feeler","Eyes"];
 const SORT_ORDER = {};
-for(const r of ENUM_PART_ROWS){
+for(const r of enumRows("PartsType").concat(enumRows("AccessoriesType"))){
   const v = S(r.SortOrder);
   if(v !== "") SORT_ORDER[S(r.EnumName)] = num(v, 0);
 }
-const ORDER_FROM_DATA = ACTIVE_TYPES.every(t => t in SORT_ORDER);
+const ORDER_FROM_DATA = LAYER_TYPES.every(t => t in SORT_ORDER);
 
 const DEFAULT_ORDER = ORDER_FROM_DATA
-  ? ACTIVE_TYPES.slice().sort((a,b) => SORT_ORDER[a] - SORT_ORDER[b])
-  : FALLBACK_ORDER.filter(t => ACTIVE_TYPES.includes(t));
+  ? LAYER_TYPES.slice().sort((a,b) => SORT_ORDER[a] - SORT_ORDER[b])
+  : FALLBACK_ORDER.filter(t => LAYER_TYPES.includes(t));
 let renderOrder = DEFAULT_ORDER.slice();
 
-const partsByType  = t => PARTS.filter(p => p.type === t);
+const wearablesOf  = t => (isAcc(t) ? ACCS : PARTS).filter(p => p.type === t);
 const colorsByType = t => COLORS.filter(c => c.type === t);
 
-/* ── 합성 렌더 ── */
-/* sel: { PartsType: {part, colorKey} } */
-function renderSnail(el, sel){
-  el.innerHTML = "";
-  let drew = 0, missing = [];
-  for(const type of renderOrder){
-    const s = sel[type];
-    if(!s || !s.part) continue;
-    const p = s.part;
+/* ── 애니메이션 시트 ──
+   칸 수는 가로÷세로다(런타임 SnailComposer.FramesOf 와 같은 판정). 파일을 열어 봐야
+   알 수 있으므로 한 번 재고 캐시한다. */
+const _sheet = new Map();
+function framesOf(rel){
+  if(!_sheet.has(rel)) _sheet.set(rel, new Promise(res => {
+    const i = new Image();
+    i.onload = () => {
+      const w = i.naturalWidth, h = Math.max(1, i.naturalHeight);
+      const n = Math.round(w / h);
+      res(n >= 2 && Math.abs(w - n*h) <= n ? n : 1);
+    };
+    i.onerror = () => res(1);
+    i.src = url(rel);
+  }));
+  return _sheet.get(rel);
+}
 
-    if(p.useColor && s.colorKey){
-      const rel = colorRel(type, s.colorKey);
-      if(has(rel)) { el.appendChild(img(rel)); drew++; }
-      else missing.push(rel);
-    }
-    const rel = baseRel(type, p.resourceKey);
-    if(has(rel)) { el.appendChild(img(rel)); drew++; }
-    else missing.push(rel);
+/* 레이어끼리 위상이 어긋나면 선화와 색이 다른 칸을 보인다. 공통 기준 시각에서
+   역산한 delay 를 주어 언제 붙든 같은 칸에서 만나게 한다. */
+const EPOCH = performance.now();
+let playing = true;
+
+function addLayer(el, rel, missing){
+  if(!has(rel)){ missing.push(rel); return; }
+  const d = document.createElement("div");
+  d.className = "ly";
+  d.style.backgroundImage = `url("${url(rel)}")`;
+  el.appendChild(d);
+
+  framesOf(rel).then(n => {
+    if(n < 2) return;
+    const dur = n / FPS;
+    d.dataset.frames = n;
+    d.style.backgroundSize = (n * 100) + "% 100%";
+    d.style.animation = `film ${dur}s steps(${n}, jump-none) infinite`;
+    d.style.animationDelay = (-(((performance.now() - EPOCH) / 1000) % dur)) + "s";
+    if(!playing) d.style.animationPlayState = "paused";
+  });
+}
+
+/* entries: [{part, colorKey}] — 이미 그릴 순서 */
+function drawLayers(el, entries){
+  el.innerHTML = "";
+  const missing = [];
+  for(const s of entries){
+    if(!s || !s.part) continue;
+    if(s.part.useColor && s.colorKey) addLayer(el, colorRel(s.part.folder, s.colorKey), missing);
+    addLayer(el, baseRel(s.part.folder, s.part.resourceKey), missing);
   }
   if(missing.length){
     const d = document.createElement("div");
@@ -328,9 +493,18 @@ function renderSnail(el, sel){
     d.textContent = "리소스 없음: " + missing.join(", ");
     el.appendChild(d);
   }
-  return {drew, missing};
+  return { missing };
 }
-function img(rel){ const i = new Image(); i.src = url(rel); i.loading = "lazy"; return i; }
+/* sel: { 레이어타입: {part, colorKey} } */
+const renderSnail = (el, sel) => drawLayers(el, renderOrder.map(t => sel[t]).filter(Boolean));
+const renderOne   = (el, part, colorKey) => drawLayers(el, [{ part, colorKey }]);
+
+document.getElementById("play").onchange = e => {
+  playing = e.target.checked;
+  document.querySelectorAll(".ly[data-frames]").forEach(d => {
+    d.style.animationPlayState = playing ? "running" : "paused";
+  });
+};
 
 /* ── 가중치 추첨 ── */
 function pickWeighted(arr, wf){
@@ -342,18 +516,20 @@ function pickWeighted(arr, wf){
   return arr[arr.length-1];
 }
 const pickOne = a => a.length ? a[(Math.random()*a.length)|0] : null;
+/* 알과 파츠의 그룹이 하나라도 겹치는가. 몇 개가 겹치든 한 번만 센다. */
+const overlaps = (a, b) => a.some(g => b.includes(g));
+const poolOf   = egg => PARTS.filter(p => overlaps(egg.groups, p.groups));
 
-/* 알 1개 부화 → { sel, groupId }
-   기본은 union: PartsGroupIds 에 적힌 모든 그룹의 파츠가 하나의 추첨 풀이 된다. */
+/* 알 1개 부화 → { sel, groupId } */
 function hatch(egg, mode){
-  const groups = egg.groups.length ? egg.groups : [];
+  const groups = egg ? egg.groups : [];
   let pool, groupLabel;
   if(mode !== "pick" || groups.length === 0){
-    pool = groups.length ? PARTS.filter(p => groups.includes(p.groupId)) : PARTS.slice();
-    groupLabel = groups.length ? groups.join("+") : "(전체)";
+    pool = groups.length ? PARTS.filter(p => overlaps(groups, p.groups)) : PARTS.slice();
+    groupLabel = groups.length ? groups.join(" + ") : "(전체)";
   }else{
     groupLabel = pickOne(groups);
-    pool = PARTS.filter(p => p.groupId === groupLabel);
+    pool = PARTS.filter(p => p.groups.includes(groupLabel));
   }
   const sel = {};
   for(const type of ACTIVE_TYPES){
@@ -365,29 +541,73 @@ function hatch(egg, mode){
   return { sel, groupId: groupLabel };
 }
 
+/* ── 교배 (SnailBreeding 과 같은 규칙) ── */
+function mutate(parents, type){
+  const groups = new Set();
+  for(const c of parents) if(c.part.mutGroup) groups.add(c.part.mutGroup);
+  if(!groups.size) return null;
+
+  const pool = PARTS.filter(p => p.type === type && p.mutGroup && groups.has(p.mutGroup));
+  if(!pool.length) return null;
+
+  const part = pickWeighted(pool, p => Math.max(0, p.mutWeight == null ? MUT_W : p.mutWeight));
+  return { part, colorKey: part.useColor ? pickOne(part.colors) : null };
+}
+
+function cross(a, b){
+  const sel = {}, mutatedTypes = [];
+  for(const type of ACTIVE_TYPES){
+    const cands = [a[type], b[type]].filter(s => s && s.part);
+    if(!cands.length) continue;
+
+    let parents = 0;
+    for(const c of cands) parents += Math.max(0, c.part.weight);
+    const total = parents + Math.max(0, MUT_W);
+    if(total <= 0){ sel[type] = cands[(Math.random()*cands.length)|0]; continue; }
+
+    let r = Math.random() * total, taken = null;
+    for(const c of cands){
+      const w = Math.max(0, c.part.weight);
+      if(r < w){ taken = c; break; }
+      r -= w;
+    }
+    if(taken){ sel[type] = taken; continue; }
+
+    const m = mutate(cands, type);
+    if(m){ sel[type] = m; mutatedTypes.push(type); }
+    else   sel[type] = cands[cands.length-1];
+  }
+  return { sel, mutatedTypes };
+}
+
 /* ══════════════ 탭 ══════════════ */
 document.querySelectorAll("nav button").forEach(b => {
   b.onclick = () => {
     document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x === b));
     document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.id === "tab-" + b.dataset.tab));
-    if(b.dataset.tab === "atlas" && !atlasDone){ buildAtlas(); atlasDone = true; }
-    if(b.dataset.tab === "validate" && !valDone){ buildValidate(); valDone = true; }
+    if(b.dataset.tab === "atlas"    && !atlasDone){ buildAtlas();    atlasDone = true; }
+    if(b.dataset.tab === "guide"    && !guideDone){ buildGuide();    guideDone = true; }
+    if(b.dataset.tab === "validate" && !valDone)  { buildValidate(); valDone   = true; }
   };
 });
 
 /* ══════════════ 조합기 ══════════════ */
 const cv = document.getElementById("cv"), cvCap = document.getElementById("cv-cap");
 const composerSel = {};
+const pickerRefs = {};
 
 function buildPicker(){
   const host = document.getElementById("picker");
   host.innerHTML = "";
-  for(const type of ACTIVE_TYPES){
+  for(const type of LAYER_TYPES){
+    const acc = isAcc(type);
+
     const pRow = document.createElement("div"); pRow.className = "row";
-    pRow.innerHTML = `<label>${type}</label>`;
+    pRow.innerHTML = `<label>${type}${acc ? ' <span style="font-weight:400">(악세)</span>' : ""}</label>`;
     const pSel = document.createElement("select");
     pSel.innerHTML = `<option value="">— 없음 —</option>` +
-      partsByType(type).map(p => `<option value="${p.uid}">${esc(p.id)} · ${esc(p.resourceKey)}</option>`).join("");
+      wearablesOf(type).map(p =>
+        `<option value="${p.uid}">${esc(p.name)} · ${esc(p.resourceKey)}</option>`).join("");
     pRow.appendChild(pSel); host.appendChild(pRow);
 
     const cRow = document.createElement("div"); cRow.className = "row";
@@ -396,7 +616,7 @@ function buildPicker(){
     cRow.appendChild(cSel); host.appendChild(cRow);
 
     const syncColors = () => {
-      const p = PARTS.find(x => x.uid === pSel.value);
+      const p = byUid[pSel.value];
       if(!p || !p.useColor){
         cSel.innerHTML = `<option value="">(색상 미사용)</option>`;
         cSel.disabled = true;
@@ -406,8 +626,8 @@ function buildPicker(){
       cSel.disabled = false;
       cSel.innerHTML = colorsByType(type).map(c => {
         const star = p.colors.includes(c.key) ? "★ " : "";
-        const gone = has(colorRel(type, c.key)) ? "" : " ⚠ 파일없음";
-        return `<option value="${c.key}">${star}${esc(c.key)}${gone}</option>`;
+        const gone = c.file ? "" : " ⚠ 파일없음";
+        return `<option value="${esc(c.key)}">${star}${esc(c.key)}${gone}</option>`;
       }).join("");
       const want = p.colors.find(k => colorsByType(type).some(c => c.key === k)) || p.colors[0];
       if(want) cSel.value = want;
@@ -415,32 +635,53 @@ function buildPicker(){
     };
     pSel.onchange = () => { syncColors(); draw(); };
     cSel.onchange = () => {
-      const p = PARTS.find(x => x.uid === pSel.value);
+      const p = byUid[pSel.value];
       if(p) composerSel[type] = { part:p, colorKey: cSel.value };
       draw();
     };
-    // 기본값: 해당 타입 첫 파츠
-    const first = partsByType(type)[0];
-    if(first){ pSel.value = first.uid; }
+
+    // 파츠는 첫 행을 기본값으로, 악세서리는 안 입은 상태가 기본이다
+    const first = wearablesOf(type)[0];
+    if(first && !acc) pSel.value = first.uid;
     syncColors();
-    host.appendChild(document.createElement("div"));
     pickerRefs[type] = { pSel, cSel, syncColors };
   }
 }
-const pickerRefs = {};
 
 function draw(){
   renderSnail(cv, composerSel);
-  const parts = ACTIVE_TYPES.map(t => composerSel[t]).filter(Boolean);
-  cvCap.textContent = parts.map(s =>
-    s.part.id + (s.colorKey ? " (" + s.colorKey + ")" : "")).join("  ·  ");
+  const worn = renderOrder.map(t => composerSel[t]).filter(s => s && s.part);
+  cvCap.textContent = worn.map(s =>
+    s.part.name + (s.colorKey ? " (" + s.colorKey + ")" : "")).join("  ·  ");
+}
+
+function applySel(sel){
+  for(const t of LAYER_TYPES){
+    const r = pickerRefs[t]; if(!r) continue;
+    if(sel[t] && sel[t].part){
+      r.pSel.value = sel[t].part.uid;
+      r.syncColors();
+      if(sel[t].colorKey){
+        r.cSel.value = sel[t].colorKey;
+        composerSel[t] = { part: sel[t].part, colorKey: sel[t].colorKey };
+      }
+    }else{
+      r.pSel.value = ""; r.syncColors();
+    }
+  }
+  draw();
+}
+function gotoComposer(sel){
+  applySel(sel);
+  document.querySelector('nav button[data-tab="composer"]').click();
+  window.scrollTo({ top:0, behavior:"smooth" });
 }
 
 function buildOrder(){
   const host = document.getElementById("order");
   host.innerHTML = "";
   renderOrder.forEach((t, i) => {
-    const c = document.createElement("div"); c.className = "chip";
+    const c = document.createElement("div"); c.className = "chip" + (isAcc(t) ? " acc" : "");
     c.innerHTML = `<b>${i+1}. ${t}</b>`;
     const up = document.createElement("button"); up.textContent = "↑"; up.title = "뒤로";
     const dn = document.createElement("button"); dn.textContent = "↓"; dn.title = "앞으로";
@@ -462,16 +703,17 @@ function buildOrderSource(){
 
   let html = ORDER_FROM_DATA
     ? `<span class="pill" style="background:var(--accent-weak);color:var(--accent)">EnumData.SortOrder 에서 읽음</span>`
-    : `<span class="pill" style="background:var(--warn-weak);color:var(--warn)">SortOrder 열 없음 — 툴 내장 기본값 사용 중</span>`;
+    : `<span class="pill" style="background:var(--warn-weak);color:var(--warn)">SortOrder 가 덜 채워져 툴 내장 기본값 사용 중</span>`;
 
   if(!ORDER_FROM_DATA || dirty){
     html += `<p class="hint" style="margin:10px 0 6px">
       ${ORDER_FROM_DATA ? "바꾼 순서를 데이터에 반영하려면" : "이 순서를 데이터로 옮기려면"}
-      <code>EnumData</code> 에 <code>SortOrder</code> 열(nullableint)을 만들고 아래 값을 넣으세요.
+      <code>EnumData</code> 의 <code>SortOrder</code> 열에 아래 값을 넣으세요.
       간격 100은 나중에 사이에 끼워 넣기 위한 여유입니다.</p>`;
     html += `<table><thead><tr><th>EnumType</th><th>EnumName</th><th style="width:90px">SortOrder</th></tr></thead><tbody>` +
       renderOrder.map((t,i) =>
-        `<tr><td>PartsType</td><td><b>${esc(t)}</b></td><td class="num">${(i+1)*100}</td></tr>`).join("") +
+        `<tr><td>${isAcc(t) ? "AccessoriesType" : "PartsType"}</td><td><b>${esc(t)}</b></td>` +
+        `<td class="num">${(i+1)*100}</td></tr>`).join("") +
       `</tbody></table>`;
   }
   host.innerHTML = html;
@@ -482,14 +724,14 @@ function swap(a,b){
 }
 
 document.getElementById("btn-random").onclick = () => {
-  const cross = document.getElementById("cross-color").checked;
-  for(const type of ACTIVE_TYPES){
-    const p = pickOne(partsByType(type));
+  const cross_ = document.getElementById("cross-color").checked;
+  for(const type of ACTIVE_TYPES){          // 악세서리는 건드리지 않는다
+    const p = pickOne(wearablesOf(type));
     if(!p) continue;
     const r = pickerRefs[type];
-    r.pSel.value = p.uid; r.syncColors();     // 기본값으로 Colors 중 하나가 들어간다
-    if(p.useColor && cross){
-      // 실험 모드: 같은 PartsType 의 아무 색이나 씌워 실루엣 불일치를 확인한다
+    r.pSel.value = p.uid; r.syncColors();
+    if(p.useColor && cross_){
+      // 실험 모드: 같은 타입의 아무 색이나 씌워 실루엣 불일치를 확인한다
       const c = pickOne(colorsByType(type));
       if(c){ r.cSel.value = c.key; composerSel[type] = { part:p, colorKey:c.key }; }
     }else if(p.useColor){
@@ -504,18 +746,17 @@ document.getElementById("btn-reset").onclick = () => { buildPicker(); draw(); };
 /* ══════════════ 부화 시뮬 ══════════════ */
 function fillEggSelect(el){
   el.innerHTML = EGGS.map(e =>
-    `<option value="${esc(e.id)}">${esc(e.id)} · ${esc(e.rarity)}</option>`).join("");
+    `<option value="${esc(e.id)}">${esc(e.name)} · ${esc(e.rarity)}</option>`).join("");
 }
-fillEggSelect(document.getElementById("egg"));
-fillEggSelect(document.getElementById("s-egg"));
+["egg","s-egg","b-egg-a","b-egg-b"].forEach(id => fillEggSelect(document.getElementById(id)));
+if(EGGS.length > 1) document.getElementById("b-egg-b").selectedIndex = 1;
 
-function updateEggThumb(){
-  const host = document.getElementById("egg-thumb");
-  const e = EGGS.find(x => x.id === document.getElementById("egg").value);
+function eggThumb(host, e){
   host.innerHTML = "";
   if(!e) return;
   if(e.resourceKey && has(eggRel(e.resourceKey))){
-    const i = img(eggRel(e.resourceKey));
+    const i = new Image();
+    i.src = url(eggRel(e.resourceKey));
     i.style.cssText = "width:40px;height:40px;object-fit:contain";
     host.appendChild(i);
   }else{
@@ -526,47 +767,128 @@ function updateEggThumb(){
     host.appendChild(s);
   }
 }
+const eggBy = id => EGGS.find(e => e.id === id);
+const updateEggThumb = () =>
+  eggThumb(document.getElementById("egg-thumb"), eggBy(document.getElementById("egg").value));
 document.getElementById("egg").onchange = updateEggThumb;
 updateEggThumb();
 
+function snailCell(sel, labelHtml, onClick){
+  const cell = document.createElement("div"); cell.className = "gcell";
+  const box  = document.createElement("div"); box.className = "snail";
+  cell.appendChild(box);
+  const lbl = document.createElement("div"); lbl.className = "lbl";
+  lbl.innerHTML = labelHtml;
+  cell.appendChild(lbl);
+  renderSnail(box, sel);
+  if(onClick) cell.onclick = onClick;
+  return cell;
+}
+
 document.getElementById("btn-hatch").onclick = () => {
-  const egg  = EGGS.find(e => e.id === document.getElementById("egg").value);
+  const egg  = eggBy(document.getElementById("egg").value);
   const mode = document.getElementById("mode").value;
   const n    = Math.max(1, Math.min(120, parseInt(document.getElementById("count").value)||24));
   const out  = document.getElementById("hatch-out");
   out.innerHTML = "";
   for(let i=0;i<n;i++){
-    const {sel, groupId} = hatch(egg, mode);
-    const cell = document.createElement("div"); cell.className = "gcell";
-    const box  = document.createElement("div"); box.className = "snail";
-    cell.appendChild(box);
-    const lbl  = document.createElement("div"); lbl.className = "lbl";
-    const covered = ACTIVE_TYPES.filter(t => sel[t]);
+    const { sel, groupId } = hatch(egg, mode);
     const gap = ACTIVE_TYPES.filter(t => !sel[t]);
-    lbl.innerHTML = `<b>${esc(groupId)}</b><br>` +
-      covered.map(t => esc((sel[t].colorKey || sel[t].part.resourceKey))).join(", ") +
+    const label = `<b>${esc(groupId)}</b><br>` +
+      ACTIVE_TYPES.filter(t => sel[t]).map(t => esc(sel[t].part.name)).join(", ") +
       (gap.length ? `<br><span style="color:var(--err)">누락: ${gap.join(", ")}</span>` : "");
-    cell.appendChild(lbl);
-    out.appendChild(cell);
-    renderSnail(box, sel);
-    cell.onclick = () => {
-      for(const t of ACTIVE_TYPES){
-        const r = pickerRefs[t]; if(!r) continue;
-        if(sel[t]){ r.pSel.value = sel[t].part.uid; r.syncColors();
-                    if(sel[t].colorKey){ r.cSel.value = sel[t].colorKey;
-                      composerSel[t] = {part:sel[t].part, colorKey:sel[t].colorKey}; } }
-        else { r.pSel.value = ""; r.syncColors(); }
-      }
-      draw();
-      document.querySelector('nav button[data-tab="composer"]').click();
-      window.scrollTo({top:0,behavior:"smooth"});
-    };
+    out.appendChild(snailCell(sel, label, () => gotoComposer(sel)));
   }
+};
+
+/* ══════════════ 교배 시뮬 ══════════════ */
+function parentPane(host, sel, title){
+  const box = document.createElement("div");
+  const s = document.createElement("div"); s.className = "snail";
+  box.appendChild(s);
+  const cap = document.createElement("div"); cap.className = "cap";
+  cap.innerHTML = `<b>${esc(title)}</b><br>` +
+    ACTIVE_TYPES.filter(t => sel[t]).map(t => esc(sel[t].part.name)).join(", ");
+  box.appendChild(cap);
+  host.appendChild(box);
+  renderSnail(s, sel);
+}
+
+document.getElementById("btn-breed").onclick = () => {
+  const ea = eggBy(document.getElementById("b-egg-a").value);
+  const eb = eggBy(document.getElementById("b-egg-b").value);
+  const n  = Math.max(1, Math.min(120, parseInt(document.getElementById("b-count").value)||24));
+
+  const A = hatch(ea, "union").sel, B = hatch(eb, "union").sel;
+  const pair = document.getElementById("breed-pair");
+  pair.innerHTML = "";
+  parentPane(pair, A, "부모 A · " + ea.name);
+  parentPane(pair, B, "부모 B · " + eb.name);
+  document.getElementById("breed-parents").style.display = "";
+
+  const out = document.getElementById("breed-out");
+  out.innerHTML = "";
+  for(let i=0;i<n;i++){
+    const { sel, mutatedTypes } = cross(A, B);
+    const label =
+      (mutatedTypes.length
+        ? `<span class="tag mut">돌연변이 ${mutatedTypes.join(", ")}</span><br>`
+        : `<span class="tag">부모 그대로</span><br>`) +
+      ACTIVE_TYPES.filter(t => sel[t]).map(t => esc(sel[t].part.name)).join(", ");
+    out.appendChild(snailCell(sel, label, () => gotoComposer(sel)));
+  }
+};
+
+document.getElementById("btn-breed-stats").onclick = () => {
+  const ea = eggBy(document.getElementById("b-egg-a").value);
+  const eb = eggBy(document.getElementById("b-egg-b").value);
+  const N = 20000;
+
+  const A = hatch(ea, "union").sel, B = hatch(eb, "union").sel;
+  const mutByType = {};
+  for(const t of ACTIVE_TYPES) mutByType[t] = 0;
+  let anyMut = 0;
+
+  for(let i=0;i<N;i++){
+    const { mutatedTypes } = cross(A, B);
+    if(mutatedTypes.length) anyMut++;
+    for(const t of mutatedTypes) mutByType[t]++;
+  }
+
+  // 이론값: 부모 둘의 가중치 옆에 MutationWeight 한 칸
+  const theory = t => {
+    const c = [A[t], B[t]].filter(s => s && s.part);
+    if(!c.length) return null;
+    let parents = 0;
+    for(const x of c) parents += Math.max(0, x.part.weight);
+    const total = parents + Math.max(0, MUT_W);
+    return total > 0 ? Math.max(0, MUT_W) / total : 0;
+  };
+
+  let html = `<div class="card"><div class="sec-title">돌연변이율
+      <span class="pill">${N.toLocaleString()}회 · MutationWeight ${MUT_W}</span></div>
+    <table><thead><tr><th>부위</th><th style="width:110px">실측</th><th style="width:110px">이론</th>
+      <th style="width:34%">　</th></tr></thead><tbody>`;
+  for(const t of ACTIVE_TYPES){
+    const th = theory(t);
+    if(th == null) continue;
+    const p = mutByType[t] / N;
+    html += `<tr><td>${esc(t)}</td><td class="num">${(p*100).toFixed(2)}%</td>` +
+            `<td class="num">${(th*100).toFixed(2)}%</td>` +
+            `<td><div class="bar"><i style="width:${Math.min(100, p*100*4).toFixed(1)}%"></i></div></td></tr>`;
+  }
+  html += `</tbody></table>
+    <p class="hint" style="margin:12px 0 0">
+      한 부위라도 돌연변이가 난 자식 <b>${(anyMut/N*100).toFixed(1)}%</b> ·
+      전부 부모를 물려받은 자식 ${((N-anyMut)/N*100).toFixed(1)}%.
+      실측이 이론보다 낮으면 그 부위의 <code>MutationGroup</code> 에 뽑을 것이 없어 부모 것으로 되돌아간 경우입니다.
+    </p></div>`;
+  document.getElementById("breed-stats").innerHTML = html;
 };
 
 /* ══════════════ 확률 분포 ══════════════ */
 document.getElementById("btn-stats").onclick = () => {
-  const egg  = EGGS.find(e => e.id === document.getElementById("s-egg").value);
+  const egg  = eggBy(document.getElementById("s-egg").value);
   const mode = document.getElementById("s-mode").value;
   const N    = Math.max(100, Math.min(500000, parseInt(document.getElementById("s-n").value)||20000));
 
@@ -574,16 +896,15 @@ document.getElementById("btn-stats").onclick = () => {
   for(const t of ACTIVE_TYPES){ tally[t] = {}; gapCount[t] = 0; }
 
   for(let i=0;i<N;i++){
-    const {sel, groupId} = hatch(egg, mode);
+    const { sel, groupId } = hatch(egg, mode);
     groupTally[groupId] = (groupTally[groupId]||0) + 1;
     for(const t of ACTIVE_TYPES){
       if(!sel[t]){ gapCount[t]++; continue; }
-      const k = sel[t].part.id + (sel[t].colorKey ? " / " + sel[t].colorKey : "");
+      const k = sel[t].part.name + (sel[t].colorKey ? " / " + sel[t].colorKey : "");
       tally[t][k] = (tally[t][k]||0) + 1;
     }
   }
 
-  const out = document.getElementById("stats-out");
   let html = `<div class="card"><div class="sec-title">그룹 선택 빈도 <span class="pill">${N.toLocaleString()}회</span></div>`;
   html += table(Object.entries(groupTally).sort((a,b)=>b[1]-a[1]), N);
   html += `</div>`;
@@ -596,7 +917,7 @@ document.getElementById("btn-stats").onclick = () => {
     html += rows.length ? table(rows, N) : `<p class="hint" style="margin:0">출현한 파츠가 없습니다.</p>`;
     html += `</div>`;
   }
-  out.innerHTML = html;
+  document.getElementById("stats-out").innerHTML = html;
 };
 function table(entries, N){
   const max = entries.reduce((m,e)=>Math.max(m,e[1]),1);
@@ -608,28 +929,97 @@ function table(entries, N){
     `</tbody></table>`;
 }
 
+/* ══════════════ 도감 ══════════════ */
+const GUIDES = rowsOf("SnailGuide").map(r => {
+  const slots = [1,2,3,4].map(i => ({
+    partId: S(r["PartsId0" + i]),
+    color:  S(r["ColorId0" + i])
+  })).filter(s => s.partId || s.color);
+  return {
+    row: r._row,
+    id: S(r.Id), nameId: S(r.NameId), infoId: S(r.InfoId),
+    name: nameOf(r.NameId), info: L(r.InfoId),
+    rarity: S(r.RarityType),
+    slots,
+    rewards: [1,2,3].map(i => ({ id:S(r["RewardId0"+i]), n:S(r["RewardCount0"+i]) }))
+  };
+});
+
+let guideDone = false;
+function buildGuide(){
+  const out = document.getElementById("guide-out");
+  const g = document.createElement("div"); g.className = "gallery wide";
+
+  for(const gd of GUIDES){
+    const sel = {}, bad = [];
+    for(const s of gd.slots){
+      const p = partById[s.partId];
+      if(!p){ bad.push(`${s.partId || "(빈칸)"} 없음`); continue; }
+      sel[p.type] = { part:p, colorKey: s.color || (p.useColor ? p.colors[0] : null) };
+    }
+    const parts = Object.values(sel).map(s => s.part);
+    const eggs  = parts.length
+      ? EGGS.filter(e => parts.every(p => overlaps(e.groups, p.groups)))
+      : [];
+    const rewards = gd.rewards.filter(r => r.id || r.n);
+    const rewardBad = gd.rewards.some(r => !r.id && r.n) || !rewards.length;
+
+    const label =
+      `<b>${esc(gd.name)}</b> <span class="tag">${esc(gd.rarity)}</span><br>` +
+      Object.keys(sel).map(t => `${t}: ${esc(sel[t].part.name)}`).join("<br>") +
+      `<div class="tags">` +
+        (eggs.length
+          ? eggs.map(e => `<span class="tag hi">${esc(e.name)}</span>`).join("")
+          : `<span class="tag bad">어느 알로도 못 나옴</span>`) +
+      `</div>` +
+      `<div class="tags">` +
+        (rewards.length
+          ? rewards.map(r => `<span class="tag${r.id ? "" : " bad"}">${esc(r.id || "(빈 보상)")} ×${esc(r.n)}</span>`).join("")
+          : `<span class="tag bad">보상 없음</span>`) +
+      `</div>` +
+      (bad.length ? `<div class="tags"><span class="tag bad">${esc(bad.join(", "))}</span></div>` : "");
+
+    const cell = snailCell(sel, label, () => gotoComposer(sel));
+    if(rewardBad || bad.length) cell.style.borderColor = "var(--err)";
+    g.appendChild(cell);
+  }
+  out.innerHTML = "";
+  out.appendChild(g);
+}
+
 /* ══════════════ 파츠 아틀라스 ══════════════ */
 let atlasDone = false;
 function buildAtlas(){
   const out = document.getElementById("atlas-out");
   out.innerHTML = "";
-  for(const type of ACTIVE_TYPES){
+  for(const type of LAYER_TYPES){
+    const items = wearablesOf(type);
     const card = document.createElement("div"); card.className = "card";
-    card.innerHTML = `<div class="sec-title">${type} <span class="pill">${partsByType(type).length}종</span></div>`;
+    card.innerHTML = `<div class="sec-title">${type}` +
+      (isAcc(type) ? ` <span class="pill">악세서리</span>` : "") +
+      ` <span class="pill">${items.length}종</span></div>`;
     const g = document.createElement("div"); g.className = "gallery";
-    for(const p of partsByType(type)){
+
+    for(const p of items){
       const cell = document.createElement("div"); cell.className = "gcell";
       const box = document.createElement("div"); box.className = "snail";
       cell.appendChild(box);
       const lbl = document.createElement("div"); lbl.className = "lbl";
-      lbl.innerHTML = `<b>${esc(p.id)}</b><br>${esc(p.resourceKey)}` +
+      lbl.innerHTML = `<b>${esc(p.name)}</b><br>${esc(p.resourceKey)}` +
         (p.colors.length ? `<br>${esc(p.colors.join(", "))}` : "");
       cell.appendChild(lbl);
       g.appendChild(cell);
-      const sel = {}; sel[type] = { part:p, colorKey: p.useColor ? p.colors[0] : null };
-      const saved = renderOrder; renderOrder = [type];
-      renderSnail(box, sel);
-      renderOrder = saved;
+
+      const colorKey = p.useColor ? p.colors[0] : null;
+      renderOne(box, p, colorKey);
+      cell.onclick = () => { const s = {}; s[type] = { part:p, colorKey }; gotoComposer(s); };
+
+      // 애니메이션 시트면 칸 수를 붙여 준다 — 눈으로 세는 것보다 확실하다
+      framesOf(baseRel(p.folder, p.resourceKey)).then(n => {
+        if(n < 2) return;
+        lbl.insertAdjacentHTML("beforeend",
+          `<div class="tags"><span class="tag hi">애니 ${n}칸 · ${(n/FPS).toFixed(2)}초</span></div>`);
+      });
     }
     card.appendChild(g); out.appendChild(card);
   }
@@ -642,6 +1032,8 @@ function buildValidate(){
   const E = (msg, where) => errs.push({msg, where});
   const W = (msg, where) => warns.push({msg, where});
 
+  const groups = [...new Set(PARTS.flatMap(p => p.groups))];
+
   /* 1. PartsData */
   const seenId = {};
   for(const p of PARTS){
@@ -651,99 +1043,121 @@ function buildValidate(){
 
     if(!ENUM_PART_TYPES.includes(p.type)) E(`PartsType <code>${esc(p.type)}</code> 가 EnumData 에 없습니다.`, at);
     if(!p.resourceKey) E(`ResourceKey 가 비어 있습니다.`, at);
-    else if(!has(baseRel(p.type, p.resourceKey))) E(`선화 리소스 <code>${esc(baseRel(p.type,p.resourceKey))}</code> 파일이 없습니다.`, at);
+    else if(!has(baseRel(p.folder, p.resourceKey))) E(`선화 리소스 <code>${esc(baseRel(p.folder,p.resourceKey))}</code> 파일이 없습니다.`, at);
+
+    if(!known(p.nameId)) E(`NameId <code>${esc(p.nameId)}</code> 가 LanguageData 에 없어 이름이 토큰 그대로 나옵니다.`, at);
+    if(p.infoId && !known(p.infoId)) W(`InfoId <code>${esc(p.infoId)}</code> 가 LanguageData 에 없습니다.`, at);
 
     if(p.useColor && !p.colors.length) E(`IsUseColor=1 인데 Colors 가 비어 있습니다.`, at);
     if(!p.useColor && p.colors.length) W(`IsUseColor=0 인데 Colors 에 <code>${esc(p.colors.join(", "))}</code> 가 지정되어 무시됩니다.`, at);
 
     for(const ck of p.colors){
-      const def = COLORS.find(c => c.key === ck);
-      if(!def) E(`Colors 의 <code>${esc(ck)}</code> 가 PartsColorData 에 정의돼 있지 않습니다.`, at);
-      else if(def.type !== p.type) E(`Colors 의 <code>${esc(ck)}</code> 는 PartsColorData 에서 <code>${esc(def.type)}</code> 타입인데 이 파츠는 <code>${esc(p.type)}</code> 입니다.`, at);
-      if(!has(colorRel(p.type, ck))) E(`색상 리소스 <code>${esc(colorRel(p.type,ck))}</code> 파일이 없습니다.`, at);
+      if(!has(colorRel(p.folder, ck))) E(`색상 리소스 <code>${esc(colorRel(p.folder,ck))}</code> 파일이 없습니다.`, at);
 
-      // 색상 키의 접두사가 선화 키와 다르면 다른 파츠의 색을 참조하는 것
+      // 접두사가 「다른 파츠의 선화 이름」이면 남의 색을 물고 있는 것이다.
+      // 어느 선화 이름과도 안 맞으면 이 선화 전용으로 따로 이름 지은 색이므로 넘어간다
+      // (commonbody05 선화에 tomatobody 색을 씌우는 식으로 실루엣을 재활용한다).
       const prefix = ck.split("_c")[0];
-      if(prefix && p.resourceKey && prefix !== p.resourceKey)
-        W(`색상 <code>${esc(ck)}</code> 의 접두사가 선화 <code>${esc(p.resourceKey)}</code> 와 다릅니다. 다른 파츠용 색을 참조 중일 수 있습니다.`, at);
+      if(prefix && prefix !== p.resourceKey && PARTS.some(o => o.resourceKey === prefix))
+        W(`색상 <code>${esc(ck)}</code> 의 접두사가 다른 파츠의 선화 <code>${esc(prefix)}</code> 입니다. 이 파츠(<code>${esc(p.resourceKey)}</code>)와 실루엣이 달라 색이 윤곽 밖으로 삐져나올 수 있습니다.`, at);
     }
-    if(p.weight <= 0) W(`AppearWeight 가 ${p.weight} 이라 추첨에 절대 뽑히지 않습니다.`, at);
-    if(!p.groupId) E(`PartsGroupId 가 비어 있어 어떤 알로도 부화하지 않습니다.`, at);
+
+    if(p.weight <= 0) W(`AppearWeight 가 ${p.weight} 이라 부화 추첨에 절대 뽑히지 않습니다.`, at);
+    if(!p.groups.length) E(`PartsGroupIds 가 비어 있어 어떤 알로도 부화하지 않습니다.`, at);
+    if(!p.mutGroup) W(`MutationGroup 이 비어 있어 교배 돌연변이로는 나오지도, 이 파츠를 가진 부모가 돌연변이를 내지도 못합니다.`, at);
+
+    // AnimFps 는 남아 있는 열이지만 런타임은 보지 않는다(SnailComposer.Fps)
+    if(p.animFps != null)
+      W(`AnimFps 에 <code>${esc(String(p.animFps))}</code> 가 적혀 있지만 런타임은 <code>GameConfig.AnimationSec</code> 하나로 전부 같은 속도로 돌립니다. 이 값은 무시됩니다.`, at);
+
+    // 보상: 개수만 있고 아이템이 없으면 받을 것이 없다
+    for(let i=1;i<=3;i++){
+      const { id, n } = p.rewards[i-1];
+      if(!id && n) E(`RewardCount0${i} 에 ${esc(n)} 이 있는데 RewardId0${i} 가 비어 있어 아무것도 지급되지 않습니다.`, at);
+      if(id && !n) W(`RewardId0${i} <code>${esc(id)}</code> 에 개수가 없습니다.`, at);
+      if(id && !(id in ITEM_DEFS)) E(`RewardId0${i} <code>${esc(id)}</code> 를 정의한 시트가 없습니다.`, at);
+    }
   }
 
-  /* 2. PartsColorData 고아 */
+  /* 2. 색상 파일 */
   for(const c of COLORS){
-    const at = `PartsColorData · ${c.key}`;
-    if(!has(colorRel(c.type, c.key))) E(`<code>${esc(colorRel(c.type,c.key))}</code> 파일이 없습니다.`, at);
-    if(!PARTS.some(p => p.colors.includes(c.key))) W(`어떤 PartsData 에서도 참조하지 않는 색상입니다.`, at);
+    const at = `색상 · ${c.type}/${c.key}`;
+    if(!c.file) E(`<code>${esc(colorRel(c.type,c.key))}</code> 파일이 없습니다.`, at);
+    else if(!PARTS.some(p => p.type === c.type && p.colors.includes(c.key)))
+      W(`파일은 있는데 어떤 PartsData 도 참조하지 않는 색상입니다.`, at);
   }
 
-  /* 3. 리소스 파일 중 데이터가 안 쓰는 것 */
-  for(const rel of D.resources){
-    const m = rel.match(new RegExp("^" + ART.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
-                                   "\\/([^/]+)\\/(Color\\/)?([^/]+)\\.png$"));
-    if(!m) continue;
-    const [,type, isColor, key] = m;
-    let used;
-    if(type === "Egg")      used = EGGS.some(e => e.resourceKey === key);
-    else if(isColor)        used = PARTS.some(p => p.type===type && p.colors.includes(key));
-    else                    used = PARTS.some(p => p.type===type && p.resourceKey===key);
-    if(!used) W(`리소스 <code>${esc(rel)}</code> 를 참조하는 데이터 행이 없습니다.`, `Resource`);
+  /* 3. 리소스 파일 중 데이터가 안 쓰는 것.
+     Food·Item·Ui 는 합성과 무관한 다른 시스템 담당이라 여기서 보지 않는다. */
+  {
+    const re = new RegExp("^" + reEsc(ART) + "\\/([^/]+)\\/(Color\\/)?([^/]+)\\.png$");
+    const owned = new Set(ENUM_PART_TYPES.concat(["Egg", "Accessories"]));
+    for(const rel of D.resources){
+      const m = rel.match(re);
+      if(!m) continue;
+      const [, folder, isColor, key] = m;
+      if(!owned.has(folder)) continue;
+
+      let used;
+      // 알 등장 연출은 데이터에 칸이 없다. 코드가 <그림이름>_pop 을 찾아 쓴다(SnailEggDrop).
+      if(folder === "Egg")            used = EGGS.some(e => e.resourceKey === key || e.resourceKey + "_pop" === key);
+      else if(folder === "Accessories") used = ACCS.some(a => a.resourceKey === key);
+      else if(isColor)                used = PARTS.some(p => p.type===folder && p.colors.includes(key));
+      else                            used = PARTS.some(p => p.type===folder && p.resourceKey===key);
+
+      if(!used) W(`리소스 <code>${esc(rel)}</code> 를 참조하는 데이터 행이 없습니다.`, `Resource`);
+    }
   }
 
-  /* 4. 그룹 구성
-     그룹은 알 단위로 합쳐지므로(union), 개별 그룹이 일부 파츠만 갖는 것은 정상이다.
-     완결성은 알 단위(5번)에서 본다. */
-  const groups = [...new Set(PARTS.map(p => p.groupId).filter(Boolean))];
-  const groupCoverage = {};
-  for(const g of groups){
-    groupCoverage[g] = ACTIVE_TYPES.filter(t => PARTS.some(p => p.groupId===g && p.type===t));
-  }
+  /* 4. 그룹 */
   for(const g of groups){
     if(!EGGS.some(e => e.groups.includes(g)))
-      W(`그룹 <code>${esc(g)}</code> 를 참조하는 알이 없어 이 그룹의 파츠는 부화로 얻을 수 없습니다.`, `PartsData · PartsGroupId`);
+      W(`그룹 <code>${esc(g)}</code> 를 참조하는 알이 없어 이 그룹의 파츠는 부화로 얻을 수 없습니다.`, `PartsData · PartsGroupIds`);
   }
 
   /* 5. EggData */
   for(const e of EGGS){
     const at = `EggData · ${e.id}`;
+    if(!known(e.nameId)) E(`NameId <code>${esc(e.nameId)}</code> 가 LanguageData 에 없습니다.`, at);
+    if(e.infoId && !known(e.infoId)) W(`InfoId <code>${esc(e.infoId)}</code> 가 LanguageData 에 없습니다.`, at);
+
     if(!e.groups.length){ E(`PartsGroupIds 가 비어 있어 부화 시 파츠를 결정할 수 없습니다.`, at); continue; }
-    for(const g of e.groups){
+    for(const g of e.groups)
       if(!groups.includes(g)) E(`PartsGroupIds 의 <code>${esc(g)}</code> 를 가진 PartsData 행이 없습니다.`, at);
-    }
-    // 모든 그룹을 합친 풀이 완결이어야 한다
-    const reachable = PARTS.filter(p => e.groups.includes(p.groupId));
+
+    const reachable = poolOf(e);
     const gaps = ACTIVE_TYPES.filter(t => !reachable.some(p => p.type === t));
     if(gaps.length)
-      E(`그룹을 모두 합쳐도 ${gaps.join(", ")} 파츠가 없어 해당 부위가 빠진 달팽이가 태어납니다.`, at);
+      E(`겹치는 그룹을 모두 합쳐도 ${gaps.join(", ")} 파츠가 없어 해당 부위가 빠진 달팽이가 태어납니다.`, at);
 
-    // 희귀 알인데 희귀 파츠에 도달할 수 없는 경우
     const rarities = [...new Set(reachable.map(p => p.rarity))];
     if(e.rarity !== "Common" && !rarities.includes(e.rarity))
       W(`${e.rarity} 등급 알인데 도달 가능한 파츠에 ${e.rarity} 등급이 없습니다. 현재 도달 가능: ${rarities.join(", ")}`, at);
+
+    if(!e.resourceKey) E(`ResourceKey 가 비어 있습니다.`, at);
+    else if(!has(eggRel(e.resourceKey))) E(`알 리소스 <code>${esc(eggRel(e.resourceKey))}</code> 파일이 없습니다.`, at);
   }
 
-  /* 5-b. 알 리소스 */
-  for(const e of EGGS){
-    if(!e.resourceKey) E(`ResourceKey 가 비어 있습니다.`, `EggData · ${e.id}`);
-    else if(!has(eggRel(e.resourceKey)))
-      E(`알 리소스 <code>${esc(eggRel(e.resourceKey))}</code> 파일이 없습니다.`, `EggData · ${e.id}`);
+  /* 6. 악세서리 */
+  for(const a of ACCS){
+    const at = `AccessoriesData ${a.row}행 · ${a.id}`;
+    if(!ENUM_ACC_TYPES.includes(a.type)) E(`AccessoriesType <code>${esc(a.type)}</code> 가 EnumData 에 없습니다.`, at);
+    if(!a.resourceKey) E(`ResourceKey 가 비어 있습니다.`, at);
+    else if(!has(baseRel(a.folder, a.resourceKey))) E(`리소스 <code>${esc(baseRel(a.folder,a.resourceKey))}</code> 파일이 없습니다.`, at);
+    if(!known(a.nameId)) E(`NameId <code>${esc(a.nameId)}</code> 가 LanguageData 에 없습니다.`, at);
   }
 
-  /* 6-a. 레이어 순서(SortOrder) 정합성 */
+  /* 7. 레이어 순서(SortOrder) 정합성 */
   {
     const at = `EnumData · SortOrder`;
     if(!ORDER_FROM_DATA){
-      const missing = ACTIVE_TYPES.filter(t => !(t in SORT_ORDER));
-      if(missing.length && missing.length < ACTIVE_TYPES.length)
-        E(`SortOrder 가 ${missing.join(", ")} 에 비어 있습니다. 일부만 채워지면 전체가 툴 내장 기본값으로 폴백해 데이터가 무시됩니다.`, at);
-      else
-        W(`SortOrder 열이 없어 툴 내장 기본값(${FALLBACK_ORDER.join(" → ")})을 쓰고 있습니다.`, at);
+      const missing = LAYER_TYPES.filter(t => !(t in SORT_ORDER));
+      E(`SortOrder 가 ${missing.join(", ")} 에 비어 있습니다. 일부만 채워지면 전체가 툴 내장 기본값으로 폴백해 데이터가 무시됩니다.`, at);
     }
 
     // 같은 값이 둘 이상이면 그들 사이 순서가 정렬 안정성에 의존해 비결정적이 된다
     const byVal = {};
-    for(const r of rowsOf("EnumData")){
+    for(const r of enumRows("PartsType").concat(enumRows("AccessoriesType"))){
       const v = S(r.SortOrder); if(v === "") continue;
       (byVal[v] = byVal[v] || []).push(S(r.EnumType) + "." + S(r.EnumName));
     }
@@ -752,78 +1166,138 @@ function buildValidate(){
         E(`SortOrder <code>${esc(v)}</code> 를 ${byVal[v].join(", ")} 가 공유합니다. 값이 같으면 이들 사이 앞뒤가 비결정적입니다.`, at);
     }
 
-    // 눈은 얼굴 최상단, 점액은 바닥이어야 자연스럽다
     if(("Eyes" in SORT_ORDER) && ("Body" in SORT_ORDER) && SORT_ORDER.Eyes < SORT_ORDER.Body)
       E(`Eyes(${SORT_ORDER.Eyes}) 가 Body(${SORT_ORDER.Body}) 보다 뒤에 있어 눈이 몸통 색에 완전히 가려집니다.`, at);
-    if(("Mucus" in SORT_ORDER) && ("Shell" in SORT_ORDER) && SORT_ORDER.Mucus > SORT_ORDER.Shell)
-      W(`Mucus(${SORT_ORDER.Mucus}) 가 Shell(${SORT_ORDER.Shell}) 보다 앞에 있습니다. 점액 자국은 보통 달팽이 뒤(바닥)에 깔립니다.`, at);
+    if(("Mucus" in SORT_ORDER) && ("Body" in SORT_ORDER) && SORT_ORDER.Mucus > SORT_ORDER.Body)
+      W(`Mucus(${SORT_ORDER.Mucus}) 가 Body(${SORT_ORDER.Body}) 보다 앞에 있습니다. 점액 자국은 보통 달팽이 뒤(바닥)에 깔립니다.`, at);
 
-    // 악세서리는 몸통·껍질에 가리지 않아야 한다
-    for(const r of rowsOf("EnumData")){
-      if(S(r.EnumType) !== "AccessoriesType") continue;
-      const v = S(r.SortOrder);
-      if(v === ""){ W(`악세서리 <code>${esc(S(r.EnumName))}</code> 에 SortOrder 가 없어 파츠와의 앞뒤가 정의되지 않습니다.`, at); continue; }
-      if(("Shell" in SORT_ORDER) && num(v,0) < SORT_ORDER.Shell)
-        E(`악세서리 <code>${esc(S(r.EnumName))}</code>(${esc(v)}) 가 Shell(${SORT_ORDER.Shell}) 보다 뒤에 있어 껍질·몸통에 가려집니다.`, at);
+    // 악세서리는 입은 티가 나야 하므로 몸통·껍질보다 앞이어야 한다
+    const bodyish = Math.max(SORT_ORDER.Body ?? -Infinity, SORT_ORDER.Shell ?? -Infinity);
+    for(const t of ACC_TYPES){
+      if(!(t in SORT_ORDER)){ W(`악세서리 <code>${esc(t)}</code> 에 SortOrder 가 없어 파츠와의 앞뒤가 정의되지 않습니다.`, at); continue; }
+      if(isFinite(bodyish) && SORT_ORDER[t] < bodyish)
+        E(`악세서리 <code>${esc(t)}</code>(${SORT_ORDER[t]}) 가 몸통·껍질(${bodyish}) 보다 뒤에 있어 가려집니다.`, at);
     }
   }
 
-  /* 6-b. 시트 간 Id 참조 무결성 — 삭제된 아이템을 상점·뽑기·이벤트가 붙들고 있는 경우 */
+  /* 8. LanguageData — 파이프라인이 Id 중복에서 멈추므로 여기서 먼저 잡는다 */
+  {
+    const seen = {};
+    for(const r of rowsOf("LanguageData")){
+      const id = S(r.Id); if(!id) continue;
+      if(seen[id]) E(`Id <code>${esc(id)}</code> 가 ${seen[id]}행과 중복입니다. 데이터 파이프라인이 여기서 멈춥니다.`, `LanguageData ${r._row}행`);
+      else seen[id] = r._row;
+    }
+  }
+
+  /* 9. 도감 */
+  for(const gd of GUIDES){
+    const at = `SnailGuide ${gd.row}행 · ${gd.id}`;
+    if(!known(gd.nameId)) E(`NameId <code>${esc(gd.nameId)}</code> 가 LanguageData 에 없습니다.`, at);
+    if(gd.infoId && !known(gd.infoId)) W(`InfoId <code>${esc(gd.infoId)}</code> 가 LanguageData 에 없습니다.`, at);
+
+    const parts = [];
+    for(const s of gd.slots){
+      const p = partById[s.partId];
+      if(!p){ E(`PartsId <code>${esc(s.partId)}</code> 를 가진 PartsData 행이 없습니다.`, at); continue; }
+      parts.push(p);
+      if(s.color && !p.colors.includes(s.color))
+        E(`ColorId <code>${esc(s.color)}</code> 가 <code>${esc(p.id)}</code> 의 Colors 에 없습니다.`, at);
+      if(!s.color && p.useColor)
+        W(`<code>${esc(p.id)}</code> 는 색을 쓰는 파츠인데 ColorId 가 비어 있어 색이 달라도 도감이 완성됩니다.`, at);
+    }
+    const types = parts.map(p => p.type);
+    if(new Set(types).size !== types.length)
+      E(`같은 부위의 파츠가 두 번 지정돼 있어 그 조합은 만들어질 수 없습니다: ${types.join(", ")}`, at);
+    if(parts.length && !EGGS.some(e => parts.every(p => overlaps(e.groups, p.groups))))
+      W(`이 조합을 한 알에서 전부 뽑을 수 있는 알이 없습니다. 교배로만 도달 가능한 도감입니다.`, at);
+
+    let any = false;
+    for(let i=1;i<=3;i++){
+      const { id, n } = gd.rewards[i-1];
+      if(id || n) any = true;
+      if(!id && n) E(`RewardCount0${i} 에 ${esc(n)} 이 있는데 RewardId0${i} 가 비어 있어 아무것도 지급되지 않습니다.`, at);
+      if(id && !n) W(`RewardId0${i} <code>${esc(id)}</code> 에 개수가 없습니다.`, at);
+      if(id && !(id in ITEM_DEFS)) E(`RewardId0${i} <code>${esc(id)}</code> 를 정의한 시트가 없습니다.`, at);
+    }
+    if(!any) E(`보상이 한 칸도 없어 도감을 완성해도 받을 것이 없습니다.`, at);
+  }
+
+  /* 10. 시트 간 Id 참조 */
   const checkRef = (id, at, col) => {
     if(!id) return;
     if(!(id in ITEM_DEFS))
       E(`${col} 의 <code>${esc(id)}</code> 를 정의한 시트가 없습니다. 삭제된 아이템을 참조 중입니다.`, at);
   };
-  for(const r of rowsOf("ShopData"))
-    checkRef(S(r.Id), `ShopData ${r._row}행`, "Id");
-  for(const r of rowsOf("GachaData"))
-    checkRef(S(r.Id_2), `GachaData ${r._row}행`, "보상 Id");
+  for(const r of rowsOf("ShopData"))  checkRef(S(r.Id),   `ShopData ${r._row}행`,  "Id");
+  for(const r of rowsOf("GachaData")) checkRef(S(r.Id_2), `GachaData ${r._row}행`, "보상 Id");
   for(const r of rowsOf("EventData"))
-    for(const id of list(r.ShopItemIds))
-      checkRef(id, `EventData ${r._row}행 · ${S(r.Id)}`, "ShopItemIds");
+    for(const id of list(r.ShopItemIds)) checkRef(id, `EventData ${r._row}행 · ${S(r.Id)}`, "ShopItemIds");
+  for(const r of rowsOf("SlotSellData")) checkRef(S(r.CostItem), `SlotSellData ${r._row}행`, "CostItem");
+  for(const r of rowsOf("UnlockData"))   checkRef(S(r.CostItem), `UnlockData ${r._row}행`,   "CostItem");
+  for(const r of rowsOf("LevelData"))    checkRef(S(r.ItemId),   `LevelData ${r._row}행`,    "ItemId");
 
-  /* 6. 알끼리 결과가 구분되는지 */
+  /* 11. 칸 늘리기 — n번째 확장이 끊기면 그 앞에서 더 못 산다 */
+  const SLOT_START = { Snail: num(CFG.StartSnailSlot, 0), Egg: num(CFG.StartEggSlot, 0) };
+  for(const kind of ["Snail","Egg"]){
+    const at = `SlotSellData · ${kind}`;
+    const rows = rowsOf("SlotSellData").filter(r => S(r.SlotType) === kind);
+    if(!rows.length){ W(`${kind} 칸을 늘리는 행이 없습니다.`, at); continue; }
+    if(SLOT_START[kind] <= 0)
+      E(`GameConfig 의 Start${kind}Slot 이 ${SLOT_START[kind]} 이라 시작 칸이 없습니다.`, `GameConfig`);
+
+    const nths = rows.map(r => num(r.PlusSlotCount, 0)).sort((a,b)=>a-b);
+    for(let i=0;i<nths.length;i++){
+      if(nths[i] !== i+1){
+        E(`PlusSlotCount 가 1부터 이어지지 않습니다(${nths.join(", ")}). 끊긴 번호 앞에서 더 못 삽니다.`, at);
+        break;
+      }
+    }
+    for(const r of rows)
+      if(num(r.CostCount, 0) <= 0)
+        E(`PlusSlotCount ${S(r.PlusSlotCount)} 의 CostCount 가 비어 있어 그 칸을 살 수 없습니다.`, at);
+  }
+
+  /* 12. 알끼리 결과가 구분되는지 */
   const sig = e => e.groups.slice().sort().join("|");
   const bySig = {};
-  for(const e of EGGS){ (bySig[sig(e)] = bySig[sig(e)] || []).push(e.id); }
+  for(const e of EGGS){ (bySig[sig(e)] = bySig[sig(e)] || []).push(e.name); }
   const priceOf = id => {
     const r = rowsOf("ShopData").find(x => S(x.Id) === id);
     return r ? num(r.CostCount, null) : null;
   };
   for(const k in bySig){
     if(bySig[k].length < 2) continue;
-    const prices = bySig[k].map(id => priceOf(id)).filter(v => v != null);
-    let tail = "";
-    if(prices.length > 1){
-      const lo = Math.min(...prices), hi = Math.max(...prices);
-      if(hi > lo) tail = ` 가격은 ${lo}~${hi} 코인(${(hi/lo).toFixed(1)}배)인데 체감 차이가 없습니다.`;
-    }
-    W(`${bySig[k].join(", ")} 의 PartsGroupIds 가 완전히 같아 부화 결과 분포가 동일합니다.${tail}`, `EggData`);
+    W(`${bySig[k].join(", ")} 의 PartsGroupIds 가 완전히 같아 부화 결과 분포가 동일합니다.`, `EggData`);
   }
 
-  /* 렌더 */
-  const out = document.getElementById("validate-out");
+  /* ── 렌더 ── */
   let html = "";
   html += `<div class="card"><div class="sec-title">요약</div>
     <span class="pill" style="background:var(--err-weak);color:var(--err)">오류 ${errs.length}</span>
     <span class="pill" style="background:var(--warn-weak);color:var(--warn)">경고 ${warns.length}</span>
-    <span class="pill">PartsData ${PARTS.length}행 · 색상 ${COLORS.length} · 리소스 ${D.resources.length}</span></div>`;
+    <span class="pill">파츠 ${PARTS.length} · 악세 ${ACCS.length} · 색상 ${COLORS.length} · 도감 ${GUIDES.length} · 리소스 ${D.resources.length}</span>
+    <p class="hint" style="margin:12px 0 0">
+      애니메이션 ${ANIM_SEC > 0 ? `${ANIM_SEC}초/칸 (${FPS.toFixed(1)}fps)` : `AnimationSec 미설정 → 기본 14fps`} ·
+      돌연변이 가중치 ${MUT_W} ·
+      시작 칸 달팽이 ${SLOT_START.Snail} / 부화기 ${SLOT_START.Egg}
+    </p></div>`;
 
-  html += `<div class="card"><div class="sec-title">그룹별 파츠 커버리지</div>
-    <table><thead><tr><th>PartsGroupId</th>` +
+  html += `<div class="card"><div class="sec-title">그룹별 파츠 커버리지
+      <span class="pill">파츠 하나가 여러 그룹에 들 수 있습니다</span></div>
+    <table><thead><tr><th>PartsGroupIds</th>` +
     ACTIVE_TYPES.map(t=>`<th>${t}</th>`).join("") + `</tr></thead><tbody>` +
     groups.map(g => `<tr><td><b>${esc(g)}</b></td>` + ACTIVE_TYPES.map(t=>{
-      const n = PARTS.filter(p=>p.groupId===g && p.type===t).length;
+      const n = PARTS.filter(p=>p.groups.includes(g) && p.type===t).length;
       return n ? `<td class="num">${n}</td>` : `<td style="color:var(--err);font-weight:700">없음</td>`;
     }).join("") + `</tr>`).join("") + `</tbody></table></div>`;
 
-  /* 알별 추첨 풀 — union 기준 이론 확률 */
-  html += `<div class="card"><div class="sec-title">알별 추첨 풀 <span class="pill">PartsGroupIds 전 그룹 통합</span></div>
+  html += `<div class="card"><div class="sec-title">알별 추첨 풀 <span class="pill">그룹이 겹치는 파츠 전부</span></div>
     <table><thead><tr><th>알</th><th>그룹</th>` +
     ACTIVE_TYPES.map(t=>`<th>${t}</th>`).join("") +
     `<th>희귀 파츠 1개 이상</th></tr></thead><tbody>`;
   for(const e of EGGS){
-    const pool = PARTS.filter(p => e.groups.includes(p.groupId));
+    const pool = poolOf(e);
     let noneRare = 1;
     const cells = ACTIVE_TYPES.map(t => {
       const c = pool.filter(p => p.type === t);
@@ -836,7 +1310,7 @@ function buildValidate(){
              (pr>0 ? `<br><span style="color:var(--accent)">희귀 ${(pr*100).toFixed(1)}%</span>` : "") + `</td>`;
     }).join("");
     const price = priceOf(e.id);
-    html += `<tr><td><b>${esc(e.id)}</b><br><span class="pill">${esc(e.rarity)}</span>` +
+    html += `<tr><td><b>${esc(e.name)}</b><br><span class="pill">${esc(e.rarity)}</span>` +
             (price!=null ? `<br><span style="font-size:11px;color:var(--muted)">${price} 코인</span>` : "") +
             `</td><td style="font-size:11.5px">${e.groups.map(esc).join("<br>")}</td>` +
             cells +
@@ -858,14 +1332,15 @@ function buildValidate(){
       html += warns.map(i => `<div class="issue warn">${i.msg}<div class="where">${esc(i.where)}</div></div>`).join("");
     }
   }
-  out.innerHTML = html;
+  document.getElementById("validate-out").innerHTML = html;
 }
 
 function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
 /* ── 부트 ── */
 document.getElementById("meta").textContent =
-  `${D.source} · ${D.generatedAt} 생성 · 파츠 ${PARTS.length} · 색상 ${COLORS.length} · 리소스 ${D.resources.length}`;
+  `${D.source} · ${D.generatedAt} 생성 · 파츠 ${PARTS.length} · 악세 ${ACCS.length} · ` +
+  `색상 ${COLORS.length} · 도감 ${GUIDES.length} · 리소스 ${D.resources.length}`;
 buildPicker();
 buildOrder();
 draw();

@@ -241,15 +241,26 @@ namespace SnailPet.Ui
             public const int MinWidth = 60;
 
             /// <summary>
-            /// 띠의 최대 폭. <b>펼쳤을 때와 접었을 때가 다르다.</b>
+            /// 띠의 최대 폭. 접었든 폈든 같다.
             ///
-            /// 띠는 위젯 안에서 가운데를 잡는데, 접으면 그 가운데가 오른쪽 상세 판이라
-            /// 오른쪽으로 93px 밖에 안 남는다. 320 을 그대로 쓰면 화면 밖으로 넘친다.
-            /// 접었을 때는 186(=93×2)까지만 쓰고, 넘치는 글은 두 줄로 접는다.
+            /// 예전에는 접었을 때만 186 으로 좁혔다 — 띠가 가운데를 잡는데 접으면 그 가운데가
+            /// 오른쪽 판이라 오른쪽으로 93px 밖에 안 남아서였다. 그랬더니 짧은 문구도 두 줄로
+            /// 접혔다(2026-09-02). 지금은 접었을 때 <b>오른쪽 끝을 붙박고 왼쪽으로</b> 늘려
+            /// 화면 밖으로 안 나가므로 좁힐 이유가 없다.
             /// </summary>
             public const int MaxWidth = 320;
-            public const int MaxWidthFolded = 186;
             public const int FontSize = 12;
+
+            /// <summary>
+            /// 한 줄로 잡을 때 재 준 폭에 더해 두는 여유(px).
+            ///
+            /// <c>preferredWidth</c> 는 소수로 나오는데 픽셀로 반올림하며 깎이면 안쪽 폭이
+            /// 한두 픽셀 모자라 글자만 접힌다 — 띠는 한 줄인데 글자는 두 줄이 된다.
+            /// </summary>
+            public const int Slack = 2;
+
+            /// <summary>접었을 때 띠의 오른쪽 끝이 위젯 오른쪽에서 떨어지는 거리(px).</summary>
+            public const float FoldedRightGap = 0.5f;
 
             /// <summary>한 줄이 늘어날 때마다 띠가 이만큼 높아진다.</summary>
             public const int LineStep = 15;
@@ -296,6 +307,12 @@ namespace SnailPet.Ui
             /// 목업의 4행이 다 보이고 다섯째 줄이 살짝 걸쳐 「더 있다」가 드러난다.
             /// </summary>
             public static readonly RectInt RowView = new RectInt(0, 25, PanelW, PanelH - 25);
+
+            /// <summary>
+            /// 달팽이 칸 표시. 제목 줄 오른쪽 끝에 앉는다 (「3/15」).
+            /// 제목보다 튀면 안 되므로 알약을 작게 잡고 글자도 한 호수 줄인다.
+            /// </summary>
+            public static readonly RectInt SlotCount = new RectInt(134, 8, 30, 14);
 
             /// <summary>목록이 비었을 때 한가운데에 뜨는 안내. 음식·알이 같은 자리를 쓴다.</summary>
             public static readonly RectInt Empty = new RectInt(10, 100, PanelW - 20, 20);
@@ -453,18 +470,24 @@ namespace SnailPet.Ui
             public static readonly RectInt Title = new RectInt(0, 4, PanelW, 21);
 
             /// <summary>
-            /// 부화 칸. 지금은 3개, 나중에 UnlockData 로 늘어난다.
-            ///
-            /// 왼쪽 끝은 공책 스프링이 지나가는 자리라 비워 둔다 — 12 에 두었더니 첫 칸이
-            /// 스프링에 물렸다. 칸을 조금 줄이고 안쪽으로 밀어 스프링을 피한다(2026-08-29).
-            /// 프리팹에는 예전 자리로 구워져 있어 SnailUi 가 살아날 때 다시 놓는다.
+            /// 부화 칸 하나의 크기. <b>4열로 늘어난다</b> — 시트가 최대 13칸까지 파는데,
+            /// 예전 크기(42x41)로 세 칸씩 놓으면 아홉 칸에서 버튼 줄에 닿았다(2026-08-30).
             /// </summary>
-            public static readonly RectInt[] Slots =
-            {
-                new RectInt( 25, 34, 42, 41),
-                new RectInt( 72, 34, 42, 41),
-                new RectInt(119, 34, 42, 41),
-            };
+            public const int SlotW = 33, SlotH = 33;
+
+            /// <summary>칸 사이 간격과 열 수. 4열 x 4줄이면 16칸까지 들어간다.</summary>
+            public const int SlotStepX = 37, SlotStepY = 37, SlotCols = 4;
+
+            /// <summary>첫 칸의 왼쪽 위. 왼쪽은 공책 스프링을 피해 띄운다.</summary>
+            public static readonly Vector2Int SlotOrigin = new Vector2Int(20, 34);
+
+            /// <summary><paramref name="index"/> 번째 칸의 자리. 4개마다 다음 줄로 내려간다.</summary>
+            public static RectInt SlotAt(int index) =>
+                new RectInt(SlotOrigin.x + index % SlotCols * SlotStepX,
+                            SlotOrigin.y + index / SlotCols * SlotStepY, SlotW, SlotH);
+
+            /// <summary>알 그림 한 변. 칸보다 작아야 아래의 남은 시간이 안 눌린다.</summary>
+            public const int SlotEggArt = 18;
 
             /// <summary>
             /// 「부화시킬 알이 없습니다」. 목업은 부화기 패널에 두었지만, 알을 하나도
@@ -473,6 +496,9 @@ namespace SnailPet.Ui
             /// </summary>
             public static readonly RectInt Empty = Max.Empty;
             public static readonly RectInt Buy   = new RectInt(137, 189, 25, 22);
+
+            /// <summary>칸 늘리기 버튼. 상점 버튼 왼쪽에 나란히 둔다.</summary>
+            public static readonly RectInt PlusSlot = new RectInt(108, 189, 25, 22);
         }
 
         /// <summary>

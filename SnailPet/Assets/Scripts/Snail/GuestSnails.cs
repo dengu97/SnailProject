@@ -24,6 +24,12 @@ namespace SnailPet.Snail
             public string Name;
             public string Look;          // 받은 글자. 이게 바뀌면 다시 세운다
 
+            /// <summary>달팽이 이름. 머리 위 이름표에 그대로 나간다(사람 이름이 아니다).</summary>
+            public string SnailName;
+
+            /// <summary>머리 위 이름표. 손님이 나가면 같이 사라진다.</summary>
+            public SnailNameTag Tag;
+
             /// <summary>세워 둔 모습. 교배 짝을 고를 때 이걸 그대로 쓴다.</summary>
             public SnailAppearance Appearance;
             public Transform Root;
@@ -91,10 +97,14 @@ namespace SnailPet.Snail
         /// <summary>파츠에 딸린 이펙트를 붙일 곳. 내 달팽이와 같은 것을 쓴다.</summary>
         private readonly SparkField _sparks;
 
-        public GuestField(Transform parent, SparkField sparks = null)
+        /// <summary>이름표에 쓸 글꼴. UI 가 쓰는 것과 같은 것을 받는다.</summary>
+        private readonly Font _font;
+
+        public GuestField(Transform parent, SparkField sparks = null, Font font = null)
         {
             _parent = parent;
             _sparks = sparks;
+            _font = font;
         }
 
         public IEnumerable<Guest> Items => _guests.Values;
@@ -140,7 +150,7 @@ namespace SnailPet.Snail
         {
             // 받은 것은 「한 장」이라 머리말(이름·등급·레벨)이 붙어 있다. 외형만 떼어 읽으면
             // 첫 파츠가 머리말에 묻혀 사라진다 — 껍질 없는 달팽이가 걸어다니게 된다.
-            var (_, _, level, appearance) = SnailShare.ReadCard(card);
+            var (snailName, _, level, appearance) = SnailShare.ReadCard(card);
             if (appearance == null) return null;
 
             var composed = SnailComposer.Build(appearance, "Guest_" + name);
@@ -165,6 +175,11 @@ namespace SnailPet.Snail
             {
                 Effects = effects,
                 Name = name,
+                SnailName = snailName,
+
+                // 이름표는 루트 밖에 세운다. 자리는 아래 Tick 뒤에 부르는 쪽이 맞춘다.
+                Tag = new SnailNameTag(_parent, _font),
+
                 Look = card,
                 Appearance = appearance,
                 Composed = composed,
@@ -456,8 +471,9 @@ namespace SnailPet.Snail
         {
             if (g == null) return;
 
-            // 이펙트는 루트의 자식이 아니라 따로 서 있다. 안 치우면 손님이 나가도 남는다.
+            // 이펙트와 이름표는 루트의 자식이 아니라 따로 서 있다. 안 치우면 손님이 나가도 남는다.
             SparkField.Detach(g.Effects);
+            g.Tag?.Dispose();
 
             if (g.Root != null) Object.Destroy(g.Root.gameObject);
         }

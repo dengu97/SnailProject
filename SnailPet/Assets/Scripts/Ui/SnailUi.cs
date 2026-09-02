@@ -48,6 +48,10 @@ namespace SnailPet.Ui
 
             public const string AskBuy  = "[구매문구]";   // "{0}을(를) 구매할까요?"
             public const string AskSell = "[판매문구]";
+
+            /// <summary>칸 늘리기 팝업의 제목. 값과 수량은 팝업이 알아서 그린다.</summary>
+            public const string AskEggSlot   = "[부화슬롯확장]";
+            public const string AskSnailSlot = "[달팽이슬롯확장]";
             public const string Yes       = "[동의]";
             public const string AskRename = "[이름변경]";   // "이름을 변경합니다."
             public const string DoRename  = "[변경]";
@@ -64,6 +68,9 @@ namespace SnailPet.Ui
             public const string SnailSetting = "[달팽이설정]";
             public const string Setting      = "[설정]";
             public const string Korean       = "[한글]";
+
+            /// <summary>영어 줄. 시트에 이 행이 없으면 화면에 토큰이 그대로 나온다.</summary>
+            public const string English      = "[영어]";
             public const string Update       = "[업데이트]";
             public const string UiScale      = "[UI크기]";      // "UI크기(x{0})"
             public const string AlwaysMax    = "[UI최대화]";
@@ -106,6 +113,12 @@ namespace SnailPet.Ui
 
             /// <summary>알을 부화기에 넣었을 때.</summary>
             public const string EggHatching = "[안내_알부화시작]";
+
+            /// <summary>
+            /// 달팽이 칸이 꽉 차서 부화한 개체를 못 받을 때.
+            /// <b>시트에 아직 이 행이 없으면 화면에 토큰이 그대로 나온다</b> — 넣으면 저절로 바뀐다.
+            /// </summary>
+            public const string SnailSlotFull = "[안내_달팽이칸가득]";
 
             // ── 짝꿍 슬롯 ──
             public const string MateTitle = "[짝꿍슬롯]";
@@ -190,6 +203,12 @@ namespace SnailPet.Ui
         private const int CanvasSortOrder = 100;
 
         private Font _font;
+
+        /// <summary>
+        /// UI 가 쓰는 글꼴. 화면에 직접 그리는 글자(손님 이름표)도 같은 것을 써야 한다 —
+        /// 여기서 한 번 불러 둔 것을 나눠 쓴다.
+        /// </summary>
+        public Font Font => _font ??= LoadKoreanFont();
         [SerializeField] private RectTransform _widget;      // 패널 + 밖으로 걸치는 버튼까지 감싸는 상자
         [SerializeField] private RectTransform _listRoot, _detailRoot;
         [SerializeField] private RectTransform _panel;
@@ -223,10 +242,18 @@ namespace SnailPet.Ui
         [SerializeField] private Button _partsBookBtn;
         [SerializeField] private Button _renameBtn, _settingsBtn, _closeBtn, _maximizeBtn;
         [SerializeField] private Button _feedBtn, _foodBuyBtn, _foodSellBtn, _eggShopBtn;
+
+        /// <summary>부화기 칸 늘리기. 더 살 것이 없으면 감춘다.</summary>
+        [SerializeField] private Button _eggPlusSlotBtn;
         [SerializeField] private Button _pickBuyBtn, _shopBuyBtn, _backBtn;
         [SerializeField] private ListRow[] _rows;
         [SerializeField] private RectTransform _rowGridRoot, _rowContent;
         [SerializeField] private Text _listTitle;
+
+        /// <summary>달팽이 칸 표시(「3/15」)와 그 바탕. 눌러서 칸을 늘린다.</summary>
+        [SerializeField] private Text _slotCount;
+        [SerializeField] private Image _slotCountBg;
+        [SerializeField] private Button _slotCountBtn;
         private int _tab;
 
         /// <summary>편집용 프리팹의 위치. 메뉴 「SnailPet → 5. UI 프리팹 생성」 이 여기에 만든다.</summary>
@@ -289,6 +316,9 @@ namespace SnailPet.Ui
                 var img = s.GetComponent<Image>();
                 if (img != null && img.sprite == null) img.sprite = UiSprites.Of(s.Shape);
             }
+
+            // 꼬리표가 없는 글자에 먼저 꼬리표를 달아 준다. 아래 훑기가 그것까지 같이 읽는다.
+            AttachMissingTextRefs();
 
             // 구울 때의 글자가 프리팹에 굳어 있다. 시트가 원본이므로 항상 다시 읽는다.
             foreach (var t in GetComponentsInChildren<UiTextRef>(true))
@@ -396,14 +426,26 @@ namespace SnailPet.Ui
             // 떠 있는 팝업의 판도 납작한 그림으로 바뀌었다. 프리팹에는 예전 것이 굳어 있다.
             ApplyPopupPanelArt();
 
+
+            // 상점 카테고리 줄도 프리팹에는 넷 다 같은 칸 그림으로 구워져 있다.
+            ApplyCategorySlotArt();
+
+            // 부화 칸도 프리팹에는 세 칸만 구워져 있다. 살 수 있는 최대치까지 채워 둔다 —
+            // 자리와 크기는 아래 PlaceHatchSlot 이 새 표 값으로 다시 잡는다.
+            EnsureHatchSlots();
+
+            // 칸 늘리기 버튼과 달팽이 칸 표시도 나중에 더한 것이라 프리팹에 없다.
+            BuildEggPlusSlot();
+            if (_listRoot != null) BuildSlotCount(_listRoot.Find("Panel") as RectTransform);
+
             // 빈 부화 칸의 + 는 프리팹에 예전 크기로 굳어 있다. 글꼴이 바뀌며 커 보였다.
             for (int i = 0; i < Count(_hatchSlots); i++)
                 if (_hatchSlots[i]?.Plus != null) _hatchSlots[i].Plus.fontSize = HatchPlusSize;
 
             // 부화 칸의 자리·크기도 프리팹에는 예전 값으로 굳어 있다. 스프링을 피해
             // 조금 줄이고 안쪽으로 옮겼으므로 여기서 다시 놓는다 (자식까지 함께 움직인다).
-            for (int i = 0; i < Count(_hatchSlots) && i < UiTheme.Egg.Slots.Length; i++)
-                PlaceHatchSlot(_hatchSlots[i], UiTheme.Egg.Slots[i]);
+            for (int i = 0; i < Count(_hatchSlots); i++)
+                PlaceHatchSlot(_hatchSlots[i], UiTheme.Egg.SlotAt(i));
 
             // 즐겨찾기 별도 스프링에 물려 있었다. 같은 이유로 다시 놓는다.
             if (_favoriteBtn != null) Place((RectTransform)_favoriteBtn.transform, Fd.Favorite);
@@ -943,6 +985,10 @@ namespace SnailPet.Ui
             });
             Hook(_eggShopBtn,  () => { OpenShop(); GoShop?.Invoke(); });
 
+            // 칸 늘리기. 값을 세고 팝업을 띄우는 것은 받는 쪽이 한다.
+            Hook(_eggPlusSlotBtn, () => SlotPlusPressed?.Invoke(SnailPet.Data.SlotType.Egg));
+            Hook(_slotCountBtn,   () => SlotPlusPressed?.Invoke(SnailPet.Data.SlotType.Snail));
+
             Hook(_pickBuyBtn, () => { if (_pickId > 0) BuyProduct?.Invoke(_pickId); });
             Hook(_shopBuyBtn, () =>
             {
@@ -971,6 +1017,11 @@ namespace SnailPet.Ui
             Hook(_coinBtn,      () => { _options.CoinBubble   = !_options.CoinBubble;   ChangeOptions(); });
             Hook(_alwaysMaxBtn, () => { _options.AlwaysMax    = !_options.AlwaysMax;    ChangeOptions(); });
             Hook(_scaleBtn,     () => { _options.ScaleStep    = (_options.ScaleStep + 1) % 3; ChangeOptions(); });
+            Hook(_langBtn,      () =>
+            {
+                _options.Language = _options.IsEnglish ? SnailPet.Data.Loc.Korean : SnailPet.Data.Loc.English;
+                ChangeOptions();
+            });
             Hook(_updateBtn,    () => UpdatePressed?.Invoke());
             Hook(_quitBtn,      () => QuitPressed?.Invoke());
             Hook(_renameOk, () =>
@@ -990,8 +1041,13 @@ namespace SnailPet.Ui
             Hook(_popupYes,   () =>
             {
                 int id = _popupItemId, qty = _popupQty;
+                var kind = _slotKind;
+                bool slot = _slotTotal != null;      // 같은 판을 둘이 나눠 쓴다
+
                 HidePopup();
-                PopupConfirmed?.Invoke(id, qty);
+
+                if (slot) SlotBuyConfirmed?.Invoke(kind, qty);
+                else      PopupConfirmed?.Invoke(id, qty);
             });
 
             // 옷장
@@ -1501,7 +1557,24 @@ namespace SnailPet.Ui
         private void ShowMainPanel(bool on)
         {
             if (_panel != null)    _panel.gameObject.SetActive(on);
-            if (_mateSlot != null) _mateSlot.gameObject.SetActive(on);
+            if (_mateSlot != null) _mateSlot.gameObject.SetActive(on && _mateSlotAllowed);
+        }
+
+        /// <summary>짝꿍 칸을 띄워도 되는 때인가. 밖에서 <see cref="ShowMateSlot"/> 로 정한다.</summary>
+        private bool _mateSlotAllowed = true;
+
+        /// <summary>
+        /// 짝꿍 칸을 띄울 때인지 알린다.
+        ///
+        /// 목록에서 다른 달팽이를 고르면 오른쪽은 그 개체의 정보인데, 짝꿍은 <b>화면에 나와 있는</b>
+        /// 개체의 짝이다. 같이 놔두면 누구의 짝인지 어긋나 보인다.
+        /// 판이 닫혀 있을 때는 켜지 않는다 — 이 칸은 판 바깥에 걸쳐 있어 저절로 따라 사라지지 않는다.
+        /// </summary>
+        public void ShowMateSlot(bool on)
+        {
+            _mateSlotAllowed = on;
+            if (_mateSlot != null)
+                _mateSlot.gameObject.SetActive(on && _panel != null && _panel.gameObject.activeSelf);
         }
 
         /// <summary>짝꿍 칸을 그린다. 얼굴이 없으면 빈 칸(+)이다.</summary>
@@ -1707,6 +1780,9 @@ namespace SnailPet.Ui
         /// <summary>알을 부화기에 넣었다고 알린다.</summary>
         public void NoticeEggHatching() => ShowNotice(SnailPet.Data.Loc.Text(Keys.EggHatching));
 
+        /// <summary>달팽이 칸이 꽉 차서 부화한 개체를 못 받는다고 알린다.</summary>
+        public void NoticeSnailSlotFull() => ShowNotice(SnailPet.Data.Loc.Text(Keys.SnailSlotFull));
+
         /// <summary>
         /// 달팽이를 팔았다고 알린다. 이름을 안 지은 개체는 목록에서와 같이 「이름 없음」으로 부른다 —
         /// 문구에 빈칸이 생기면 무엇을 판 것인지 알 수 없다.
@@ -1810,6 +1886,7 @@ namespace SnailPet.Ui
             var panel = Panel(_listRoot, new RectInt(0, -At.Coin.y, UiTheme.ListPanelW, UiTheme.PanelH),
                               UiSprites.Shape.Panel2);
             _listTitle = Label(panel, new RectInt(0, 8, UiTheme.PanelW, 16), "", 12, UiTheme.Ink);
+            BuildSlotCount(panel);
 
             BuildFoodGrid(panel);
 
@@ -2385,10 +2462,10 @@ namespace SnailPet.Ui
         public event Action GoShop;
 
         /// <summary>
-        /// 부화기. 칸 3개와 각 칸의 남은 시간.
+        /// 부화기. 칸과 각 칸의 남은 시간.
         ///
-        /// 칸 수는 나중에 해금으로 늘어난다(UnlockData). 지금은 3개만 만들고,
-        /// 늘릴 때는 <see cref="UiTheme.Egg.Slots"/> 에 자리만 더 적으면 된다.
+        /// 칸은 <b>살 수 있는 최대치만큼 미리 만들어 두고</b>, 늘린 만큼만 켠다
+        /// (<see cref="SetIncubator"/>). 자리는 <see cref="UiTheme.Egg.SlotAt"/> 가 4열로 접는다.
         /// </summary>
         private void BuildEggPanel()
         {
@@ -2397,7 +2474,7 @@ namespace SnailPet.Ui
 
             LocLabel(_eggPanel, UiTheme.Egg.Title, Keys.Incubator, 12, UiTheme.Ink);
 
-            _hatchSlots = new HatchSlot[UiTheme.Egg.Slots.Length];
+            _hatchSlots = new HatchSlot[SnailPet.Snail.PlayerState.MaxIncubatorSlots];
             for (int i = 0; i < _hatchSlots.Length; i++)
                 _hatchSlots[i] = BuildHatchSlot(i);
 
@@ -2406,6 +2483,9 @@ namespace SnailPet.Ui
             _eggEmpty = LocLabel(_eggGridRoot, InGrid(UiTheme.Egg.Empty), Keys.NoEgg, 10, UiTheme.Slot);
 
             _eggShopBtn = IconButton(_eggPanel, UiTheme.Egg.Buy, "btn_shop", "BuyEgg");
+
+            // 칸 늘리기. 더 살 것이 없으면 받는 쪽이 감춘다(SetEggSlots).
+            _eggPlusSlotBtn = IconButton(_eggPanel, UiTheme.Egg.PlusSlot, "btn_plusslot", "PlusEggSlot");
         }
 
         /// <summary>
@@ -2417,9 +2497,31 @@ namespace SnailPet.Ui
         /// </summary>
         private const int HatchPlusSize = 22;
 
+
+        /// <summary>
+        /// 부화 칸이 살 수 있는 최대치보다 적으면 모자란 만큼 뒤에 붙인다.
+        ///
+        /// 프리팹에는 세 칸만 구워져 있는데 시트는 열 번까지 늘리게 해 준다. 파츠 목록과
+        /// 같은 이유로, 다시 굽지 않고 살아날 때 모자란 것만 짓는다.
+        /// </summary>
+        private void EnsureHatchSlots()
+        {
+            if (_eggPanel == null) return;
+
+            int want = SnailPet.Snail.PlayerState.MaxIncubatorSlots;
+            int have = Count(_hatchSlots);
+            if (have >= want) return;
+
+            var grown = new HatchSlot[want];
+            for (int i = 0; i < have; i++) grown[i] = _hatchSlots[i];
+
+            _hatchSlots = grown;      // BuildHatchSlot 이 이 배열을 쓰지는 않지만 차례를 맞춘다
+            for (int i = have; i < want; i++) _hatchSlots[i] = BuildHatchSlot(i);
+        }
+
         private HatchSlot BuildHatchSlot(int index)
         {
-            var at = UiTheme.Egg.Slots[index];
+            var at = UiTheme.Egg.SlotAt(index);
             var root = NewRect("Hatch" + index, _eggPanel);
 
             var bg = Backdrop(root.gameObject, UiSprites.Shape.Button, UiTheme.Slot);
@@ -2442,9 +2544,6 @@ namespace SnailPet.Ui
             return slot;
         }
 
-        /// <summary>알 그림 한 변. 칸보다 작아야 아래의 남은 시간이 눌리지 않는다.</summary>
-        private const int HatchEggArt = 23;
-
         /// <summary>
         /// 부화 칸 하나를 놓는다. 자식들의 자리가 칸 크기에서 나오므로 함께 놓는다 —
         /// 짓는 길과 <see cref="Bind"/> 두 곳에서 지나므로 한 곳에 모아 둔다.
@@ -2461,10 +2560,11 @@ namespace SnailPet.Ui
 
             if (slot.Egg != null)
                 PlaceCentered((RectTransform)slot.Egg.transform,
-                              new RectInt((at.width - HatchEggArt) / 2, 7, HatchEggArt, HatchEggArt));
+                              new RectInt((at.width - UiTheme.Egg.SlotEggArt) / 2, 4,
+                                          UiTheme.Egg.SlotEggArt, UiTheme.Egg.SlotEggArt));
 
             if (slot.Timer != null)
-                Place((RectTransform)slot.Timer.transform, new RectInt(0, at.height - 16, at.width, 14));
+                Place((RectTransform)slot.Timer.transform, new RectInt(0, at.height - 13, at.width, 12));
         }
 
         /// <summary>보유 알. 같은 등급이어도 낱개로 나열한다 — 뭐가 나올지 모르니 하나씩 봐야 한다.</summary>
@@ -2504,11 +2604,18 @@ namespace SnailPet.Ui
         /// 부화기 상태를 그린다. 칸마다 (알 Id, 남은 초). 알 Id 가 0 이면 빈 칸,
         /// 남은 초가 0 이하면 부화 완료다.
         /// </summary>
-        public void SetIncubator((int eggId, double remain)[] slots)
+        /// <param name="open">늘려서 지금 쓸 수 있는 칸 수. 아직 안 산 칸은 아예 감춘다.</param>
+        public void SetIncubator((int eggId, double remain)[] slots, int open)
         {
             for (int i = 0; i < _hatchSlots.Length; i++)
             {
                 var s = _hatchSlots[i];
+                if (s?.Root == null) continue;
+
+                // 안 산 칸을 빈 칸으로 두면 눌러도 안 되는 자리가 남는다. 통째로 감춘다.
+                s.Root.gameObject.SetActive(i < open);
+                if (i >= open) continue;
+
                 bool filled = slots != null && i < slots.Length && slots[i].eggId > 0;
 
                 s.Plus.enabled = !filled;
@@ -2775,6 +2882,9 @@ namespace SnailPet.Ui
 
             string[] titles = { Keys.SnailList, Keys.FoodList, Keys.EggList, Keys.Shop, Keys.Multiplayer };
             _listTitle.text = SnailPet.Data.Loc.Text(titles[_tab]);
+
+            RefreshSlotCount();
+
             RefreshClose();      // 설정에서 나왔으면 X 가 다시 접는 버튼이 된다
 
             if (!moved) return;
@@ -2849,7 +2959,7 @@ namespace SnailPet.Ui
                 var root = NewRect("Category" + i, _shopCatRoot);
                 Place(root, at);
 
-                var bg = Backdrop(root.gameObject, UiSprites.Shape.Slot, UiTheme.Slot);
+                var bg = Backdrop(root.gameObject, CategoryShape(i), UiTheme.Slot);
 
                 var name = LocLabel(root, UiTheme.Shop.CategoryName, Keys.CategoryOf(cats[i]), 11, UiTheme.Ink);
                 name.alignment = TextAnchor.MiddleLeft;
@@ -2862,6 +2972,40 @@ namespace SnailPet.Ui
 
             BuildGrid(panel, "ShopGrid", out _shopGridRoot, out _shopGridContent, out _shopSlots);
             BuildShopFilters(panel);
+        }
+
+        /// <summary>
+        /// 카테고리 줄 <paramref name="index"/> 번의 칸 그림. 위에서부터 slot_01 … slot_04 다.
+        /// 넷을 넘는 줄은 마지막 그림을 되쓴다 — 아트가 넷뿐이라 없는 것을 찾으면 빈 칸이 된다.
+        /// </summary>
+        private static UiSprites.Shape CategoryShape(int index) =>
+            UiSprites.Shape.Slot01 + Mathf.Clamp(index, 0, 3);
+
+        /// <summary>
+        /// 카테고리 줄의 칸 그림을 다시 지정한다.
+        ///
+        /// 프리팹에는 넷 다 <see cref="UiSprites.Shape.Slot"/> 으로 구워져 있다. 다시 굽지 않고
+        /// 살아날 때 갈아 끼운다 — <see cref="UiShapeRef"/> 도 같이 고쳐야 다음에 구울 때 남는다.
+        /// </summary>
+        private void ApplyCategorySlotArt()
+        {
+            for (int i = 0; i < Count(_shopCats); i++)
+            {
+                var root = _shopCats[i]?.Root;
+                if (root == null) continue;
+
+                var shape = CategoryShape(i);
+                var img = root.GetComponent<Image>();
+                if (img != null)
+                {
+                    img.sprite = UiSprites.Of(shape);
+                    // 아트에는 색이 칠해져 있다. 표 색으로 물들이면 두 색이 곱해져 탁해진다.
+                    if (UiSprites.IsArt(shape)) img.color = Color.white;
+                }
+
+                var mark = root.GetComponent<UiShapeRef>();
+                if (mark != null) mark.Shape = shape;
+            }
         }
 
         /// <summary>오늘의 추천 패널과 상품 상세 패널. 둘 중 하나만 떠 있다.</summary>
@@ -3516,6 +3660,8 @@ namespace SnailPet.Ui
 
         private void ApplyWardrobe()
         {
+            RefreshSlotCount();
+
             if (_wardrobeRoot == null) return;
 
             _wardrobeRoot.gameObject.SetActive(_inWardrobe);
@@ -4107,6 +4253,8 @@ namespace SnailPet.Ui
 
         private void ApplyGene()
         {
+            RefreshSlotCount();
+
             if (_geneRoot == null) return;
 
             _geneRoot.gameObject.SetActive(_inGene);
@@ -4409,6 +4557,8 @@ namespace SnailPet.Ui
 
         private void ApplyGuide()
         {
+            RefreshSlotCount();
+
             if (_guideRoot == null) return;
 
             _guideRoot.gameObject.SetActive(_inGuide);
@@ -4987,6 +5137,8 @@ namespace SnailPet.Ui
 
         private void ApplyParts()
         {
+            RefreshSlotCount();
+
             if (_partsRoot == null) return;
 
             if (!_inParts)
@@ -5164,7 +5316,7 @@ namespace SnailPet.Ui
         [SerializeField] private Button _noEggsBtn, _hungryBtn, _careBtn, _coinBtn;
         [SerializeField] private Button _langBtn, _updateBtn, _scaleBtn, _alwaysMaxBtn, _quitBtn;
         [SerializeField] private Text _noEggsMark, _hungryMark, _careMark, _coinMark, _alwaysMaxMark;
-        [SerializeField] private Text _scaleLabel;
+        [SerializeField] private Text _scaleLabel, _langLabel;
 
         private bool _inSettings;
         public bool InSettings => _inSettings;
@@ -5205,9 +5357,8 @@ namespace SnailPet.Ui
 
             LocLabel(_settingsPanel, new RectInt(0, 4, UiTheme.PanelW, 21), Keys.Setting, 12, UiTheme.Ink);
 
-            // 언어는 지금 한글뿐이라 눌러도 바뀌지 않는다. 목업의 「나중에 추가」가 이것이다.
             // 오른쪽 행은 스프링을 피해 짧다 — 너비를 빼먹으면 체크·▾ 가 행 밖으로 나간다.
-            _langBtn = SettingRow(_settingsPanel, Set.RightX, Set.RightRows[0], Keys.Korean, out _, "Language",
+            _langBtn = SettingRow(_settingsPanel, Set.RightX, Set.RightRows[0], null, out _langLabel, "Language",
                                   w: Set.RightW);
             Chevron(_settingsPanel, Set.RightX, Set.RightRows[0], Set.RightW);
 
@@ -5299,6 +5450,8 @@ namespace SnailPet.Ui
 
         private void ApplySettings()
         {
+            RefreshSlotCount();
+
             if (_settingsRoot == null) return;
 
             _settingsRoot.gameObject.SetActive(_inSettings);
@@ -5327,6 +5480,10 @@ namespace SnailPet.Ui
 
             if (_scaleLabel != null)
                 _scaleLabel.text = SnailPet.Data.Loc.Format(Keys.UiScale, _options.Scale.ToString("0.#"));
+
+            // 언어 줄은 <b>지금 쓰는 언어</b>를 보여 준다. 눌러서 갈아 끼운다.
+            if (_langLabel != null)
+                _langLabel.text = SnailPet.Data.Loc.Text(_options.IsEnglish ? Keys.English : Keys.Korean);
         }
 
         /// <summary>
@@ -5336,15 +5493,74 @@ namespace SnailPet.Ui
         public void SetOptions(Options options)
         {
             _options = options;
+            ApplyLanguage();
             PaintSettings();
             ApplyUiOptions();
         }
 
         private void ChangeOptions()
         {
+            ApplyLanguage();
             PaintSettings();
             ApplyUiOptions();
             OptionsChanged?.Invoke(_options);
+        }
+
+        /// <summary>
+        /// 설정의 언어를 걸고, <b>토큰으로 지은 글자를 전부 다시 읽는다</b>.
+        ///
+        /// 화면 곳곳의 글자는 지을 때 한 번 채워 넣은 것이라, 언어만 바꾸면 옛 글자가 그대로
+        /// 남는다. <see cref="UiTextRef"/> 가 어느 토큰으로 지었는지 들고 있으므로
+        /// (<see cref="Bind"/> 가 프리팹의 글자를 되살릴 때 쓰는 그것이다) 한 번에 훑는다.
+        ///
+        /// 값이 섞인 글자(배율 x1.5, 「n/n」 같은 것)는 여기서 안 건드린다 — 그린 쪽이
+        /// 다시 칠한다(PaintSettings · RefreshSnail …).
+        /// </summary>
+        /// <summary>
+        /// 꼬리표(<see cref="UiTextRef"/>)가 없는 글자에 꼬리표를 달아 준다.
+        ///
+        /// 프리팹에 구워진 글자에는 어느 토큰으로 지었는지가 안 남는다. 그 라벨이 코드에 생긴
+        /// 뒤로 프리팹을 다시 안 구웠으면 꼬리표 없이 한글만 박혀 있고 — 한글로는 멀쩡해
+        /// 보이지만 <b>언어를 바꿀 때 그 자리만 옛 글자로 남는다</b>(2026-09-02).
+        ///
+        /// 그래서 구울 때의 한글로 토큰을 되찾아 붙인다. 같은 문구를 쓰는 토큰이 둘 이상이면
+        /// 어느 쪽인지 알 수 없으므로 건드리지 않는다 — 그건 프리팹을 다시 구워야 풀린다.
+        /// (다시 구우면 <c>LocLabel</c> 이 제대로 붙여 주므로 이 보정은 할 일이 없어진다.)
+        /// </summary>
+        private void AttachMissingTextRefs()
+        {
+            int added = 0, unknown = 0;
+
+            foreach (var t in GetComponentsInChildren<Text>(true))
+            {
+                if (t.GetComponent<UiTextRef>() != null) continue;
+                if (string.IsNullOrEmpty(t.text)) continue;
+
+                string token = SnailPet.Data.Loc.TokenOfKorean(t.text);
+                if (string.IsNullOrEmpty(token)) { unknown++; continue; }
+
+                t.gameObject.AddComponent<UiTextRef>().Token = token;
+                added++;
+            }
+
+            if (added > 0)
+                Debug.Log($"[SnailPet] 프리팹의 글자 {added}개에 언어 꼬리표를 달았습니다 " +
+                          $"(못 찾은 것 {unknown}개 — 값이 들어가는 자리이거나 겹치는 문구입니다).");
+        }
+
+        private void ApplyLanguage()
+        {
+            string want = _options.IsEnglish ? SnailPet.Data.Loc.English : SnailPet.Data.Loc.Korean;
+            if (SnailPet.Data.Loc.Language == want) return;
+
+            SnailPet.Data.Loc.Language = want;
+
+            foreach (var t in GetComponentsInChildren<UiTextRef>(true))
+            {
+                var text = t.GetComponent<Text>();
+                if (text != null && !string.IsNullOrEmpty(t.Token))
+                    text.text = SnailPet.Data.Loc.Text(t.Token);
+            }
         }
 
         /// <summary>
@@ -6701,13 +6917,14 @@ namespace SnailPet.Ui
 
             _noticeText.text = message ?? "";
 
-            // 쓸 수 있는 폭은 상태에 따라 다르다 — 접었을 때는 띠가 오른쪽 판에 붙어 있어
-            // 좁게 잡아야 화면 밖으로 안 나간다.
-            float max = Wide ? UiTheme.Notice.MaxWidth : UiTheme.Notice.MaxWidthFolded;
+            // 쓸 수 있는 폭은 접었든 폈든 같다. 접었을 때 넓어지는 쪽은 ApplyNotice 가
+            // 오른쪽 끝을 붙박고 왼쪽으로 늘려 화면 밖으로 안 나가게 한다.
+            float max = UiTheme.Notice.MaxWidth;
 
             // preferredWidth 는 레이아웃을 기다리지 않고 그 자리에서 재 준다.
             // 한 줄로 폈을 때의 너비이므로, 띠 안쪽 폭으로 나누면 몇 줄이 될지가 나온다.
-            float one = _noticeText.preferredWidth;
+            // 픽셀로 올려 잡는다 — 깎이면 한 줄짜리가 접힌다.
+            float one = Mathf.Ceil(_noticeText.preferredWidth) + UiTheme.Notice.Slack;
             float inner = max - UiTheme.Notice.PadX * 2;
 
             int lines = Mathf.Clamp(Mathf.CeilToInt(one / Mathf.Max(1f, inner)),
@@ -6719,7 +6936,7 @@ namespace SnailPet.Ui
                                               UiTheme.Notice.MinWidth, max);
 
             _notice.sizeDelta = new Vector2(
-                Mathf.Round(w),
+                Mathf.Ceil(w),
                 UiTheme.Notice.Height + (lines - 1) * UiTheme.Notice.LineStep);
 
             _notice.gameObject.SetActive(true);
@@ -6732,10 +6949,16 @@ namespace SnailPet.Ui
         {
             if (_notice == null) return;
 
-            // 펼쳤을 때는 두 판 사이(노트 제본)로, 접거나 최소화하면 상세 판 한가운데로.
-            // 매 프레임 두는 이유: 띠가 떠 있는 동안 최대화·접기를 눌러도 자리는 따라가야 한다
-            // (폭은 띄울 때 정해지므로 그대로 남는다 — 잠깐 뜨는 것이라 거기까지는 안 맞춘다).
-            _notice.anchoredPosition = Wide ? UiTheme.Notice.OffsetMax : UiTheme.Notice.Offset;
+            // 펼쳤을 때는 두 판 사이(노트 제본)에 가운데를 둔다.
+            //
+            // 접었을 때는 <b>오른쪽 끝을 붙박고 왼쪽으로</b> 늘린다. 가운데를 잡으면 넓어질수록
+            // 오른쪽이 화면 밖으로 나가서, 예전에는 그것 때문에 폭을 186 으로 좁히고 짧은 문구까지
+            // 두 줄로 접었다. 끝을 붙박으면 좁힐 이유가 없다.
+            //
+            // 매 프레임 두는 이유: 띠가 떠 있는 동안 최대화·접기를 눌러도 자리는 따라가야 한다.
+            _notice.anchoredPosition = Wide
+                ? UiTheme.Notice.OffsetMax
+                : new Vector2(-(_notice.sizeDelta.x * 0.5f + UiTheme.Notice.FoldedRightGap), 0f);
 
             // 팝업과 같은 곡선으로 스르륵 커진다
             float s = Mathf.LerpUnclamped(0.88f, 1f, EaseOutBack(Mathf.Clamp01(_noticeTime / NoticeGrow)));
@@ -6891,6 +7114,8 @@ namespace SnailPet.Ui
         {
             _popupItemId = itemId;
             _popupSelling = selling;
+            _slotTotal = null;      // 칸 늘리기가 아니라 보통 매매다
+
             _popupUnit = System.Math.Abs(unitCost);
             _popupMax = Mathf.Max(1, max);
             _popupQty = 1;
@@ -6935,8 +7160,11 @@ namespace SnailPet.Ui
         {
             _popupCount.text = _popupQty.ToString();
 
-            // 합계는 반올림이 아니라 버림. 판매값이 2.5 처럼 소수라 두 개를 팔면 5 가 되어야 한다.
-            long shown = (long)System.Math.Floor(_popupUnit * _popupQty);
+            // 칸 늘리기는 값이 칸마다 달라 합계를 받는 쪽이 센다.
+            // 보통 매매는 반올림이 아니라 버림 — 판매값이 2.5 처럼 소수라 두 개를 팔면 5 가 되어야 한다.
+            long shown = _slotTotal != null
+                       ? _slotTotal(_popupQty)
+                       : (long)System.Math.Floor(_popupUnit * _popupQty);
 
             // 마이너스는 코인이 나가는 쪽, 즉 구매에 붙는다 (목업 3쪽의 -5,000).
             _popupCost.text = (_popupSelling ? "" : "-") + shown.ToString("N0");
@@ -6945,6 +7173,102 @@ namespace SnailPet.Ui
             if (_popupMinus != null) _popupMinus.interactable = _popupQty > 1;
             if (_popupPlus != null)  _popupPlus.interactable  = _popupQty < _popupMax;
         }
+
+
+        // ── 칸 늘리기 ──
+        //
+        // 달팽이 칸과 부화기 칸을 코인으로 늘린다. 값은 칸마다 달라(500·600·700…) 「한 개당
+        // 값 x 수량」으로 못 세므로, 값을 세는 일은 받는 쪽(게임)이 하고 여기는 물어보기만 한다.
+
+        /// <summary>칸을 늘리겠다고 눌렀다. 어느 쪽 칸인지가 나간다.</summary>
+        public event Action<SnailPet.Data.SlotType> SlotPlusPressed;
+
+        /// <summary>칸 늘리기를 확정했다. (종류, 몇 칸)</summary>
+        public event Action<SnailPet.Data.SlotType, int> SlotBuyConfirmed;
+
+        /// <summary>
+        /// 달팽이 칸 표시(「3/15」). 제목 줄 오른쪽 끝에 앉고 눌러서 늘린다.
+        /// 프리팹에는 나중에 더한 것이라 없다 — 짓는 길과 살아나는 길 양쪽에서 지난다.
+        /// </summary>
+        private void BuildSlotCount(RectTransform panel)
+        {
+            if (panel == null || _slotCount != null) return;
+
+            _slotCountBg = Box(panel, Max.SlotCount, UiTheme.RowSlot, UiSprites.Shape.SlotCount, "SlotCountBox");
+            _slotCountBg.raycastTarget = true;
+
+            // 바탕이 어두워 먹색 글자는 안 읽힌다. 개수 뱃지와 같은 밝은 색을 쓴다.
+            _slotCount = Label(panel, Max.SlotCount, "", 8, UiTheme.OnBadge);
+
+            _slotCountBtn = _slotCountBg.gameObject.AddComponent<Button>();
+            _slotCountBtn.targetGraphic = _slotCountBg;
+        }
+
+        /// <summary>부화기 칸 늘리기 버튼. 역시 프리팹에는 없다.</summary>
+        private void BuildEggPlusSlot()
+        {
+            if (_eggPanel == null || _eggPlusSlotBtn != null) return;
+
+            _eggPlusSlotBtn = IconButton(_eggPanel, UiTheme.Egg.PlusSlot, "btn_plusslot", "PlusEggSlot");
+        }
+
+        /// <summary>
+        /// 달팽이 칸 표시를 채운다. <paramref name="max"/> 까지 다 늘렸으면 눌러도 소용없으므로 끈다.
+        /// 표시 자체는 남긴다 — 몇 마리인지는 늘 보이는 편이 낫다.
+        /// </summary>
+        public void SetSnailSlots(int have, int max, bool canBuy)
+        {
+            if (_slotCount != null) _slotCount.text = have + "/" + max;
+            if (_slotCountBtn != null) _slotCountBtn.interactable = canBuy;
+        }
+
+        /// <summary>달팽이 칸 표시를 켜고 끈다. 달팽이 목록이 아닐 때는 뜻이 없다.</summary>
+        private void ShowSlotCount(bool on)
+        {
+            if (_slotCountBg != null) _slotCountBg.gameObject.SetActive(on);
+            if (_slotCount != null) _slotCount.gameObject.SetActive(on);
+        }
+
+        /// <summary>
+        /// 달팽이 칸 표시를 지금 화면에 맞춘다.
+        ///
+        /// 이 뱃지는 왼쪽 목록 판에 얹혀 있는데, 옷장·유전정보·도감·파츠도감·설정은
+        /// <b>탭을 그대로 둔 채</b> 그 판 위에 들어선다. 그래서 탭만 보고 켜면 칸이 하나도
+        /// 없는 화면에도 「10/10」 이 남는다. 판 위에 다른 화면이 없을 때만 켠다.
+        /// </summary>
+        private void RefreshSlotCount() =>
+            ShowSlotCount(_tab == 0 && !_inWardrobe && !_inGene && !_inGuide && !_inParts && !_inSettings);
+
+        /// <summary>부화기 칸 늘리기 버튼을 켜고 끈다. 더 살 것이 없으면 감춘다.</summary>
+        public void SetEggSlotPlus(bool canBuy)
+        {
+            if (_eggPlusSlotBtn != null) _eggPlusSlotBtn.gameObject.SetActive(canBuy);
+        }
+
+        /// <summary>
+        /// 칸 늘리기 팝업. 구매 팝업과 판이 같은데 <b>값 세는 법만 다르다</b> —
+        /// 칸마다 값이 달라 「한 개당 값 x 수량」이 아니라 받은 함수로 합계를 묻는다.
+        /// </summary>
+        /// <param name="total">몇 칸을 살 때의 총액. 못 사면 음수를 준다.</param>
+        public void ShowSlotPopup(SnailPet.Data.SlotType kind, int max, Func<int, long> total)
+        {
+            _slotKind = kind;
+            _slotTotal = total;
+            _popupSelling = false;
+            _popupMax = Mathf.Max(1, max);
+            _popupQty = 1;
+
+            HidePopupGroups();
+            _buyGroup.gameObject.SetActive(true);
+            _popupTitle.text = SnailPet.Data.Loc.Text(
+                kind == SnailPet.Data.SlotType.Snail ? Keys.AskSnailSlot : Keys.AskEggSlot);
+            OpenBlocker();
+            PaintPopup();
+        }
+
+        /// <summary>지금 띄운 것이 칸 늘리기 팝업인가. 값 세는 법과 「예」가 갈린다.</summary>
+        private Func<int, long> _slotTotal;
+        private SnailPet.Data.SlotType _slotKind;
 
         // ── 예/아니오 묻기 ──
         //

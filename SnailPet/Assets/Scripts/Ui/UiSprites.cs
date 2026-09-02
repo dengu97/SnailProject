@@ -86,6 +86,17 @@ namespace SnailPet.Ui
             /// 늘려 쓰면 손그림 결이 뭉갠다.
             /// </summary>
             Panel3,
+
+            /// <summary>
+            /// 상점 카테고리 줄의 칸. 위에서부터 하나씩 다른 그림을 쓴다.
+            /// 지금은 넷 다 <see cref="Slot"/> 과 같은 그림이지만 파일이 갈라져 있어
+            /// 한 줄씩 갈아 끼울 수 있다. <b>넷이 이어져 있어야 한다</b> —
+            /// 쓰는 쪽이 <c>Slot01 + 줄번호</c> 로 고른다.
+            /// </summary>
+            Slot01,
+            Slot02,
+            Slot03,
+            Slot04,
         }
 
         /// <summary>역할별 기본 모서리 반지름. 아트가 없을 때만 쓴다.</summary>
@@ -114,6 +125,10 @@ namespace SnailPet.Ui
             Shape.SlotRound   => "slot_round",
             Shape.Selection   => "slotline",   // 고른 칸에 덧그리는 테두리
             Shape.RowSelection => "slotline2",
+            Shape.Slot01      => "slot_01",
+            Shape.Slot02      => "slot_02",
+            Shape.Slot03      => "slot_03",
+            Shape.Slot04      => "slot_04",
             _ => s.ToString().ToLowerInvariant(),
         };
 
@@ -180,6 +195,10 @@ namespace SnailPet.Ui
             Shape.Notice    => new Vector4(30, 26, 30, 26),
             Shape.Notice2   => new Vector4(30, 26, 30, 26),   // notice 와 같은 도형이다
             Shape.SlotCount => new Vector4(30, 26, 30, 26),   // notice 와 같은 도형이다
+            // 카테고리 칸은 slot 과 같은 크기(631x168)의 같은 손그림이라 테두리도 같다.
+            // 임포터의 표에는 없으므로(이름이 다르다) 여기서 채워 준다.
+            Shape.Slot01 or Shape.Slot02 or Shape.Slot03 or Shape.Slot04
+                            => new Vector4(24, 24, 24, 24),
             _            => Vector4.zero,
         };
 

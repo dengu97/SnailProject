@@ -138,6 +138,13 @@ namespace SnailPet.Snail
 
             /// <summary>모은 파츠. 없으면 파츠 도감이 없던 시절의 세이브다 — 가진 달팽이에서 다시 채운다.</summary>
             public PartsDto[] parts;
+
+            /// <summary>
+            /// 늘려 둔 칸 수. 나중에 더한 값이라 옛 세이브에는 없다(0 으로 읽힌다).
+            /// 0 이면 아직 안 늘린 것이므로 GameConfig 의 시작값을 쓴다.
+            /// </summary>
+            public int snailSlots;
+            public int eggSlots;
         }
 
         /// <summary>물려받은 모습을 적을 꼴로. 없으면 null 이라 세이브에도 안 남는다.</summary>
@@ -299,6 +306,8 @@ namespace SnailPet.Snail
                 hasOptions = true,
                 guides = ToGuideDtos(player),
                 parts = ToPartsDtos(player),
+                snailSlots = player.SnailSlots,
+                eggSlots = player.EggSlots,
                 snails = new SnailDto[player.Snails.Count],
                 incubator = new SlotDto[player.Incubator.Length],
             };
@@ -423,6 +432,11 @@ namespace SnailPet.Snail
             if (root.favorites != null) player.Favorites.AddRange(root.favorites);
             RestoreGuides(player, root.guides);
             RestoreParts(player, root.parts);
+
+            // 칸을 늘리기 전의 세이브에는 이 값이 없어 0 으로 읽힌다. 그러면 시작값을 쓴다.
+            // 늘린 뒤에 시트의 시작값을 올렸다면 그쪽이 이긴다 — 줄어들 일은 없어야 한다.
+            player.SnailSlots = System.Math.Max(root.snailSlots, Config.StartSnailSlot);
+            player.EggSlots   = System.Math.Max(root.eggSlots,   Config.StartEggSlot);
 
             // 설정이 없던 시절의 세이브는 전부 꺼진 것처럼 읽힌다. 그러면 알림 셋이
             // 꺼진 채로 시작해 기본값과 어긋나므로, 적혀 있을 때만 가져온다.

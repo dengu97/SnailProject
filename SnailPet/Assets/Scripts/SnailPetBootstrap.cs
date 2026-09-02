@@ -336,7 +336,7 @@ namespace SnailPet
             // 파츠에 딸린 이펙트는 담을 곳이 생긴 뒤라야 붙일 수 있다.
             // (ActivateSnail 은 이 위에서 이미 한 번 지나갔다)
             RebuildPartEffects();
-            _guestField = new GuestField(transform, _sparks);
+            _guestField = new GuestField(transform, _sparks, _ui != null ? _ui.Font : null);
             RefreshMate();      // 짝꿍이 놓여 있으면 켤 때부터 같이 걷는다
             _coins = new CoinPop(transform);
             _present = new SnailPresent(transform);
@@ -492,6 +492,9 @@ namespace SnailPet
             };
 
             _ui.HatchRevealed += ShowHatchGlow;
+
+            _ui.SlotPlusPressed  += OpenSlotPopup;
+            _ui.SlotBuyConfirmed += BuySlots;
 
             _ui.Detail      += OpenGuide;
             _ui.GuidePicked += PickGuide;
@@ -657,10 +660,14 @@ namespace SnailPet
             // 이미 방에 있으면 옮길지 먼저 묻는다. 「예」를 눌러야 지금 방에서 나온다.
             _ui.EnterLobby   += i =>
             {
+                // 목록은 진짜 로비 뒤에 더미가 붙은 한 줄이다. 뒤쪽이면 더미로 보낸다.
+                int real = RealLobbyCount;
+                if (i >= real) { JoinDummyRoom(i - real); return; }
+
                 if (SteamHub.IsCurrent(i)) { _ui.NoticeSameRoom(); return; }
 
-                if (SteamHub.InLobby) _ui.AskRoomSwap(() => SteamHub.JoinLobby(i));
-                else                  SteamHub.JoinLobby(i);
+                if (InRoom) _ui.AskRoomSwap(() => EnterLobby(i));
+                else        EnterLobby(i);
             };
             _ui.MakeRoom     += () => SteamHub.CreateLobby();
             // 랜덤·로비ID 도 옮기는 것은 마찬가지라 같이 묻는다.
@@ -669,7 +676,11 @@ namespace SnailPet
                 if (SteamHub.InLobby) _ui.AskRoomSwap(() => SteamHub.JoinRandom());
                 else                  SteamHub.JoinRandom();
             };
-            _ui.LeaveRoom    += () => SteamHub.Leave();
+            _ui.LeaveRoom    += () =>
+            {
+                if (_dummyRoom != 0) { LeaveDummyRoom(); return; }
+                SteamHub.Leave();
+            };
             _ui.JoinById     += () => _ui.ShowLobbyId();
             _ui.LobbyIdEntered += text =>
             {
@@ -745,8 +756,12 @@ namespace SnailPet
             if (_ui == null) return;
 
             _ui.SetMultiRows(_ui.OnLobbyTab ? LobbyNames() : FriendNames());
-            _ui.SetRoom(SteamHub.InLobby, SteamHub.LobbyName, SteamHub.LobbyCode, SteamHub.IsHost);
-            if (SteamHub.InLobby) _ui.SetMembers(MemberRows());
+
+            // 더미 방에는 코드도 방장도 없다 — 둘 다 비우면 UI 가 그 칸을 감춘다.
+            if (_dummyRoom != 0) _ui.SetRoom(true, DummyRooms.NameOf(_dummyRoom));
+            else _ui.SetRoom(SteamHub.InLobby, SteamHub.LobbyName, SteamHub.LobbyCode, SteamHub.IsHost);
+
+            if (InRoom) _ui.SetMembers(MemberRows());
 
             // 목록만이 아니라 화면에서도 같이 논다
             SyncGuests();
@@ -761,12 +776,147 @@ namespace SnailPet
             return SteamHub.Friends();
         }
 
+        /// <summary>
+        /// 방 목록. <b>진짜 로비 뒤에 아직 안 열린 더미 방을 자리표시자로 붙인다.</b>
+        ///
+        /// 이미 누가 들어가서 열려 있는 더미 방은 진짜 로비 쪽에 이름이 그대로 떠 있으므로
+        /// 여기서 또 붙이지 않는다 — 붙이면 같은 방이 두 줄로 보이고, 아래 줄을 누른 사람은
+        /// 옆에 있는 친구를 못 만난다.
+        /// </summary>
         private static string[] LobbyNames()
         {
-            if (!SteamHub.Available)
-                return new[] { "로비 목록01", "로비 목록02", "로비 목록03" };
+            var real = SteamHub.Available ? SteamHub.Lobbies()
+                                          : new[] { "로비 목록01", "로비 목록02", "로비 목록03" };
 
-            return SteamHub.Lobbies();
+            var closed = ClosedDummies();
+            if (closed.Length == 0) return real;
+
+            var all = new string[real.Length + closed.Length];
+            real.CopyTo(all, 0);
+            for (int i = 0; i < closed.Length; i++) all[real.Length + i] = DummyRooms.NameOf(closed[i]);
+
+            return all;
+        }
+
+        /// <summary>목록에서 자리표시자가 시작하는 줄. 이 앞은 진짜 로비다.</summary>
+        private static int RealLobbyCount =>
+            SteamHub.Available ? SteamHub.Lobbies().Length : 3;   // 스팀이 없으면 자리표시자 세 줄
+
+        // ── 더미 방 ──
+        //
+        // 방 목록이 비어 있으면 들어갈 데가 없어 보인다. 그래서 DummyData 의 방을 늘 목록에
+        // 걸어 둔다. 다만 <b>보여만 주는 가짜여서는 안 된다</b> — 친구 둘이 같은 줄을 눌렀는데
+        // 서로 안 보이면 빈 목록보다 나쁘다(2026-09-02).
+        //
+        // 스팀 로비는 사람이 들어가 있는 동안에만 존재하므로, 늘 떠 있는 방은 만들 수 없다.
+        // 대신 이렇게 한다:
+        //
+        //   1. 아직 아무도 없는 더미 방 → 목록에 <b>자리표시자</b>로 건다
+        //   2. 처음 누른 사람 → 그 방 번호를 박은 <b>진짜 로비</b>를 연다
+        //   3. 남이 같은 줄을 누름 → 새로 만들지 않고 그 로비로 들어간다 (서로 보인다)
+        //   4. 다 나가면 로비가 사라지고 → 다시 1번의 자리표시자로 돌아간다
+        //
+        // 시트의 더미 참가자는 어느 쪽이든 방을 채운다 — 진짜 사람 뒤에 같이 선다.
+
+        /// <summary>스팀 없이 혼자 들어가 있는 더미 방의 RoomNumber. 0 이면 안 들어가 있다.</summary>
+        private int _dummyRoom;
+
+        /// <summary>어느 쪽으로든 방 안에 있는가.</summary>
+        private bool InRoom => _dummyRoom != 0 || SteamHub.InLobby;
+
+        /// <summary>아직 아무도 안 연 더미 방들. 이것만 목록에 자리표시자로 걸린다.</summary>
+        private static int[] ClosedDummies()
+        {
+            var rooms = DummyRooms.Numbers();
+            var closed = new List<int>();
+
+            foreach (int n in rooms)
+                if (!SteamHub.Available || SteamHub.IndexOfDummy(n) < 0) closed.Add(n);
+
+            return closed.ToArray();
+        }
+
+        /// <summary>
+        /// 방 사람들. <b>진짜 참가자 뒤에 그 방의 더미를 이어 붙인다</b> —
+        /// 방이 한산해도 사람이 있어 보이게 하려고 넣은 것이라 진짜와 같이 서야 한다.
+        /// </summary>
+        private (string name, string look, bool me)[] MemberLooks()
+        {
+            if (_dummyRoom != 0) return DummyRooms.MemberLooks(_dummyRoom);
+
+            var real = SteamHub.MemberLooks();
+
+            int dummy = SteamHub.CurrentDummy;
+            if (dummy == 0) return real;
+
+            var all = new List<(string name, string look, bool me)>(real);
+            all.AddRange(DummyRooms.MemberLooks(dummy));
+            return all.ToArray();
+        }
+
+        /// <summary>
+        /// 자리표시자를 눌렀다. 그 방이 이미 열려 있으면 그리로, 아니면 내가 연다.
+        /// 스팀이 없으면 열 방이 없으므로 예전처럼 내 화면에서만 세운다.
+        /// </summary>
+        private void JoinDummyRoom(int index)
+        {
+            var closed = ClosedDummies();
+            if (index < 0 || index >= closed.Length) return;
+
+            int want = closed[index];
+
+            // 진짜 방과 같은 흐름을 탄다 — 어느 방이든 들어가 있으면 옮길지 먼저 묻는다.
+            if (InRoom) _ui.AskRoomSwap(() => OpenDummyRoom(want));
+            else        OpenDummyRoom(want);
+        }
+
+        private void OpenDummyRoom(int roomNumber)
+        {
+            if (!SteamHub.Available) { EnterDummyRoom(roomNumber); return; }
+
+            // 목록을 받아 온 뒤에 눌렀어도 그 사이 남이 먼저 열었을 수 있다. 있으면 그리로 간다.
+            int at = SteamHub.IndexOfDummy(roomNumber);
+            if (at >= 0)
+            {
+                _dummyRoom = 0;
+                SteamHub.JoinLobby(at);
+                Say($"      [더미] 「{DummyRooms.NameOf(roomNumber)}」 방이 이미 열려 있어 그리로 들어갑니다");
+                return;
+            }
+
+            _dummyRoom = 0;
+            SteamHub.CreateLobby(DummyRooms.NameOf(roomNumber), roomNumber);
+            Say($"      [더미] 「{DummyRooms.NameOf(roomNumber)}」 방을 엽니다 (진짜 로비)");
+        }
+
+        /// <summary>
+        /// 스팀이 없을 때만 쓰는 길. 열 방이 없으므로 내 화면에서만 그 방인 척한다 —
+        /// 이때는 남에게 안 보이고 남도 못 들어온다.
+        /// </summary>
+        private void EnterDummyRoom(int roomNumber)
+        {
+            _dummyRoom = roomNumber;
+            _ui.NoticeRoomJoined();
+            RefreshMulti();      // 안에서 SyncGuests 가 지난 방 사람들을 치우고 새로 세운다
+            Say($"      [더미] 「{DummyRooms.NameOf(_dummyRoom)}」 방에 들어갔습니다 " +
+                $"(참가자 {MemberLooks().Length}명)");
+        }
+
+        /// <summary>진짜 로비에 들어간다. 더미 방에 있었으면 그 자리를 비운다.</summary>
+        private void EnterLobby(int index)
+        {
+            _dummyRoom = 0;
+            SteamHub.JoinLobby(index);
+        }
+
+        /// <summary>더미 방에서 나온다. 같이 걷던 달팽이도 치운다.</summary>
+        private void LeaveDummyRoom()
+        {
+            _dummyRoom = 0;
+            ClearGuests();          // 안에서 SyncGuests 까지 지나간다
+            _ui.NoticeRoomLeft();
+            RefreshMulti();
+            Say("      [더미] 방에서 나왔습니다");
         }
 
         /// <summary>
@@ -779,7 +929,7 @@ namespace SnailPet
         /// </summary>
         private (string, string, UnityEngine.Texture)[] MemberRows()
         {
-            var members = SteamHub.MemberLooks();
+            var members = MemberLooks();
             var rows = new (string, string, UnityEngine.Texture)[members.Length];
 
             for (int i = 0; i < members.Length; i++)
@@ -830,7 +980,7 @@ namespace SnailPet
         /// </summary>
         private void ShowGuestCard(int index)
         {
-            var members = SteamHub.MemberLooks();
+            var members = MemberLooks();
             if (index < 0 || index >= members.Length) return;
 
             var (steamName, card, me) = members[index];
@@ -867,10 +1017,9 @@ namespace SnailPet
         private readonly Dictionary<string, (string look, SnailPortrait view)> _guests =
             new Dictionary<string, (string, SnailPortrait)>();
 
-        /// <summary>방을 나가면 남의 것은 들고 있을 이유가 없다.</summary>
         /// <summary>
-        /// 방에서 나왔다. 남의 달팽이는 치우고 <b>짝꿍은 남긴다</b> —
-        /// 짝꿍은 방과 상관없이 내 화면에 계속 있어야 한다.
+        /// 방에서 나왔다. 남의 달팽이는 치우고 <b>짝꿍은 도로 세운다</b> —
+        /// 방에 있는 동안 물러나 있던 것이 여기서 돌아온다(<see cref="SyncGuests"/>).
         /// </summary>
         private void ClearGuests()
         {
@@ -900,12 +1049,13 @@ namespace SnailPet
 
             var others = new List<(string, string)>();
 
-            // 짝꿍이 먼저다. 방 밖에서도 남아 있어야 한다.
+            // 짝꿍은 <b>방 밖에서만</b> 같이 있는다. 방에 들어가는 것은 메인 달팽이 하나뿐이라,
+            // 짝꿍까지 서 있으면 남들 눈에는 없는 달팽이가 내 화면에만 끼어 있는 꼴이 된다.
             var mate = _player.Mate;
-            if (mate != null)
+            if (mate != null && !InRoom)
                 others.Add((MateKey, SnailShare.WriteCard(mate.Name, mate.Rarity, mate.Growth.Level, mate.Dressed())));
 
-            foreach (var (name, look, me) in SteamHub.MemberLooks())
+            foreach (var (name, look, me) in MemberLooks())
                 if (!me && !string.IsNullOrEmpty(look)) others.Add((name, look));
 
             _guestField.Sync(others.ToArray());
@@ -973,7 +1123,13 @@ namespace SnailPet
             _ui.SetRows(rows);
             PruneThumbs();
 
+            _ui.SetSnailSlots(_player.Snails.Count, _player.SnailSlots,
+                              SlotSell.Room(SlotType.Snail, _player.SnailSlots) > 0);
+
             _ui.SetCoin(_player.Coins);
+
+            // 짝꿍 칸은 화면에 나와 있는 달팽이를 볼 때만 뜬다 — 짝꿍은 그 개체의 짝이다.
+            _ui.ShowMateSlot(_viewingId == 0);
 
             // 다른 달팽이 정보를 보고 있는 동안에는 오른쪽을 건드리지 않는다.
             // 목록은 위에서 이미 새로 그렸으므로 마릿수가 바뀌어도 따라온다.
@@ -1427,18 +1583,30 @@ namespace SnailPet
 
             _viewingId = snail.Id;
 
+            // 화면에 나와 있는 개체가 아니므로 짝꿍 칸은 접는다(RefreshSnail 을 거치지 않는 길이다)
+            _ui.ShowMateSlot(false);
+
             _ui.SetSnail(snail.Name, snail.Rarity, snail.Growth.Level);
             _ui.SetGauges((float)snail.Growth.FullPercent, (float)snail.Growth.HappyPercent);
             _ui.SetEggQuota(snail.EggsLeftToday, Config.CreateEggCount);
 
-            // 입은 모습으로 찍는다. 목록 썸네일과 같은 기준이다.
+            ReshootViewPortrait(snail);
+
+            Say($"      [UI] 목록에서 고름: {snail.Name ?? "(이름 없음)"} (화면의 달팽이는 그대로)");
+        }
+
+        /// <summary>
+        /// 보고 있는 개체의 초상을 지금 모습으로 다시 찍는다. 입은 모습으로 찍으므로
+        /// 목록 썸네일과 기준이 같다. 화면의 달팽이 초상(<c>_portrait</c>)과는 따로 든다.
+        /// </summary>
+        private void ReshootViewPortrait(OwnedSnail snail)
+        {
             var dressed = snail.Dressed();
             _viewPortrait?.Dispose();
+
             var size = SnailUi.PortraitSize;
             _viewPortrait = new SnailPortrait(transform, dressed, SnailMetrics.Measure(dressed), size.x, size.y);
             _ui.SetPortrait(_viewPortrait.Texture);
-
-            Say($"      [UI] 목록에서 고름: {snail.Name ?? "(이름 없음)"} (화면의 달팽이는 그대로)");
         }
 
         /// <summary>오른쪽을 화면에 나와 있는 달팽이로 되돌린다.</summary>
@@ -1596,7 +1764,11 @@ namespace SnailPet
             else
             {
                 // 목록에만 있는 개체다. 화면의 달팽이를 갈아입히면 안 된다.
+                //
+                // 상세 초상은 여기서 직접 다시 찍는다 — RefreshSnail 은 다른 개체를 보고 있으면
+                // 오른쪽을 건드리지 않고 돌아가므로, 갈아입은 모습이 반영되지 않는다.
                 RefreshSnail(reshoot: false);
+                ReshootViewPortrait(snail);
             }
 
             RefreshWardrobe();
@@ -2273,6 +2445,8 @@ namespace SnailPet
 
                     // 파츠에 딸린 이펙트도 같이 따라간다. 자세가 정해진 뒤라야 자리가 맞는다.
                     SparkField.Place(g.Effects, g.Root);
+
+                    PlaceGuestName(g, px);
                 }
             }
 
@@ -3058,6 +3232,50 @@ namespace SnailPet
             _state = PetState.Wander;
         }
 
+
+        // ── 칸 늘리기 ──
+        //
+        // 달팽이 칸과 부화기 칸을 코인으로 늘린다. 값은 SlotSellData 가 <b>몇 번째 확장인가</b>로
+        // 적어 두므로 칸마다 다르다 — 여러 칸을 한 번에 사면 다음 칸들의 값을 더해서 낸다.
+
+        /// <summary>칸 늘리기 버튼을 눌렀다. 값을 세어 팝업을 띄운다.</summary>
+        private void OpenSlotPopup(SlotType kind)
+        {
+            int have = kind == SlotType.Snail ? _player.SnailSlots : _player.EggSlots;
+            int room = SlotSell.Room(kind, have);
+            if (room <= 0) return;      // 버튼이 감춰져 있어야 정상이다
+
+            // 문구는 UI 가 들고 있다. 여기서는 어느 칸인지와 값 세는 법만 넘긴다.
+            _ui.ShowSlotPopup(kind, room, n => SlotSell.TotalCost(kind, have, n));
+        }
+
+        /// <summary>칸 늘리기를 확정했다. 값을 치르고 그만큼 늘린다.</summary>
+        private void BuySlots(SlotType kind, int count)
+        {
+            int have = kind == SlotType.Snail ? _player.SnailSlots : _player.EggSlots;
+
+            long cost = SlotSell.TotalCost(kind, have, count);
+            int item = SlotSell.CostItem(kind, have);
+            if (cost < 0 || item == 0) return;
+
+            // 팝업을 여는 사이에 코인이 줄었을 수 있다. 한 번에 치른다 —
+            // 낱개로 빼면 중간에 모자라 절반만 늘어난 상태로 끝난다.
+            if (!_player.Items.TrySpend(item, cost)) { _ui.NoticeNoCoins(); return; }
+
+            if (kind == SlotType.Snail) _player.SnailSlots += count;
+            else                        _player.EggSlots += count;
+
+            RefreshSnail(reshoot: false);   // 「3/15」 표시가 여기서 다시 그려진다
+            RefreshEggs();
+            _ui.SetCoin(_player.Coins);
+
+            Say($"      [UI] 칸 늘리기: {kind} +{count} → " +
+                $"달팽이 {_player.SnailSlots} · 부화기 {_player.EggSlots} (−{cost})");
+        }
+
+        /// <summary>달팽이 칸이 꽉 찼는가. 꽉 차면 부화한 개체를 못 받는다.</summary>
+        private bool SnailSlotsFull => _player != null && _player.Snails.Count >= _player.SnailSlots;
+
         // ── 부화기 ──
 
         /// <summary>
@@ -3071,7 +3289,8 @@ namespace SnailPet
         private void RefreshEggs()
         {
             _ui.SetEggs(_player.EggIds());
-            _ui.SetIncubator(_player.Incubator);
+            _ui.SetIncubator(_player.Incubator, _player.EggSlots);
+            _ui.SetEggSlotPlus(SlotSell.Room(SlotType.Egg, _player.EggSlots) > 0);
         }
 
         /// <summary>목록의 알을 눌렀다. 빈 칸이 있으면 넣는다.</summary>
@@ -3108,11 +3327,30 @@ namespace SnailPet
         /// </summary>
         private void ApplyOptions(PlayerOptions options)
         {
+            bool languageChanged = _player.Options.IsEnglish != options.IsEnglish;
             _player.Options = options;
+
+            // 시트에서 읽어 채운 글자(파츠 이름·설명·상품 이름 …)는 UI 의 토큰 훑기로는 안 바뀐다.
+            // 그린 쪽이 다시 칠해야 한다.
+            if (languageChanged) RepaintForLanguage();
 
             Say($"      [UI] 설정 바뀜: 알생성금지={options.NoEggs} 배고픔={options.HungryBubble} " +
                 $"관심={options.CareBubble} 코인={options.CoinBubble} " +
-                $"항상최대화={options.AlwaysMax} UI크기=x{options.Scale:0.#}");
+                $"항상최대화={options.AlwaysMax} UI크기=x{options.Scale:0.#} " +
+                $"언어={(options.IsEnglish ? "en" : "kr")}");
+        }
+
+        /// <summary>언어가 바뀌었다. 데이터에서 이름을 읽어 채우는 화면들을 다시 그린다.</summary>
+        private void RepaintForLanguage()
+        {
+            RefreshSnail(reshoot: false);
+            RefreshFoods();
+            RefreshEggs();
+            RefreshFavorites();
+            RefreshWardrobe();
+            RefreshGuides();
+            RefreshPartsBook();
+            RefreshMulti();
         }
 
         /// <summary>
@@ -3183,6 +3421,21 @@ namespace SnailPet
 
         private void ClaimHatched(int slot)
         {
+            // 달팽이 칸이 꽉 찼으면 받지 않는다. <b>TakeHatched 앞에서</b> 막아야 한다 —
+            // 뒤에서 막으면 알만 사라진다. 부화는 끝난 채로 칸에 남으니 자리를 만들고 오면 된다.
+            //
+            // 알린다. 칸 늘리기 팝업을 띄우지 않는 것은, 누를 때마다 구매 팝업이 다시 떠서
+            // 안 닫히는 것처럼 보였기 때문이다(2026-09-01). 늘리는 것은 왼쪽 「n/n」 뱃지로 한다.
+            bool ready = slot >= 0 && slot < _player.Incubator.Length
+                      && _player.Incubator[slot].eggId != 0 && _player.Incubator[slot].remain <= 0;
+
+            if (ready && SnailSlotsFull)
+            {
+                Say($"      [UI] 달팽이 칸이 꽉 찼습니다 ({_player.Snails.Count}/{_player.SnailSlots})");
+                _ui.NoticeSnailSlotFull();
+                return;
+            }
+
             var (eggId, gene) = _player.TakeHatched(slot);
             if (eggId == 0)
             {
@@ -3222,7 +3475,7 @@ namespace SnailPet
         private void TickIncubator(float deltaTime)
         {
             if (_player.TickIncubator(deltaTime))
-                _ui.SetIncubator(_player.Incubator);
+                _ui.SetIncubator(_player.Incubator, _player.EggSlots);
         }
 
         // ── 알 낳기 ──
@@ -3849,6 +4102,28 @@ namespace SnailPet
         /// (예전 고정값 <see cref="SnailPresent.BubbleGap"/> 18px 은 달팽이가 컸을 때의 값이다.)
         /// </summary>
         private const float BubbleGapFraction = 0.12f, BubbleGapMinPx = 3f;
+
+        /// <summary>
+        /// 손님(남의 달팽이·짝꿍)의 이름표를 머리 위에 놓는다.
+        ///
+        /// 말풍선과 <b>같은 자리</b>다 — 내 달팽이의 말풍선이 뜨는 그 높이에 이름이 뜬다.
+        /// 내 달팽이에는 안 붙인다. 화면에 내 것이 하나뿐이라 이름을 볼 이유가 없고,
+        /// 그 자리는 말풍선이 쓴다.
+        /// </summary>
+        private void PlaceGuestName(GuestField.Guest g, float px)
+        {
+            if (g.Tag == null) return;
+
+            var n = g.Free ? BoxWalk.OutwardNormal(BoxEdge.Bottom) : BoxWalk.OutwardNormal(g.Anchor);
+
+            float footDepth = Mathf.Abs(g.Bounds.Foot) * g.Scale * px;
+            float bodyDepth = (g.Bounds.Top - g.Bounds.Foot) * g.Scale * px;
+
+            Vector2 foot = g.Screen + n * footDepth;
+            Vector2 at = foot - n * (bodyDepth + Mathf.Max(BubbleGapMinPx, bodyDepth * BubbleGapFraction));
+
+            g.Tag.Place(VirtualToWorld(at.x, at.y), g.RotationDeg, px, g.SnailName, true);
+        }
 
         /// <summary>배고픔 말풍선의 BubbleData 토큰. 시트에 넣으면 크기를 거기서 정할 수 있다.</summary>
         private const string HungryBubbleToken = "[배고픔]";

@@ -44,8 +44,13 @@ namespace SnailPet.Snail
 
             foreach (var p in appearance.Parts)
             {
-                // 가로·위쪽은 색상 레이어까지 포함해도 선화와 실루엣이 같으므로 선화만 보면 된다
-                var sprite = SnailComposer.LoadFrame(SnailComposer.LinePath(p.Type, p.ResourceKey));
+                // 가로·위쪽은 색상 레이어까지 포함해도 선화와 실루엣이 같으므로 선화만 보면 된다.
+                //
+                // 폴더는 <b>Folder 로 물어야 한다</b>. 악세서리는 PartsType 이 아니라
+                // AccessoriesType 이라 Type 으로 물으면 엉뚱한 폴더를 찾아 null 이 되고,
+                // 그대로 건너뛰어 모자·가방이 경계에서 빠졌다 — 초상이 몸통 높이로 잘려
+                // 머리 위 악세서리가 통째로 화면 밖에 있었다.
+                var sprite = SnailComposer.LoadFrame(SnailComposer.LinePath(p.Folder, p.ResourceKey));
                 if (sprite == null) continue;
                 if (!TryGetExtents(sprite, out var e)) continue;
 
@@ -66,7 +71,7 @@ namespace SnailPet.Snail
                 float lowest = float.MaxValue;
                 foreach (var p in appearance.Parts)
                 {
-                    var sprite = SnailComposer.LoadFrame(SnailComposer.LinePath(p.Type, p.ResourceKey));
+                    var sprite = SnailComposer.LoadFrame(SnailComposer.LinePath(p.Folder, p.ResourceKey));
                     if (sprite != null && TryGetExtents(sprite, out var e) && e.Bottom < lowest) lowest = e.Bottom;
                 }
                 result.Foot = lowest == float.MaxValue ? 0f : lowest;

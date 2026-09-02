@@ -30,6 +30,15 @@ namespace SnailPet.Desktop
         private const string NameKey = "name";
 
         /// <summary>
+        /// 이 방이 어느 <b>더미 방의 자리</b>인가 (DummyData.RoomNumber). 없으면 보통 방이다.
+        ///
+        /// 스팀 로비는 사람이 들어가 있는 동안에만 존재한다 — 목록에 늘 떠 있는 방을 만들 수가 없다.
+        /// 그래서 목록에는 시트의 더미 방을 <b>자리표시자</b>로 걸어 두고, 누가 처음 들어가면 그때
+        /// 이 표시를 박은 진짜 방을 연다. 남이 같은 줄을 누르면 새로 만드는 대신 그 방으로 들어간다.
+        /// </summary>
+        private const string DummyKey = "dummy";
+
+        /// <summary>
         /// 방 코드. 스팀의 로비 ID 는 17자리 숫자라 사람이 불러 주기 어렵다.
         /// 그래서 짧은 코드를 따로 붙이고, 들어갈 때는 그 코드로 목록을 걸러 찾는다.
         /// 헷갈리는 글자(0/O, 1/I)는 뺀다 — 불러 주고 받아 적는 물건이다.
@@ -83,7 +92,10 @@ namespace SnailPet.Desktop
         public static bool Init() { LastError = "이 빌드에는 스팀이 빠져 있습니다"; return false; }
         public static void Pump() { }
         public static void Shutdown() { }
-        public static void CreateLobby() { }
+        public static void CreateLobby(string name = null, int dummyRoom = 0) { }
+        public static int DummyOf(int index) => 0;
+        public static int IndexOfDummy(int roomNumber) => -1;
+        public static int CurrentDummy => 0;
         public static void RefreshLobbies() { }
         public static void JoinLobby(int index) { }
         public static void JoinById(string text) { }
@@ -96,6 +108,9 @@ namespace SnailPet.Desktop
         private static readonly List<CSteamID> _friendIds = new List<CSteamID>();
         private static readonly List<CSteamID> _lobbyIds = new List<CSteamID>();
         private static readonly List<string> _lobbyNames = new List<string>();
+
+        /// <summary>줄마다의 더미 방 번호. 보통 방은 0 이다. _lobbyIds 와 길이가 같다.</summary>
+        private static readonly List<int> _lobbyDummies = new List<int>();
 
         private static CSteamID _lobby;
         private static bool _joinRandomPending;
@@ -263,13 +278,45 @@ namespace SnailPet.Desktop
 
         // ── 방 ──
 
-        public static void CreateLobby()
+        /// <summary>
+        /// 방을 만든다.
+        /// <paramref name="name"/> 을 주면 그 이름으로 열고, 없으면 내 이름을 붙인다.
+        /// <paramref name="dummyRoom"/> 이 0 이 아니면 <b>그 더미 방의 자리</b>라는 표시를 박는다 —
+        /// 남이 목록에서 같은 줄을 눌렀을 때 새로 만드는 대신 이 방으로 들어오게 하는 표식이다.
+        /// </summary>
+        public static void CreateLobby(string name = null, int dummyRoom = 0)
         {
             if (!Available) return;
+
+            // 만들어지는 것은 콜백이라 한 박자 뒤다. 그때 쓸 값을 들고 있는다.
+            _pendingName = name;
+            _pendingDummy = dummyRoom;
 
             Leave(quiet: true);
             _onCreated.Set(SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypePublic, MaxMembers));
         }
+
+        private static string _pendingName;
+        private static int _pendingDummy;
+
+        /// <summary>그 줄의 방이 어느 더미 방 자리인가. 0 이면 보통 방이다.</summary>
+        public static int DummyOf(int index) =>
+            index >= 0 && index < _lobbyDummies.Count ? _lobbyDummies[index] : 0;
+
+        /// <summary>그 더미 방으로 이미 열려 있는 방의 줄 번호. 없으면 -1.</summary>
+        public static int IndexOfDummy(int roomNumber)
+        {
+            if (roomNumber == 0) return -1;
+
+            for (int i = 0; i < _lobbyDummies.Count; i++)
+                if (_lobbyDummies[i] == roomNumber) return i;
+
+            return -1;
+        }
+
+        /// <summary>지금 들어가 있는 방이 어느 더미 방 자리인가. 0 이면 보통 방이거나 방 밖이다.</summary>
+        public static int CurrentDummy =>
+            InLobby && int.TryParse(SteamMatchmaking.GetLobbyData(_lobby, DummyKey), out int n) ? n : 0;
 
         private static void OnLobbyCreated(LobbyCreated_t e, bool failed)
         {
@@ -283,8 +330,16 @@ namespace SnailPet.Desktop
 
             // 480 을 같이 쓰는 남의 방과 섞이지 않게 표시를 박는다
             SteamMatchmaking.SetLobbyData(_lobby, GameKey, GameValue);
-            SteamMatchmaking.SetLobbyData(_lobby, NameKey, MyName + "의 방");
+            SteamMatchmaking.SetLobbyData(_lobby, NameKey,
+                string.IsNullOrEmpty(_pendingName) ? MyName + "의 방" : _pendingName);
             SteamMatchmaking.SetLobbyData(_lobby, CodeKey, MakeCode());
+
+            // 더미 방 자리로 연 것이면 그 번호를 박아 둔다. 남이 같은 줄을 누르면 이리로 온다.
+            if (_pendingDummy != 0)
+                SteamMatchmaking.SetLobbyData(_lobby, DummyKey, _pendingDummy.ToString());
+
+            _pendingName = null;
+            _pendingDummy = 0;
 
             Note?.Invoke("방을 만들었습니다: " + LobbyName + " (" + _lobby.m_SteamID + ")");
             Entered?.Invoke(true);
@@ -305,6 +360,7 @@ namespace SnailPet.Desktop
         {
             _lobbyIds.Clear();
             _lobbyNames.Clear();
+            _lobbyDummies.Clear();
 
             if (!failed)
             {
@@ -315,6 +371,7 @@ namespace SnailPet.Desktop
 
                     _lobbyIds.Add(id);
                     _lobbyNames.Add(string.IsNullOrEmpty(name) ? id.m_SteamID.ToString() : name);
+                    _lobbyDummies.Add(int.TryParse(SteamMatchmaking.GetLobbyData(id, DummyKey), out int d) ? d : 0);
                 }
             }
 

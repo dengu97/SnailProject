@@ -67,5 +67,11 @@ namespace SnailPet.Data
         /// 파츠마다 다르게 주지 않는다 — 애니메이션 파츠는 전부 이 속도로 돈다.
         /// </summary>
         public static double AnimationSec => Of(Row?.AnimationSec ?? 0, 1.0 / 14.0, nameof(AnimationSec));
+
+        /// <summary>시작할 때 가지고 있는 달팽이 칸 수. 그 뒤로는 SlotSellData 로 늘린다.</summary>
+        public static int StartSnailSlot => (int)Of(Row?.StartSnailSlot ?? 0, 10.0, nameof(StartSnailSlot));
+
+        /// <summary>시작할 때 가지고 있는 부화기 칸 수.</summary>
+        public static int StartEggSlot => (int)Of(Row?.StartEggSlot ?? 0, 3.0, nameof(StartEggSlot));
     }
 }

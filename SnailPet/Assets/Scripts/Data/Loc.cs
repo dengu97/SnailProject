@@ -13,8 +13,17 @@ namespace SnailPet.Data
     /// </summary>
     public static class Loc
     {
-        /// <summary>지금 언어. en 열이 추가되면 여기에 따라 고른다.</summary>
-        public static string Language = "kr";
+        public const string Korean = "kr", English = "en";
+
+        /// <summary>지금 언어. LanguageData 의 어느 칸을 읽을지 정한다.</summary>
+        public static string Language = Korean;
+
+        /// <summary>
+        /// 그 행에서 지금 언어의 글. 그 칸이 비어 있으면 <b>한글로 되돌린다</b> —
+        /// 번역이 덜 된 줄을 빈칸으로 두면 화면에서 그 자리가 통째로 사라진다.
+        /// </summary>
+        private static string Pick(LanguageDataRow row) =>
+            Language == English && !string.IsNullOrEmpty(row.En) ? row.En : row.Kr;
 
         /// <summary>
         /// 토큰에 해당하는 글자. 없으면 토큰을 그대로 돌려준다.
@@ -35,7 +44,8 @@ namespace SnailPet.Data
                 return token;
             }
 
-            return string.IsNullOrEmpty(row.Kr) ? token : row.Kr;
+            string text = Pick(row);
+            return string.IsNullOrEmpty(text) ? token : text;
         }
 
         /// <summary>
@@ -48,8 +58,11 @@ namespace SnailPet.Data
             // 화면에 #0 을 띄우느니 비워 둔다. 다만 한 번은 알린다.
             if (id <= 0) { Warn("#0", "비어 있는 Id 를 글자로 찾으려 했습니다"); return string.Empty; }
 
-            if (GameData.LanguageDataById.TryGetValue(id, out var row) && !string.IsNullOrEmpty(row.Kr))
-                return row.Kr;
+            if (GameData.LanguageDataById.TryGetValue(id, out var row))
+            {
+                string text = Pick(row);
+                if (!string.IsNullOrEmpty(text)) return text;
+            }
 
             string token = GameData.TokenById.TryGetValue(id, out string t) ? t : "#" + id;
             Warn(token, "LanguageData 에 없음 (id " + id + ")");
@@ -70,6 +83,38 @@ namespace SnailPet.Data
                 Warn(token, "자리표시자가 인자와 맞지 않음: " + text);
                 return text;
             }
+        }
+
+        /// <summary>
+        /// 한글 문구로 토큰을 되찾는다. 그런 문구가 없거나 <b>둘 이상이 같은 문구를 쓰면</b> null.
+        ///
+        /// 프리팹에 구워진 글자에는 어느 토큰으로 지었는지가 안 남아 있다. 언어를 바꾸려면
+        /// 그걸 알아야 하므로 구울 때의 한글로 거꾸로 찾는다. 겹치는 문구는 어느 쪽인지 알 수
+        /// 없으니 건드리지 않는다 — 잘못 붙이면 엉뚱한 글자로 바뀐다.
+        /// </summary>
+        public static string TokenOfKorean(string korean)
+        {
+            if (string.IsNullOrEmpty(korean)) return null;
+
+            _byKorean ??= BuildByKorean();
+            return _byKorean.TryGetValue(korean, out string token) ? token : null;
+        }
+
+        private static System.Collections.Generic.Dictionary<string, string> _byKorean;
+
+        private static System.Collections.Generic.Dictionary<string, string> BuildByKorean()
+        {
+            var map = new System.Collections.Generic.Dictionary<string, string>();
+
+            foreach (var row in GameData.LanguageData)
+            {
+                if (row == null || string.IsNullOrEmpty(row.Kr)) continue;
+                if (!GameData.TokenById.TryGetValue(row.Id, out string token)) continue;
+
+                // 겹치면 자리만 잡아 두고 값을 비운다. 아래에서 null 은 「모르겠다」로 읽힌다.
+                map[row.Kr] = map.ContainsKey(row.Kr) ? null : token;
+            }
+            return map;
         }
 
         private static readonly System.Collections.Generic.HashSet<string> _warned =

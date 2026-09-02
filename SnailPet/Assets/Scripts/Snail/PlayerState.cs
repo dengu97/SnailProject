@@ -155,17 +155,37 @@ namespace SnailPet.Snail
         /// <summary>0 = x1, 1 = x1.5, 2 = x2. 목업이 이 셋만 준다.</summary>
         public int ScaleStep;
 
+        /// <summary>
+        /// 화면에 쓸 언어 (<see cref="Data.Loc.Korean"/> · <see cref="Data.Loc.English"/>).
+        /// <b>비어 있으면 한글이다</b> — 언어 칸이 없던 옛 세이브가 그렇게 들어온다.
+        /// </summary>
+        public string Language;
+
         /// <summary>목업의 「보이는게 디폴트 값」 — 알림 셋은 켜짐, 나머지는 꺼짐.</summary>
         public static PlayerOptions Default =>
             new PlayerOptions { HungryBubble = true, CareBubble = true, CoinBubble = true };
 
         public float Scale => ScaleStep == 1 ? 1.5f : ScaleStep == 2 ? 2f : 1f;
+
+        /// <summary>지금 영어인가. 빈 칸을 한글로 치는 판정을 한곳에 둔다.</summary>
+        public bool IsEnglish => Language == Data.Loc.English;
     }
 
     public sealed class PlayerState
     {
-        /// <summary>부화 칸 수. UnlockData 로 늘어나면 이 값이 바뀐다.</summary>
-        public const int IncubatorSlots = 3;
+        /// <summary>
+        /// 부화 칸의 <b>최대</b> 수. 배열을 이만큼 잡아 두고 실제로 쓰는 것은
+        /// <see cref="EggSlots"/> 까지다 — 늘릴 때마다 배열을 다시 잡으면 세이브를 옮겨야 한다.
+        /// </summary>
+        public static int MaxIncubatorSlots => SlotSell.Max(SlotType.Egg);
+
+        /// <summary>
+        /// 지금 쓸 수 있는 부화 칸 수. 시작값은 GameConfig, 늘리는 값은 SlotSellData 가 정한다.
+        /// </summary>
+        public int EggSlots = Config.StartEggSlot;
+
+        /// <summary>지금 가질 수 있는 달팽이 수. 꽉 차면 부화한 개체를 못 받는다.</summary>
+        public int SnailSlots = Config.StartSnailSlot;
 
         /// <summary>설정 화면의 값. 개체가 아니라 유저의 것이라 달팽이를 바꿔도 그대로다.</summary>
         public PlayerOptions Options = PlayerOptions.Default;
@@ -288,13 +308,13 @@ namespace SnailPet.Snail
         }
 
         /// <summary>부화 중인 칸. eggId 가 0 이면 빈 칸이다.</summary>
-        public readonly (int eggId, double remain)[] Incubator = new (int, double)[IncubatorSlots];
+        public readonly (int eggId, double remain)[] Incubator = new (int, double)[MaxIncubatorSlots];
 
         /// <summary>
         /// 칸에 들어 있는 알이 물려받은 모습. 칸 번호로 나란히 놓는다 —
         /// 칸은 자리가 고정이라 목록처럼 밀리지 않는다.
         /// </summary>
-        public readonly SnailAppearance[] IncubatorGenes = new SnailAppearance[IncubatorSlots];
+        public readonly SnailAppearance[] IncubatorGenes = new SnailAppearance[MaxIncubatorSlots];
 
         /// <summary>화면에 나와 있는 개체의 <see cref="OwnedSnail.Id"/>.</summary>
         public int ActiveId;
@@ -433,7 +453,11 @@ namespace SnailPet.Snail
         {
             if (listIndex < 0 || listIndex >= Eggs.Count) return -1;
 
-            int slot = System.Array.FindIndex(Incubator, h => h.eggId == 0);
+            // 늘리지 않은 칸은 배열에는 있어도 없는 것으로 친다.
+            int slot = -1;
+            for (int i = 0; i < EggSlots && i < Incubator.Length; i++)
+                if (Incubator[i].eggId == 0) { slot = i; break; }
+
             if (slot < 0) return -1;
 
             var egg = Eggs[listIndex];
