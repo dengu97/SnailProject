@@ -58,6 +58,13 @@ namespace SnailPet.Ui
             public const string No      = "[거부]";
 
             public const string Hatched = "[부화문구]";   // "알이 부화했습니다!"
+
+            // 튜토리얼 자막. 3초마다 한 줄씩 넘어간다.
+            public const string Tutorial1  = "[튜토_알받음]";
+            public const string Tutorial2  = "[튜토_뭐가나올까]";
+            public const string Tutorial3  = "[튜토_태어났다]";
+            public const string Tutorial4  = "[튜토_키워볼까]";
+            public const string TutorialOk = "[튜토_좋아요]";
             public const string Confirm = "[확인]";
 
             // 도감 완성·보상 수령 팝업
@@ -77,6 +84,9 @@ namespace SnailPet.Ui
 
             /// <summary>방에 안 들어가 있어서 부를 수 없을 때.</summary>
             public const string NeedRoom     = "[방생성요청]";
+
+            /// <summary>남이 쓰고 있는 악세서리를 벗길지 묻는 말.</summary>
+            public const string AskTakeOff   = "[악세해제]";
             public const string Update       = "[업데이트]";
             public const string UiScale      = "[UI크기]";      // "UI크기(x{0})"
             public const string AlwaysMax    = "[UI최대화]";
@@ -138,6 +148,12 @@ namespace SnailPet.Ui
 
             /// <summary>짝꿍 도움말의 ContentsGuide.GroupId. 물음표를 누르면 이 묶음이 뜬다.</summary>
             public const string MateHelp = "[짝꿍달팽이]";
+
+            /// <summary>
+            /// 멀티 방에 들어가 있어서 짝꿍을 못 만질 때.
+            /// <b>시트에 아직 이 행이 없으면 화면에 토큰이 그대로 나온다</b> — 넣으면 저절로 바뀐다.
+            /// </summary>
+            public const string MultiMate = "[멀티짝꿍]";
 
             // ── 파츠(외형) 도감 ──
             public const string PartsBook  = "[외형도감]";
@@ -1010,7 +1026,14 @@ namespace SnailPet.Ui
             Hook(_popupClose, HidePopup);
 
             // 부화 팝업의 「확인」. X 와 하는 일이 같다 — 닫고 목록으로 돌아간다.
-            Hook(_hatchOk,    HidePopup);
+            Hook(_hatchOk, () =>
+            {
+                bool wasTutorial = _tutorial;
+                _tutorial = false;
+
+                HidePopup();
+                if (wasTutorial) { ShowWidget(true); TutorialDone?.Invoke(); }
+            });
 
             // 도감 완성 → 확인 → 보상 수령 → 확인. 보상은 받는 쪽이 준다.
             Hook(_doneOk,   () => GuideDoneConfirmed?.Invoke());
@@ -1797,6 +1820,9 @@ namespace SnailPet.Ui
             ShowNotice(SnailPet.Data.Loc.Format(Keys.SnailSold,
                 string.IsNullOrWhiteSpace(name) ? SnailPet.Data.Loc.Text(Keys.NoName) : name));
 
+        /// <summary>멀티 방에 있는 동안에는 짝꿍을 못 만진다고 알린다.</summary>
+        public void NoticeMultiMate() => ShowNotice(SnailPet.Data.Loc.Text(Keys.MultiMate));
+
         /// <summary>짝꿍으로 놓인 달팽이를 메인으로 옮길지 묻는다. 「예」면 짝꿍 슬롯이 빈다.</summary>
         public void AskMateSwap(Action onYes) => ShowAsk(SnailPet.Data.Loc.Text(Keys.MateSwap), onYes);
 
@@ -1816,6 +1842,9 @@ namespace SnailPet.Ui
 
         /// <summary>친구를 지금 방으로 부를지 묻는다. 「예」를 누르면 부르는 일은 받는 쪽이 한다.</summary>
         public void AskInviteFriend(Action onYes) => ShowAsk(SnailPet.Data.Loc.Text(Keys.AskInvite), onYes);
+
+        /// <summary>남이 쓰고 있는 악세서리를 벗길지 묻는다.</summary>
+        public void AskTakeOff(Action onYes) => ShowAsk(SnailPet.Data.Loc.Text(Keys.AskTakeOff), onYes);
 
         /// <summary>위젯 상자 기준 좌표로 옮긴다. 목업은 패널 왼쪽 위가 원점이라 코인 줄만큼 내려 준다.</summary>
         private static RectInt Above(RectInt r) => new RectInt(r.x, r.y - At.Coin.y, r.width, r.height);
@@ -3766,10 +3795,10 @@ namespace SnailPet.Ui
                 SetSlotCount(_wardrobeSlots[i], worn ? SnailPet.Data.Loc.Text(Keys.Worn) : "");
                 _wardrobeSlots[i].Count.alignment = TextAnchor.MiddleCenter;
 
-                // 남이 쓰고 있는 것은 흐리게 두고 못 누르게 한다.
+                // 남이 쓰고 있는 것은 흐리게 둔다. <b>누르는 것은 막지 않는다</b> —
+                // 누르면 그 달팽이에게서 벗길지 묻고, 벗기면 그때부터 낄 수 있다.
                 bool taken = locked != null && Array.IndexOf(locked, id) >= 0;
                 _wardrobeSlots[i].Icon.color = taken ? UiTheme.Faded : Color.white;
-                if (_wardrobeSlots[i].Button != null) _wardrobeSlots[i].Button.interactable = !taken;
             }
             FitContent(_wardrobeContent, _wardrobeIds.Length);
 
@@ -4098,9 +4127,14 @@ namespace SnailPet.Ui
 
         /// <summary>방에 들어갔는지. 오른쪽이 「방」 버튼과 참가자 목록 사이를 오간다.</summary>
         /// <param name="host">내가 방장인가. 방 이름은 방장만 고칠 수 있다.</param>
-        public void SetRoom(bool inRoom, string name, string code = "", bool host = false)
+        /// <param name="canRename">
+        /// 이름을 고칠 수 있는가. 스팀의 방장 권한과는 다르다 — <b>내가 직접 만든 방</b>일 때만
+        /// 참이다. 더미 방은 내가 열었어도 이름이 시트에 적힌 것이라 고치면 안 되고,
+        /// 방장이 나가 내가 승격된 방도 내 방은 아니다.
+        /// </param>
+        public void SetRoom(bool inRoom, string name, string code = "", bool canRename = false)
         {
-            if (_roomRenameBtn != null) _roomRenameBtn.gameObject.SetActive(inRoom && host);
+            if (_roomRenameBtn != null) _roomRenameBtn.gameObject.SetActive(inRoom && canRename);
 
             if (_lobbyGroup != null) _lobbyGroup.gameObject.SetActive(!inRoom);
             if (_roomGroup != null)  _roomGroup.gameObject.SetActive(inRoom);
@@ -5610,7 +5644,8 @@ namespace SnailPet.Ui
         ///
         /// 언어 줄도 같은 이유다. 지금 쓰는 언어 이름이 들어가는 자리라 고정 글이 아니다.
         /// </summary>
-        private bool IsValueSlot(Text t) => t == _listTitle || t == _langLabel;
+        private bool IsValueSlot(Text t) =>
+            t == _listTitle || t == _langLabel || t == _hatchTitle || t == _hatchOkLabel;
 
         private void AttachMissingTextRefs()
         {
@@ -6000,7 +6035,7 @@ namespace SnailPet.Ui
         [SerializeField] private Image _hatchEgg, _hatchLightFill, _hatchRarityBadge, _hatchRarityIcon;
         [SerializeField] private RawImage _hatchSnail;
         [SerializeField] private RawImage _hatchFx;
-        [SerializeField] private Text _hatchRarityText;
+        [SerializeField] private Text _hatchRarityText, _hatchTitle, _hatchOkLabel;
         [SerializeField] private Button _hatchOk;
 
         private void BuildHatchGroup()
@@ -6008,7 +6043,7 @@ namespace SnailPet.Ui
             _hatchGroup = Fill(NewRect("HatchGroup", _popup));
             _hatchGroup.gameObject.SetActive(false);
 
-            LocLabel(_hatchGroup, Pop.HatchTitle, Keys.Hatched, 12, UiTheme.Ink);
+            _hatchTitle = LocLabel(_hatchGroup, Pop.HatchTitle, Keys.Hatched, 12, UiTheme.Ink);
 
             // 알은 아래 가운데를 축으로 눌렸다 늘어난다. 떼는 연출이 발을 축으로 하는 것과
             // 같은 이유다 — 축이 바닥에 있어야 눌리는 것처럼 보인다.
@@ -6032,7 +6067,7 @@ namespace SnailPet.Ui
             _hatchRarityIcon.raycastTarget = false;
             BakeRarity(_hatchRarityIcon, _hatchRarityBadge, _hatchRarityText);
 
-            _hatchOk = TextButton(_hatchGroup, Pop.HatchOk, Keys.Confirm, "Ok");
+            _hatchOk = TextButton(_hatchGroup, Pop.HatchOk, Keys.Confirm, "Ok", out _hatchOkLabel);
 
             // 빛은 판을 통째로 덮어 알에서 달팽이로 갈아 끼우는 순간을 가린다.
             //
@@ -6187,7 +6222,7 @@ namespace SnailPet.Ui
 
         [SerializeField] private RectTransform _mateGroup, _mateListRoot, _mateContent;
         [SerializeField] private ListRow[] _mateRows;
-        [SerializeField] private Text _mateEmptyText, _mateInfoText, _mateClearLabel;
+        [SerializeField] private Text _mateEmptyText, _mateInfoText, _mateClearLabel, _mateOkLabel;
         [SerializeField] private Button _mateOkBtn, _mateClearBtn, _mateHelpBtn;
 
         /// <summary>팝업에 보이는 줄들의 개체 Id. 고른 줄을 부트스트랩에 알릴 때 쓴다.</summary>
@@ -6201,6 +6236,27 @@ namespace SnailPet.Ui
 
         /// <summary>짝꿍 슬롯을 비운다.</summary>
         public event Action MateCleared;
+
+        /// <summary>
+        /// 버튼을 자리에 둔 채 살리거나 죽인다.
+        ///
+        /// 유니티의 흐리게 하기는 <see cref="Button.targetGraphic"/> 인 <b>상자에만</b> 걸린다 —
+        /// 글자는 따로 서 있어서 죽여도 또렷하게 남는다. 그래서 글자 색도 같이 내린다.
+        /// </summary>
+        private static void DimButton(Button btn, Text label, bool on)
+        {
+            if (btn != null)
+            {
+                btn.gameObject.SetActive(true);
+                btn.interactable = on;
+            }
+
+            if (label != null)
+                label.color = on
+                            ? UiTheme.OnButton
+                            : new Color(UiTheme.OnButton.r, UiTheme.OnButton.g, UiTheme.OnButton.b,
+                                        UiTheme.Faded.a);
+        }
 
         private void BuildMateGroup()
         {
@@ -6234,7 +6290,7 @@ namespace SnailPet.Ui
             }
 
             _mateClearBtn = TextButton(_mateGroup, Pop.MateClear, Keys.MateClear, "MateClear", out _mateClearLabel);
-            _mateOkBtn    = TextButton(_mateGroup, Pop.MateOk,    Keys.MatePut,   "MateOk");
+            _mateOkBtn    = TextButton(_mateGroup, Pop.MateOk,    Keys.MatePut,   "MateOk", out _mateOkLabel);
 
             // 누르는 것을 잇는 곳은 Rewire 다 — 이 묶음은 프리팹에 심을 수 있다.
         }
@@ -6315,17 +6371,11 @@ namespace SnailPet.Ui
             bool empty = _mateIds.Length == 0;
             _mateListRoot.gameObject.SetActive(!empty);
             _mateEmptyText.enabled = empty;
-            _mateOkBtn.gameObject.SetActive(!empty);
 
-            // 비울 짝꿍이 없어도 버튼은 자리를 지킨다 — 사라지면 아래가 휑해 보인다.
-            // 대신 못 누르게 죽여 두고, 글자도 같이 흐려 놓는다.
-            bool canClear = mateId != 0;
-            _mateClearBtn.gameObject.SetActive(true);
-            _mateClearBtn.interactable = canClear;
-            if (_mateClearLabel != null)
-                _mateClearLabel.color = canClear ? UiTheme.OnButton
-                                                 : new Color(UiTheme.OnButton.r, UiTheme.OnButton.g,
-                                                             UiTheme.OnButton.b, UiTheme.Faded.a);
+            // 할 수 없는 쪽도 <b>자리를 지킨다</b> — 한쪽만 남으면 아래가 휑하고, 버튼이
+            // 있다 없다 하면 어느 자리를 누르는지도 헷갈린다. 대신 흐리게 죽여 둔다.
+            DimButton(_mateOkBtn,    _mateOkLabel,    !empty);
+            DimButton(_mateClearBtn, _mateClearLabel, mateId != 0);
 
             PaintMateFrames();
             OpenBlocker();
@@ -6845,15 +6895,41 @@ namespace SnailPet.Ui
         /// </summary>
         public bool HatchOpen => _hatchGroup != null && _hatchGroup.gameObject.activeSelf;
 
+        /// <summary>첫 실행 안내가 끝났다(「좋아요!」를 눌렀다).</summary>
+        public event Action TutorialDone;
+
+        /// <summary>
+        /// 위젯 내용을 감추거나 되돌린다. 안내가 도는 동안 뒤를 비워 두는 데 쓴다.
+        ///
+        /// <b>위젯 자체를 끄면 안 된다</b> — 팝업 덮개가 위젯의 자식이라 같이 꺼진다.
+        /// 그래서 목록과 상세만 내린다.
+        /// </summary>
+        public void ShowWidget(bool on)
+        {
+            if (_detailRoot != null) _detailRoot.gameObject.SetActive(on);
+
+            // 목록이 보이는지는 펼침 상태가 정한다. 되돌릴 때 그쪽에 다시 물어본다.
+            if (on) SetMaximized(Maximized);
+            else if (_listRoot != null) _listRoot.gameObject.SetActive(false);
+        }
+
         /// <summary>
         /// 알 부화 팝업을 띄우고 연출을 시작한다.
         /// <paramref name="snail"/> 은 갓 태어난 개체를 찍은 렌더 텍스처다.
         /// </summary>
-        public void ShowHatch(int eggId, SnailPet.Data.RarityType rarity, Texture snail)
+        /// <param name="tutorial">
+        /// 첫 실행 안내로 띄우는가. 자막이 3초마다 넘어가고, <b>마지막 줄에서야</b> 버튼이 나온다.
+        /// 닫는 X 는 끝까지 안 나온다 — 건너뛸 수 없는 안내다.
+        /// </param>
+        public void ShowHatch(int eggId, SnailPet.Data.RarityType rarity, Texture snail,
+                              bool tutorial = false)
         {
             HidePopupGroups();
             _hatchGroup.gameObject.SetActive(true);
             OpenBlocker();
+
+            _tutorial = tutorial;
+            _tutorialStep = -1;      // 아래 StepTutorial 이 0 번 자막부터 새로 건다
 
             var row = SnailPet.Data.GameData.EggDataById.TryGetValue(eggId, out var e) ? e : null;
             _hatchEgg.sprite = EggSprite(row);
@@ -6866,6 +6942,56 @@ namespace SnailPet.Ui
             _hatchTime = 0f;
             ShowHatchResult(false);
             ShowHatchButtons(false);
+
+            if (tutorial) StepTutorial(0);
+            else
+            {
+                if (_hatchTitle != null)   _hatchTitle.text   = SnailPet.Data.Loc.Text(Keys.Hatched);
+                if (_hatchOkLabel != null) _hatchOkLabel.text = SnailPet.Data.Loc.Text(Keys.Confirm);
+            }
+        }
+
+        // ── 첫 실행 안내 ──
+        //
+        // 부화 연출을 그대로 쓰되 자막을 얹는다. 알이 떠는 동안 두 줄, 태어난 뒤 두 줄이고
+        // 3초마다 넘어간다. 마지막 줄에 「좋아요!」 가 나오고 그걸 눌러야 끝난다.
+
+        private bool _tutorial;
+        private int _tutorialStep;
+
+        /// <summary>자막 한 줄이 머무는 시간(초).</summary>
+        private const float TutorialLine = 3f;
+
+        /// <summary>알이 떠는 동안 보여 줄 자막. 이 수 x <see cref="TutorialLine"/> 이 곧 떠는 시간이다.</summary>
+        private static readonly string[] TutorialBefore = { Keys.Tutorial1, Keys.Tutorial2 };
+
+        /// <summary>태어난 뒤의 자막. 마지막 줄에서 버튼이 나온다.</summary>
+        private static readonly string[] TutorialAfter = { Keys.Tutorial3, Keys.Tutorial4 };
+
+        /// <summary>안내가 도는 동안 알이 떠는 시간. 자막이 다 지나가야 깨어난다.</summary>
+        private static float TutorialWobbleTime => TutorialBefore.Length * TutorialLine;
+
+        /// <summary>자막을 <paramref name="step"/> 번으로 건다. 같은 줄이면 아무것도 안 한다.</summary>
+        private void StepTutorial(int step)
+        {
+            if (_tutorialStep == step || _hatchTitle == null) return;
+            _tutorialStep = step;
+
+            var lines = _hatchPhase == HatchPhase.Result ? TutorialAfter : TutorialBefore;
+            if (step < 0 || step >= lines.Length) return;
+
+            _hatchTitle.text = SnailPet.Data.Loc.Text(lines[step]);
+
+            // 마지막 줄에서만 「좋아요!」 가 나온다. X 는 끝까지 안 나온다.
+            if (_hatchPhase == HatchPhase.Result && step == lines.Length - 1)
+            {
+                if (_hatchOk != null)
+                {
+                    _hatchOk.gameObject.SetActive(true);
+                    _hatchOk.interactable = true;
+                    if (_hatchOkLabel != null) _hatchOkLabel.text = SnailPet.Data.Loc.Text(Keys.TutorialOk);
+                }
+            }
         }
 
         /// <summary>연출 중과 결과에서 보이는 것이 갈린다. 빛이 덮고 있는 사이에 바꾼다.</summary>
@@ -7082,14 +7208,30 @@ namespace SnailPet.Ui
 
         private void StepHatch()
         {
-            if (_hatchPhase == HatchPhase.None || _hatchPhase == HatchPhase.Result) return;
+            if (_hatchPhase == HatchPhase.None) return;
+
+            // 태어난 뒤에도 안내는 자막이 한 줄 더 남아 있다. 그것만 마저 흘린다.
+            if (_hatchPhase == HatchPhase.Result)
+            {
+                if (!_tutorial) return;
+
+                _hatchTime += Time.deltaTime;
+                StepTutorial(Mathf.Min((int)(_hatchTime / TutorialLine), TutorialAfter.Length - 1));
+                return;
+            }
 
             _hatchTime += Time.deltaTime;
 
             if (_hatchPhase == HatchPhase.Wobble)
             {
                 WobbleEgg(_hatchTime);
-                if (_hatchTime >= HatchWobbleTime) { _hatchPhase = HatchPhase.Flash; _hatchTime = 0f; }
+
+                // 안내일 때는 자막이 다 지나갈 때까지 떤다.
+                float wobble = _tutorial ? TutorialWobbleTime : HatchWobbleTime;
+                if (_tutorial)
+                    StepTutorial(Mathf.Min((int)(_hatchTime / TutorialLine), TutorialBefore.Length - 1));
+
+                if (_hatchTime >= wobble) { _hatchPhase = HatchPhase.Flash; _hatchTime = 0f; }
                 return;
             }
 
@@ -7114,7 +7256,11 @@ namespace SnailPet.Ui
             {
                 SetLight(0f);
                 _hatchPhase = HatchPhase.Result;
-                ShowHatchButtons(true);      // 빛이 다 걷힌 뒤에 나타난다
+                _hatchTime = 0f;
+
+                // 안내는 자막이 마지막 줄에 닿아야 버튼이 나온다. 여기서는 첫 줄만 건다.
+                if (_tutorial) { _tutorialStep = -1; StepTutorial(0); }
+                else ShowHatchButtons(true);      // 빛이 다 걷힌 뒤에 나타난다
             }
         }
 

@@ -302,6 +302,47 @@ namespace SnailPet
             _cam.allowMSAA = false;
         }
 
+        // ── 첫 실행 안내 ──
+        //
+        // 게임을 처음 켜면 알 하나가 부화하는 것을 보여 주며 시작한다. 건너뛸 수 없다.
+        // 세이브가 없을 때만 도므로 따로 「봤다」 표시를 두지 않는다 — 세이브가 곧 그 표시다.
+
+        /// <summary>안내로 보여 줄 알. null 이면 안내를 안 돈다(이어하기).</summary>
+        private EggDataRow _tutorialEgg;
+
+        /// <summary>
+        /// 안내에 쓸 일반 알. 시트에서 <b>가장 낮은 등급</b>을 고른다 —
+        /// 「일반알」이라는 이름에 매이면 시트에서 이름을 바꿨을 때 조용히 어긋난다.
+        /// </summary>
+        private static EggDataRow CommonEgg()
+        {
+            EggDataRow best = null;
+            foreach (var e in GameData.EggData)
+                if (best == null || e.RarityType < best.RarityType) best = e;
+
+            return best;
+        }
+
+        /// <summary>UI 가 선 뒤에 부른다. 이미 있는 첫 달팽이를 부화 연출로 보여 준다.</summary>
+        private void StartTutorial()
+        {
+            var born = _player.Active;
+            if (_tutorialEgg == null || born == null) return;
+
+            _hatchView?.Dispose();
+            var size = SnailUi.HatchSnailSize;
+            _hatchView = new SnailPortrait(transform, born.Appearance,
+                                           SnailMetrics.Measure(born.Appearance), size.x, size.y);
+
+            // 안내가 도는 동안 뒤를 비운다. 「좋아요!」를 누르면 그때 위젯이 나타난다.
+            _ui.ShowWidget(false);
+
+            _ui.ShowHatch(_tutorialEgg.Id, born.Rarity, _hatchView.Texture, tutorial: true);
+            _tutorialEgg = null;      // 한 번만 돈다
+
+            Say("      [안내] 첫 실행 안내를 시작합니다");
+        }
+
         private void SetupSnail()
         {
             var rng = new System.Random();
@@ -316,12 +357,16 @@ namespace SnailPet
             {
                 _player = new PlayerState();
 
-                var eggs = GameData.EggData;
-                var egg = eggs[rng.Next(eggs.Length)];
-                var first = _player.AddSnail(SnailHatchery.Hatch(egg.Id, rng));
+                // 첫 달팽이는 <b>일반 알</b>에서 나온다. 확률은 평소 부화와 같은 길을 쓴다.
+                // 여기서 바로 까는 것은 달팽이가 없는 상태로 게임이 도는 것을 막기 위해서다 —
+                // 안내는 이 개체를 그대로 보여 주기만 한다(StartTutorial).
+                _tutorialEgg = CommonEgg();
+                var first = _player.AddSnail(SnailHatchery.Hatch(_tutorialEgg.Id, rng));
+                SetStartingMood(first);
                 GiveStartingBelongings();
 
-                Say("[1] 부화 ............. " + GameData.TokenById[egg.Id] + " (" + egg.RarityType + ")");
+                Say("[1] 부화 ............. " + GameData.TokenById[_tutorialEgg.Id] +
+                    " (" + _tutorialEgg.RarityType + ")  ※ 첫 실행 안내로 보여 줍니다");
                 Say("      " + first.Appearance);
             }
 
@@ -375,16 +420,45 @@ namespace SnailPet
         /// 첫 실행 지급. 상점이 없어 스스로 구할 방법이 아직 없으므로 손에 쥐어 준다.
         /// 상점이 생기면 여기서 주는 양을 줄이거나 없앤다.
         /// </summary>
+        // ── 첫 실행 기본 세팅 ──
+        //
+        // 처음 켠 사람이 손에 쥐고 시작하는 것. 예전에는 확인하기 편하라고 알을 종류별로 둘씩,
+        // 음식도 종류별로 넣어 줬는데 그건 개발용이었다. 지금은 실제 시작 구성이다.
+
+        /// <summary>시작할 때 주는 음식과 개수.</summary>
+        private const string StartFoodToken = "[상추]";
+        private const int StartFoodCount = 3;
+
+        /// <summary>시작 코인.</summary>
+        private const int StartCoins = 100;
+
+        /// <summary>시작할 때의 포만도·행복도(0~1). 0 으로 두면 켜자마자 배고픔 말풍선이 뜬다.</summary>
+        private const double StartFullPercent = 0.5, StartHappyPercent = 0.5;
+
         private void GiveStartingBelongings()
         {
-            foreach (var e in GameData.EggData) { _player.AddEgg(e.Id); _player.AddEgg(e.Id); }
+            // 부화기가 3칸으로 시작하는데 넣을 것이 없으면 첫 손님이 상점부터 가야 한다.
+            var egg = CommonEgg();
+            if (egg != null) _player.AddEgg(egg.Id);
 
-            // 아트가 없는 음식은 화면에 떨어뜨릴 수 없어 줘도 쓸 수가 없다
-            int n = 1;
-            foreach (var f in GameData.FoodData)
-                if (!string.IsNullOrEmpty(f.ResourceKey)) _player.Items.Add(f.Id, n++);
+            if (GameData.IdByToken.TryGetValue(StartFoodToken, out int food))
+                _player.Items.Add(food, StartFoodCount);
+            else
+                Say("      [경고] 시작 음식 " + StartFoodToken + " 를 시트에서 못 찾았습니다");
 
-            _player.Items.Add(PlayerState.CoinItemId, 100);
+            _player.Items.Add(PlayerState.CoinItemId, StartCoins);
+        }
+
+        /// <summary>갓 태어난 첫 개체의 포만·행복을 절반에서 시작하게 한다.</summary>
+        private static void SetStartingMood(OwnedSnail snail)
+        {
+            if (snail == null) return;
+
+            var row = snail.Growth.Current;
+            snail.Growth.Restore(snail.Growth.Level,
+                                 row.NeedFullPoint  * StartFullPercent,
+                                 row.NeedHappyPoint * StartHappyPercent,
+                                 0);
         }
 
         /// <summary>
@@ -597,6 +671,9 @@ namespace SnailPet
             // 지난번에 못 주운 알은 다시 구석에 내놓는다. 자리는 첫 프레임에 정해진다.
             _eggDue.AddRange(_player.LooseEggs);
             _player.LooseEggs.Clear();
+
+            // 첫 실행이면 여기서 안내가 시작된다. 도감 팝업보다 나중이라 그 위를 덮는다.
+            StartTutorial();
             if (_eggDue.Count > 0) Say("      화면에 남아 있던 알 " + _eggDue.Count + "개를 다시 놓습니다");
 
             RefreshEggs();
@@ -634,6 +711,10 @@ namespace SnailPet
             // 방에 들어가면 내 달팽이가 어떻게 생겼는지 올린다. 남들은 이걸 받아 그린다.
             SteamHub.Entered += made =>
             {
+                // 이름을 고칠 수 있는 것은 내가 직접 만든 방뿐이다. 더미 방은 내가 열었어도
+                // 이름이 시트에 적힌 것이고, 방장이 나가 내가 승격된 방도 내 방은 아니다.
+                _myRoom = made;
+
                 // 방마다 따로 올려야 한다. 같은 모습이어도 새 방에는 아직 아무것도 안 올라가 있다.
                 _publishedCard = null;
                 PublishMySnail();
@@ -656,6 +737,7 @@ namespace SnailPet
                 // 방을 여는 데 실패했거나 그새 나왔으면 기다리던 초대는 없던 일이다 —
                 // 안 지우면 한참 뒤 엉뚱한 방에 들어갈 때 초대장이 나간다.
                 _inviteWhenOpen = -1;
+                _myRoom = false;
 
                 _ui.NoticeRoomLeft();
 
@@ -786,7 +868,7 @@ namespace SnailPet
 
             // 더미 방에는 코드도 방장도 없다 — 둘 다 비우면 UI 가 그 칸을 감춘다.
             if (_dummyRoom != 0) _ui.SetRoom(true, DummyRooms.NameOf(_dummyRoom));
-            else _ui.SetRoom(SteamHub.InLobby, SteamHub.LobbyName, SteamHub.LobbyCode, SteamHub.IsHost);
+            else _ui.SetRoom(SteamHub.InLobby, SteamHub.LobbyName, SteamHub.LobbyCode, _myRoom);
 
             if (InRoom) _ui.SetMembers(MemberRows());
 
@@ -847,6 +929,9 @@ namespace SnailPet
 
         /// <summary>스팀 없이 혼자 들어가 있는 더미 방의 RoomNumber. 0 이면 안 들어가 있다.</summary>
         private int _dummyRoom;
+
+        /// <summary>지금 방을 내가 직접 만들었는가. 이름을 고칠 수 있는 것은 이때뿐이다.</summary>
+        private bool _myRoom;
 
         /// <summary>
         /// 방이 열리면 부를 친구의 줄 번호. -1 이면 없다.
@@ -1115,6 +1200,14 @@ namespace SnailPet
         /// <summary>짝꿍 슬롯을 눌렀다. 자격이 되는 달팽이만 모아 보여 준다.</summary>
         private void OpenMatePopup()
         {
+            // 방에는 메인 달팽이만 들어간다(SyncGuests). 짝꿍을 바꿔 봐야 방에서는 아무 일도
+            // 일어나지 않으니, 팝업을 여는 대신 왜 안 되는지 알린다.
+            if (InRoom)
+            {
+                _ui.NoticeMultiMate();
+                return;
+            }
+
             var rows = new List<(int, string, RarityType, int, Texture)>();
             foreach (var s in _player.Snails)
                 if (_player.CanBeMate(s))
@@ -1786,14 +1879,45 @@ namespace SnailPet
         }
 
         /// <summary>악세서리를 끼거나 뺐다. 화면의 달팽이도 같이 갈아입는다.</summary>
+        /// <summary>
+        /// 그 악세서리를 쓰고 있는 <b>다른</b> 달팽이에게서 벗긴다.
+        ///
+        /// 여러 개 가진 것이면 한 마리에게서만 벗기면 자리가 난다 — 나머지는 그대로 둔다.
+        /// 벗긴 개체의 모습이 바뀌므로 썸네일·화면·초상을 그 개체 기준으로 다시 그린다.
+        /// </summary>
+        private void TakeOffFromOther(OwnedSnail asking, int accessoryId)
+        {
+            OwnedSnail other = null;
+            foreach (var s in _player.Snails)
+                if (s != asking && s.Equipped.Contains(accessoryId)) { other = s; break; }
+
+            // 묻는 사이에 그쪽이 먼저 벗었을 수 있다. 그러면 할 일이 없다.
+            if (other == null || !other.ToggleEquip(accessoryId)) return;
+
+            DropThumb(other.Id);
+
+            if (other.Id == _player.ActiveId) { ActivateSnail(other); RefreshSnail(); }
+            else                              RefreshSnail(reshoot: false);
+
+            RefreshWardrobe();      // 흐리던 칸이 여기서 풀린다
+
+            string name = GameData.AccessoriesDataById.TryGetValue(accessoryId, out var row)
+                        ? Loc.ById(row.NameId) : accessoryId.ToString();
+            Say($"      [UI] {other.Name ?? "(이름 없음)"} 에게서 {name} 해제 → {other.Dressed()}");
+        }
+
         private void EquipAccessory(int accessoryId)
         {
             var snail = Viewing;
             if (snail == null) return;
 
-            // 하나를 두 마리가 나눠 낄 수는 없다. 옷장에서 이미 흐리게 막아 두지만,
-            // 낄 수 있는가를 정하는 것은 상태 쪽이다 — 규칙은 한 곳에만 둔다.
-            if (!_player.CanEquip(snail, accessoryId)) return;
+            // 하나를 두 마리가 나눠 낄 수는 없다. 남이 쓰고 있으면 벗길지 먼저 묻는다 —
+            // 벗기면 그때부터 낄 수 있다(한 번 더 누르면 낀다).
+            if (!_player.CanEquip(snail, accessoryId))
+            {
+                _ui.AskTakeOff(() => TakeOffFromOther(snail, accessoryId));
+                return;
+            }
 
             if (!snail.ToggleEquip(accessoryId)) return;
 

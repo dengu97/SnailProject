@@ -1428,6 +1428,13 @@ namespace SnailPet.Data
             new LanguageDataRow(558, "달달한 맛이 날 것만 같은 껍질입니다.", "A shell that looks like it tastes sweet."),
             new LanguageDataRow(560, "친구를 방으로 초대할까요?", null),
             new LanguageDataRow(561, "방에 들어가 있는 상태에서 초대할 수 있습니다.", null),
+            new LanguageDataRow(562, "다른 달팽이가 착용중인 액세서리입니다. 착용 해제할까요?", null),
+            new LanguageDataRow(563, "응? 알을 받았어요.", null),
+            new LanguageDataRow(564, "뭐가 나오는지 볼까요?", null),
+            new LanguageDataRow(565, "달팽이가 태어났어요!", null),
+            new LanguageDataRow(566, "열심히 키워보자구요!", null),
+            new LanguageDataRow(567, "좋아요!", null),
+            new LanguageDataRow(568, "친구를 만나는 동안은 짝꿍을 불러올 수 없습니다.", null),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -2137,6 +2144,13 @@ namespace SnailPet.Data
             { "[영어]", 559 },
             { "[친구방초대]", 560 },
             { "[방생성요청]", 561 },
+            { "[악세해제]", 562 },
+            { "[튜토_알받음]", 563 },
+            { "[튜토_뭐가나올까]", 564 },
+            { "[튜토_태어났다]", 565 },
+            { "[튜토_키워볼까]", 566 },
+            { "[튜토_좋아요]", 567 },
+            { "[멀티짝꿍]", 568 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();

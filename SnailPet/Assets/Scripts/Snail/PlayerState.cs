@@ -161,9 +161,12 @@ namespace SnailPet.Snail
         /// </summary>
         public string Language;
 
-        /// <summary>목업의 「보이는게 디폴트 값」 — 알림 셋은 켜짐, 나머지는 꺼짐.</summary>
+        /// <summary>
+        /// 목업의 「보이는게 디폴트 값」 — 알림 셋은 켜짐, 나머지는 꺼짐.
+        /// UI 는 x1.5 로 시작한다. 기본 크기는 요즘 화면에서 너무 작다.
+        /// </summary>
         public static PlayerOptions Default =>
-            new PlayerOptions { HungryBubble = true, CareBubble = true, CoinBubble = true };
+            new PlayerOptions { HungryBubble = true, CareBubble = true, CoinBubble = true, ScaleStep = 1 };
 
         public float Scale => ScaleStep == 1 ? 1.5f : ScaleStep == 2 ? 2f : 1f;
 
