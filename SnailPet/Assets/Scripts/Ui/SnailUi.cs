@@ -4875,8 +4875,31 @@ namespace SnailPet.Ui
             BuildScrollView(_partsRoot, "PartsList", UiTheme.PartsGuide.View, out _partsView, out _partsContent);
             _partsView.gameObject.SetActive(true);
 
-            _partsRows = new PartsRow[UiTheme.PartsGuide.RowPool];
+            _partsRows = new PartsRow[PartsRowsNeeded()];
             for (int i = 0; i < _partsRows.Length; i++) _partsRows[i] = BuildPartsRow(i);
+        }
+
+        /// <summary>
+        /// 목록에 있어야 할 줄 수. <b>파츠가 가장 많은 부위</b>가 기준이다.
+        ///
+        /// <see cref="UiTheme.PartsGuide.RowPool"/> 만 보던 시절에는 시트가 커질 때마다
+        /// 손으로 그 숫자를 올려야 했고, 잊으면 넘치는 파츠가 목록에 <b>아예 안 나왔다</b>.
+        /// 안 나오면 고를 수도 없어 보상을 못 받고, 레드닷은 영영 켜진 채로 남는다 —
+        /// 껍질이 48→52 로 늘 때 한 번, 56→69 로 늘 때 또 한 번 같은 일이 있었다.
+        /// 시트에서 직접 세면 다시는 뒤처지지 않는다. 상수는 이제 <b>하한</b>이다.
+        /// </summary>
+        private static int PartsRowsNeeded()
+        {
+            var perType = new Dictionary<SnailPet.Data.PartsType, int>();
+            foreach (var p in SnailPet.Data.GameData.PartsData)
+            {
+                perType.TryGetValue(p.PartsType, out int n);
+                perType[p.PartsType] = n + 1;
+            }
+
+            int most = UiTheme.PartsGuide.RowPool;
+            foreach (var n in perType.Values) if (n > most) most = n;
+            return most;
         }
 
         private PartsRow BuildPartsRow(int index)
@@ -4908,21 +4931,22 @@ namespace SnailPet.Ui
         }
 
         /// <summary>
-        /// 구워진 줄이 <see cref="UiTheme.PartsGuide.RowPool"/> 보다 적으면 모자란 만큼 뒤에 붙인다.
+        /// 구워진 줄이 <see cref="PartsRowsNeeded"/> 보다 적으면 모자란 만큼 뒤에 붙인다.
         ///
         /// 줄이 모자라면 넘치는 파츠는 목록에 <b>아예 안 나오고</b>, 안 나오면 고를 수도 없어
         /// 보상을 받을 길이 없다 — 껍질이 52개로 늘었을 때 48번째 뒤의 파츠에 걸린 레드닷이
-        /// 영영 꺼지지 않았다. 풀만 키우면 프리팹에 구워진 줄 수는 그대로라 여기서 채운다.
+        /// 영영 꺼지지 않았다. 프리팹에 구워진 줄 수는 구울 때 그대로 굳으므로 여기서 채운다.
         /// 다시 구우면 이 조건은 저절로 거짓이 된다.
         /// </summary>
         private void EnsurePartsRows()
         {
             if (_partsContent == null) return;
 
+            int want = PartsRowsNeeded();
             int have = Count(_partsRows);
-            if (have >= UiTheme.PartsGuide.RowPool) return;
+            if (have >= want) return;
 
-            var grown = new PartsRow[UiTheme.PartsGuide.RowPool];
+            var grown = new PartsRow[want];
             for (int i = 0; i < have; i++) grown[i] = _partsRows[i];
             for (int i = have; i < grown.Length; i++) grown[i] = BuildPartsRow(i);
 
