@@ -114,6 +114,22 @@ namespace SnailPet.Snail
         /// 방에 있는 사람들에 맞춘다. 새로 온 사람은 세우고, 나간 사람은 치우고,
         /// 모습이 바뀐 사람은 다시 세운다. <b>나는 빼고</b> 넘겨야 한다 — 내 달팽이는 본체가 그린다.
         /// </summary>
+        /// <summary>
+        /// 이펙트를 다시 붙인다. 설정에서 켜고 끌 때 부른다.
+        ///
+        /// 손님은 세워 둔 채로 이펙트만 갈아 끼운다 — <see cref="Sync"/> 는 외형이 그대로면
+        /// 아무것도 안 하므로 설정만 바뀐 것은 그쪽으로는 반영되지 않고, 통째로 다시 세우면
+        /// 걷던 자리와 자세가 처음으로 돌아가 눈에 띈다.
+        /// </summary>
+        public void RefreshEffects()
+        {
+            foreach (var g in _guests.Values)
+            {
+                SparkField.Detach(g.Effects);
+                g.Effects = _sparks?.AttachTo(g.Appearance, g.Root);
+            }
+        }
+
         public void Sync((string name, string card)[] members)
         {
             var alive = new HashSet<string>();

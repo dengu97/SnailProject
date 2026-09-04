@@ -58,19 +58,27 @@ namespace SnailPet.Ui
             /// <summary>지금 나와 있는 달팽이의 모습. 등급 뱃지와 나이 뱃지 사이를 채운다.</summary>
             public static readonly RectInt Portrait  = new RectInt(16, 44, 141, 80);
 
-            // 게이지는 알 칸이 들어오면서 짧아졌다. 오른쪽 끝(29+85=114)에서 칸까지 6px 이 뜬다.
-            public static readonly RectInt FullIcon  = new RectInt(16, 141, 19, 18);
-            public static readonly RectInt FullBar   = new RectInt(29, 145, 85, 12);
-            public static readonly RectInt HappyIcon = new RectInt(16, 163, 19, 18);
-            public static readonly RectInt HappyBar  = new RectInt(29, 167, 85, 12);
+            // 알 칸이 이름 밑으로 옮겨 가면서 오른쪽이 비었지만, 끝까지 늘리니 길어 보여
+            // 그 2/3 로 줄였다 (128 → 85).
+            //
+            // 줄여 놓으니 왼쪽에 붙어 보여 <b>아이콘부터 막대 끝까지를 한 덩어리로</b> 가운데에 놓는다 —
+            // 37 에서 시작해 135 에서 끝나므로 좌우 여백이 37 · 38 로 거의 같다.
+            public static readonly RectInt FullIcon  = new RectInt(37, 141, 19, 18);
+            public static readonly RectInt FullBar   = new RectInt(50, 145, 85, 12);
+            public static readonly RectInt HappyIcon = new RectInt(37, 163, 19, 18);
+            public static readonly RectInt HappyBar  = new RectInt(50, 167, 85, 12);
 
             /// <summary>
-            /// 오늘 낳을 수 있는 알. 게이지 두 줄 오른쪽에 붙는 네모 칸으로,
-            /// 알 그림 아래에 「남은 수 / 전체 수」가 앉는다.
+            /// 오늘 낳을 수 있는 알 하나. 등급 뱃지 아래에 이만큼씩 늘어선다 —
+            /// 낳은 것은 흐려지므로 숫자를 읽지 않아도 몇 개가 남았는지 보인다.
+            ///
+            /// <b>x 는 쓰지 않는다.</b> 줄 전체의 너비가 개수에 따라 달라져서
+            /// 가운데로 맞추는 일은 개수를 아는 코드가 한다.
             /// </summary>
-            public static readonly RectInt EggBox   = new RectInt(120, 139, 36, 42);
-            public static readonly RectInt EggIcon  = new RectInt(128, 142, 20, 20);
-            public static readonly RectInt EggCount = new RectInt(120, 165, 36, 12);
+            public static readonly RectInt EggDot = new RectInt(0, 45, 10, 10);
+
+            /// <summary>점 사이 간격(왼쪽 끝에서 왼쪽 끝).</summary>
+            public const int EggDotStep = 14;
 
             // 주의: 프리팹에는 이 표로 나타낼 수 없는 손 조정이 더 들어 있다 —
             // Portrait 0.7배, 아래 Actions 넷 1.2배, CoinIcon 0.8배의 localScale.
@@ -118,10 +126,16 @@ namespace SnailPet.Ui
             public static readonly RectInt Maximize = new RectInt(152,  19, 28, 28);
 
             /// <summary>
-            /// 짝꿍 슬롯. 닫기·최대화와 같은 x 라 오른쪽 가장자리에 나란히 걸친다.
-            /// 비어 있으면 +, 놓여 있으면 그 달팽이 얼굴이 들어간다.
+            /// 짝꿍 슬롯. 오른쪽 가장자리에 메모지(Ui/Icon/memo)가 붙어 있고 그 위에 초상이 얹힌다.
+            /// 오른쪽 끝(180)은 닫기·최대화와 같아 셋이 세로로 나란히 걸린다.
             /// </summary>
-            public static readonly RectInt MateSlot = new RectInt(152, 97, 28, 28);
+            public static readonly RectInt MateSlot = new RectInt(134, 80, 46, 46);
+
+            /// <summary>
+            /// 메모지 안의 초상 (칸 왼쪽 위가 원점). 종이 한가운데보다 조금 아래다 —
+            /// 메모지 그림은 위쪽 13% 를 테이프가 차지한다.
+            /// </summary>
+            public static readonly RectInt MateFace = new RectInt(11, 14, 24, 24);
         }
 
         /// <summary>
@@ -873,12 +887,23 @@ namespace SnailPet.Ui
             /// </summary>
             public const int RightW = 143;
 
-            /// <summary>왼쪽은 구역이 둘이라 행 간격이 일정하지 않다. 그래서 y 를 그대로 적는다.</summary>
-            public static readonly RectInt EggTitle    = new RectInt(7, 29, 98, 19);
-            public static readonly RectInt BubbleTitle = new RectInt(7, 83, 98, 19);
-            public static readonly int[] LeftRows  = { 49, 103, 136, 169 };
+            /// <summary>왼쪽은 구역이 여럿이라 행 간격이 일정하지 않다. 그래서 y 를 그대로 적는다.</summary>
+            public static readonly RectInt EggTitle    = new RectInt(7,  29, 98, 19);
+            public static readonly RectInt BubbleTitle = new RectInt(7,  83, 98, 19);
+
+            /// <summary>세 번째 구역. 여기서부터 판(<see cref="PanelH"/> = 220) 밖이라 왼쪽이 굴러간다.</summary>
+            public static readonly RectInt LookTitle   = new RectInt(7, 203, 98, 19);
+
+            /// <summary>구역 제목은 제 첫 행보다 20 위, 앞 구역 끝보다 6 아래 — 그 리듬을 지킨다.</summary>
+            public static readonly int[] LeftRows  = { 49, 103, 136, 169, 223 };
+
+            /// <summary>내용 아래에 두는 여백. 마지막 행이 바닥에 딱 붙으면 답답하다.</summary>
+            public const int ContentPad = 8;
 
             public static readonly int[] RightRows = { 33, 68, 102, 137, 171 };
+
+            /// <summary>드롭다운으로 펼친 칸 사이(와 여는 행과의) 틈.</summary>
+            public const int DropGap = 2;
 
             // 행 안쪽 (행 왼쪽 위가 원점)
             public static readonly RectInt Label = new RectInt(6, 4, 119, 19);

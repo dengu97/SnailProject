@@ -196,6 +196,15 @@ namespace SnailPet.Snail
         // PartsData.EffectPath 에 이름이 적힌 파츠는 그 자리에서 이펙트가 돈다.
         // 내 달팽이와 손님 달팽이가 같은 길을 쓴다 — 두 벌이 되면 한쪽만 고치게 된다.
 
+        /// <summary>
+        /// 파츠에 딸린 이펙트를 끌지. 설정의 「달팽이 이펙트 끄기」가 여기로 온다.
+        ///
+        /// 세이브에 있는 값을 이펙트 층까지 들고 오지 않으려고 <b>정적 스위치</b> 하나만 둔다 —
+        /// 손님 달팽이를 만드는 곳은 플레이어 상태를 모르는 자리라 값을 넘길 길이 마땅치 않다.
+        /// 켜고 끄는 것은 설정이 바뀔 때 게임 쪽이 한 번 해 준다.
+        /// </summary>
+        public static bool NoEffect;
+
         /// <summary>붙어 있는 이펙트 하나. <see cref="Local"/> 은 합성 안에서의 자리다.</summary>
         public struct Attached
         {
@@ -212,6 +221,10 @@ namespace SnailPet.Snail
         {
             var list = new List<Attached>();
             if (look == null || snailRoot == null) return list;
+
+            // 설정에서 껐으면 아예 안 붙인다. 내 달팽이와 손님이 이 길을 함께 쓰므로
+            // 여기 하나만 막으면 둘 다 꺼진다.
+            if (NoEffect) return list;
 
             foreach (var p in look.Parts)
             {

@@ -513,6 +513,9 @@ namespace SnailPet
         /// <summary>확인용(F6)으로 붙여 본 이펙트. 파츠 것과 같은 길로 따라다닌다.</summary>
         private readonly List<SparkField.Attached> _testEffect = new List<SparkField.Attached>();
 
+        /// <summary>설정의 「달팽이 이펙트 끄기」를 이펙트 층에 건다. 붙이는 곳이 이 값만 본다.</summary>
+        private void ApplyEffectOption() => SparkField.NoEffect = _player.Options.NoEffect;
+
         private void RebuildPartEffects()
         {
             SparkField.Detach(_partEffects);
@@ -610,7 +613,6 @@ namespace SnailPet
             _ui.UpdatePressed  += () => Say("      [UI] 업데이트 및 재시작 (아직 업데이트 체계가 없습니다)");
             _ui.QuitPressed    += QuitFromUi;
             _ui.Close    += () => Say("      [UI] 최소화");
-            _ui.Maximize += () => Say("      [UI] 최대화");
             _ui.TabChanged += i =>
             {
                 ShowActiveSnail();      // 탭을 옮기면 오른쪽이 화면의 달팽이로 돌아온다
@@ -667,6 +669,7 @@ namespace SnailPet
             // 세이브에서 읽은 설정을 UI 에 넣는다. 이 호출은 OptionsChanged 를 내지 않으므로
             // 넣자마자 다시 저장이 도는 일이 없다.
             _ui.SetOptions(_player.Options);
+            ApplyEffectOption();
 
             // 지난번에 못 주운 알은 다시 구석에 내놓는다. 자리는 첫 프레임에 정해진다.
             _eggDue.AddRange(_player.LooseEggs);
@@ -3497,15 +3500,24 @@ namespace SnailPet
         private void ApplyOptions(PlayerOptions options)
         {
             bool languageChanged = _player.Options.IsEnglish != options.IsEnglish;
+            bool effectChanged   = _player.Options.NoEffect  != options.NoEffect;
             _player.Options = options;
 
             // 시트에서 읽어 채운 글자(파츠 이름·설명·상품 이름 …)는 UI 의 토큰 훑기로는 안 바뀐다.
             // 그린 쪽이 다시 칠해야 한다.
             if (languageChanged) RepaintForLanguage();
 
+            // 이미 붙어 도는 이펙트는 스위치만 내려서는 안 꺼진다. 내 달팽이와 손님 둘 다 다시 건다.
+            if (effectChanged)
+            {
+                ApplyEffectOption();
+                RebuildPartEffects();
+                _guestField?.RefreshEffects();
+            }
+
             Say($"      [UI] 설정 바뀜: 알생성금지={options.NoEggs} 배고픔={options.HungryBubble} " +
                 $"관심={options.CareBubble} 코인={options.CoinBubble} " +
-                $"항상최대화={options.AlwaysMax} UI크기=x{options.Scale:0.#} " +
+                $"이펙트끄기={options.NoEffect} UI크기=x{options.Scale:0.#} " +
                 $"언어={(options.IsEnglish ? "en" : "kr")}");
         }
 

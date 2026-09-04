@@ -97,6 +97,13 @@ namespace SnailPet.Ui
             Slot02,
             Slot03,
             Slot04,
+
+            /// <summary>
+            /// 드롭다운으로 펼쳐지는 칸. <see cref="Slot"/> 과 같은 크기(631x168)의 손그림인데
+            /// 색이 짙어 아래 줄 위에 떠 있는 것처럼 보인다.
+            /// <b>맨 뒤에 붙인다</b> — 프리팹이 이 enum 을 숫자로 저장한다.
+            /// </summary>
+            Slot5,
         }
 
         /// <summary>역할별 기본 모서리 반지름. 아트가 없을 때만 쓴다.</summary>
@@ -199,6 +206,8 @@ namespace SnailPet.Ui
             // 임포터의 표에는 없으므로(이름이 다르다) 여기서 채워 준다.
             Shape.Slot01 or Shape.Slot02 or Shape.Slot03 or Shape.Slot04
                             => new Vector4(24, 24, 24, 24),
+            // 드롭다운 칸도 slot 과 같은 크기의 같은 손그림이다. 임포터의 표에는 없다.
+            Shape.Slot5     => new Vector4(24, 24, 24, 24),
             _            => Vector4.zero,
         };
 

@@ -150,7 +150,14 @@ namespace SnailPet.Snail
     {
         public bool NoEggs;                                  // 알 생성 금지
         public bool HungryBubble, CareBubble, CoinBubble;    // 말풍선 알림 3종
-        public bool AlwaysMax;                               // UI 항상 최대화
+        /// <summary>
+        /// 달팽이에 붙어 도는 이펙트(<c>PartsData.EffectPath</c>)를 끈다.
+        ///
+        /// <b>끄기</b>가 켜짐이다 — 체크하면 안 보인다. 기본은 꺼짐이라 이펙트가 보인다.
+        /// 자리는 예전 <c>AlwaysMax</c>(UI 항상 최대화) 가 쓰던 칸이다. 그 설정은
+        /// 반 접힘이 없어지면서 할 일이 사라져 없앴고, 옛 세이브의 그 값은 그냥 버려진다.
+        /// </summary>
+        public bool NoEffect;
 
         /// <summary>0 = x1, 1 = x1.5, 2 = x2. 목업이 이 셋만 준다.</summary>
         public int ScaleStep;
