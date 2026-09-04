@@ -98,7 +98,14 @@ namespace SnailPet.Snail
                 if (sprite == null)
                     Debug.LogWarning("[SnailPet] 말풍선 리소스를 찾지 못했습니다: " + CoinBubbleToken);
             }
+
+            _baseScale = go.transform.localScale;
         }
+
+        /// <summary>제 크기. 뽀잉 하는 동안 여기에 배율을 곱한다.</summary>
+        private Vector3 _baseScale = Vector3.one;
+
+        private SnailBubble.Pop _pop;
 
         /// <summary>레벨이 바뀌면 주기도 바뀐다. 남은 시간은 이어서 센다.</summary>
         /// <summary>기다리지 않고 바로 받을 수 있게 한다. 확인용 치트가 쓴다.</summary>
@@ -148,14 +155,27 @@ namespace SnailPet.Snail
         /// <summary>
         /// 말풍선을 그 위치·각도에 띄운다.
         /// 각도는 달팽이 자세를 그대로 받으므로 모서리를 도는 동안에도 같이 부드럽게 돌아간다.
+        ///
+        /// 나타나는 <b>그 순간</b>에 뽀잉이 시작된다 (<see cref="SnailBubble.Pop"/>).
+        /// 부푸는 동안에는 <see cref="Contains"/> 도 같이 작아진다 — 보이는 만큼만 눌린다.
         /// </summary>
         public void Place(Vector3 worldPosition, float rotationDeg, bool visible)
         {
+            bool was = _renderer.enabled;
             _renderer.enabled = visible && _renderer.sprite != null;
-            if (!visible) return;
+
+            if (!_renderer.enabled)
+            {
+                _pop.Stop();
+                _bubble.localScale = _baseScale;
+                return;
+            }
+
+            if (!was) _pop.Restart();
 
             _bubble.position = worldPosition;
             _bubble.localRotation = Quaternion.Euler(0f, 0f, rotationDeg);
+            _bubble.localScale = _baseScale * _pop.Step(Time.deltaTime);
         }
 
         /// <summary>
