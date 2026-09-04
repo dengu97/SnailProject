@@ -223,7 +223,7 @@ ParticleSystem:
       serializedVersion: 2
       minMaxState: 0
       minColor: {r: 0.13462922, g: 0.07843136, b: 0.52156866, a: 0.56078434}
-      maxColor: {r: 1, g: 1, b: 1, a: 1}
+      maxColor: {r: 0.5273732, g: 0.36850303, b: 0.8584906, a: 1}
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 1}
@@ -1385,15 +1385,15 @@ ParticleSystem:
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 0}
-        key1: {r: 0, g: 0.8071177, b: 1, a: 1}
-        key2: {r: 0.17412782, g: 0.21910922, b: 0.4056604, a: 1}
+        key1: {r: 0.87209034, g: 0.745105, b: 0.9811321, a: 1}
+        key2: {r: 0.7593217, g: 0.41869882, b: 0.9150943, a: 1}
         key3: {r: 0.2848339, g: 0, b: 1, a: 0.9116554}
         key4: {r: 0.33962262, g: 0, b: 0.22254503, a: 0}
         key5: {r: 0, g: 0, b: 0, a: 0}
         key6: {r: 0, g: 0, b: 0, a: 0}
         key7: {r: 0, g: 0, b: 0, a: 0}
         ctime0: 0
-        ctime1: 29422
+        ctime1: 33731
         ctime2: 65535
         ctime3: 35492
         ctime4: 45851
@@ -4982,7 +4982,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1301943221363101672}
   m_Layer: 0
-  m_Name: flower1
+  m_Name: flower2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
