@@ -46,6 +46,28 @@ namespace SnailPet.Desktop
             return IntPtr.Zero;
         }
 
+        /// <summary>
+        /// 창을 그 자리·그 크기로 옮기기만 한다. 스타일은 손대지 않는다.
+        ///
+        /// 스플래시가 도는 동안 쓰는 길이다 — 그때는 아직 평범한 창이라 유니티가 화면
+        /// 한가운데에 띄운다. 펫이 설 자리(오른쪽 아래)로 미리 옮겨 두면 로고가 거기서 뜬다.
+        /// </summary>
+        public static bool MoveTo(int x, int y, int width, int height)
+        {
+            if (Application.isEditor) return false;
+
+            IntPtr hwnd = FindOwnWindow();
+            if (hwnd == IntPtr.Zero) return false;
+
+            Hwnd = hwnd;
+
+            // <b>보여 주지도, 맨 앞으로 올리지도 않는다.</b> 아직 유니티가 첫 그림을 그리기
+            // 전이라 SWP_SHOWWINDOW 로 억지로 띄우면 윈도가 칠해 둔 흰 바탕이 그대로 보인다.
+            // 자리만 옮겨 두고, 띄우고 맨 앞으로 올리는 일은 Apply 가 맡는다.
+            return Win32.SetWindowPos(hwnd, IntPtr.Zero, x, y, width, height,
+                                      Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE);
+        }
+
         /// <summary>가상 화면 전체를 덮는 투명·항상 위·클릭 통과 창으로 만든다.</summary>
         public static bool Apply(bool clickThrough = true)
         {

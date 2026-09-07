@@ -47,9 +47,23 @@ namespace SnailPet.EditorTools
             PlayerSettings.allowFullscreenSwitch = false;
             PlayerSettings.fullScreenMode      = FullScreenMode.Windowed;
             PlayerSettings.forceSingleInstance = true;
-            PlayerSettings.defaultScreenWidth  = 1280;
-            PlayerSettings.defaultScreenHeight = 720;
             PlayerSettings.usePlayerLog        = true;
+
+            // ── 시작할 때 뜨는 창 ──
+            //
+            // 유니티 Personal 은 「Made with Unity」 로고를 못 끈다(라이선스). 다만 로고는
+            // <b>게임 창 안에</b> 그려지므로, 창이 작으면 로고도 작다. 그래서 작게 열고,
+            // 로고가 끝난 뒤에 펫이 화면 전체로 편다(SnailPetBootstrap.StretchWindow).
+            //
+            // 크기는 펼친 위젯과 비슷하게 잡았다 — 위젯 상자 353x251 에 UI 기본 배율 x1.5.
+            // <b>여기가 그 값의 임자다.</b> ProjectSettings.asset 을 손으로 고쳐도 이 함수가
+            // 프로젝트를 열 때마다(InitializeOnLoad) 다시 덮어쓴다.
+            PlayerSettings.defaultScreenWidth      = 530;
+            PlayerSettings.defaultScreenHeight     = 380;
+            PlayerSettings.defaultIsNativeResolution = false;
+
+            // 로고가 확 줌인하며 밀려오는 동작을 끈다. 번쩍이는 느낌이 가장 크게 준다.
+            PlayerSettings.SplashScreen.animationMode = PlayerSettings.SplashScreen.AnimationMode.Static;
 
             // 투명 창의 핵심. flip model 스왑체인에서는 DWM 유리 영역과 알파 합성이
             // 제대로 동작하지 않는다. 반드시 꺼야 한다.

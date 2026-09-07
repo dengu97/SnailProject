@@ -274,7 +274,9 @@ namespace SnailPet
 #else
             _vLeft = 0; _vTop = 0; _vWidth = Screen.width; _vHeight = Screen.height;
 #endif
-            Screen.SetResolution(_vWidth, _vHeight, FullScreenMode.Windowed);
+            // 창을 펴는 것은 스플래시가 끝난 뒤다(StretchWindow). 그동안은 작은 창에
+            // 로고만 뜨고, 펫이 설 자리에 미리 가 있는다.
+            MoveWindowToPetCorner();
 
             SetupCamera();
             SetupSnail();
@@ -287,10 +289,6 @@ namespace SnailPet
 
             bool steam = SteamHub.Init();
             Say("[9] 스팀 ............ " + (steam ? "OK (" + SteamHub.MyName + ")" : "미연결: " + SteamHub.LastError));
-
-            bool ok = TransparentWindow.Apply(clickThrough: true);
-            Say("[3] 투명 창 적용 ..... " + (ok ? "OK" : "실패: " + TransparentWindow.LastError));
-            Say("[4] 클릭 통과 ....... " + (TransparentWindow.IsClickThrough() ? "OK" : "미적용"));
 
             _anchor = new BoxAnchor { Edge = DemoStartEdge, T = DemoStartT, Forward = true };
             _box = ResolveBox();
@@ -2549,8 +2547,96 @@ namespace SnailPet
             else               DropHatchGlow();
         }
 
+        // ── 창 펴기 ──
+        //
+        // 유니티 Personal 은 「Made with Unity」 로고를 못 끈다(라이선스). 다만 로고는 <b>게임 창
+        // 안에</b> 그려지므로, 창이 작으면 로고도 작다. 그래서 작은 창으로 시작해 로고를 거기서
+        // 띄우고, 로고가 끝난 뒤에야 화면 전체로 편다 — 화면이 통째로 번쩍이지 않게 하려는 것이다.
+
+        /// <summary>아직 화면 전체로 안 폈다.</summary>
+        private bool _windowPending = true;
+
+        /// <summary>펫이 설 자리에서 화면 가장자리까지 띄우는 여백(px).</summary>
+        private const int PetCornerMargin = UiTheme.ScreenMargin;
+
+        /// <summary>
+        /// 로고가 뜨는 동안의 창 크기(px). 펼친 위젯과 비슷하게 잡았다 —
+        /// 위젯 상자가 353x251 이고 UI 기본 배율이 x1.5 다.
+        /// </summary>
+        private const int SplashWindowW = 530, SplashWindowH = 380;
+
+        /// <summary>
+        /// 로고가 뜨는 동안 쓸 작은 창을 <b>펫이 설 자리</b>(오른쪽 아래)로 옮긴다.
+        /// 크기는 유니티가 정한 시작 해상도 그대로 둔다 — 그 값이 곧 로고 크기다.
+        /// </summary>
+        /// <summary>
+        /// 로고가 그려지기 <b>전에</b> 창을 줄인다.
+        ///
+        /// <see cref="Awake"/> 는 이미 늦다 — 그때는 로고가 큰 창에 한참 그려진 뒤다.
+        /// 시작 해상도(PlayerSettings)로 줄여 보려 했지만 플레이어가 그 값을 안 쓰고
+        /// 모니터 크기로 창을 열었다(2026-09-07: 530 을 넣어도 1920x1080 으로 열림).
+        /// 유니티는 바로 이 자리를 위해 <c>BeforeSplashScreen</c> 을 준다.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSplashScreen)]
+        private static void ShrinkWindowBeforeSplash()
+        {
+#if UNITY_STANDALONE_WIN
+            var v = TransparentWindow.VirtualScreen;
+            bool ok = TransparentWindow.MoveTo(
+                v.Left + v.Width  - SplashWindowW - PetCornerMargin,
+                v.Top  + v.Height - SplashWindowH - PetCornerMargin,
+                SplashWindowW, SplashWindowH);
+
+            // Awake 보다 먼저라 Say 를 못 쓴다(_log 가 아직 없다).
+            Debug.Log("[SnailPet] 로고 전 창 줄이기: " + (ok ? "OK" : "실패 (창 손잡이 없음)"));
+#endif
+        }
+
+        private void MoveWindowToPetCorner()
+        {
+#if UNITY_STANDALONE_WIN
+            // 지금 창이 얼마든 <b>이 크기로 줄여</b> 놓는다. 플레이어는 지난번 창 크기를
+            // 레지스트리에서 되살려 열기 때문에, 시작 해상도 설정만 믿으면 안 된다.
+            bool moved = TransparentWindow.MoveTo(
+                _vLeft + _vWidth  - SplashWindowW - PetCornerMargin,
+                _vTop  + _vHeight - SplashWindowH - PetCornerMargin,
+                SplashWindowW, SplashWindowH);
+
+            Say($"      로고 창 줄이기 . {(moved ? "OK" : "실패 (창 손잡이를 못 찾음)")} " +
+                $"→ {SplashWindowW}x{SplashWindowH}");
+#endif
+        }
+
+        /// <summary>
+        /// 로고가 끝났으면 창을 화면 전체로 펴고 투명·클릭 통과를 건다.
+        ///
+        /// <b>여기까지 미루는 이유</b>: Awake 는 로고가 아직 떠 있는 동안 돈다. 거기서 창을
+        /// 키우면 로고도 같이 커져 화면을 덮는다. 편 뒤에야 펫이 보이므로 늦어 보이지만,
+        /// 그동안 화면에 있던 것은 어차피 로고다.
+        /// </summary>
+        private void StretchWindow()
+        {
+            if (!_windowPending) return;
+            if (!UnityEngine.Rendering.SplashScreen.isFinished) return;
+
+            _windowPending = false;
+
+#if UNITY_STANDALONE_WIN
+            // 크기는 Apply 가 Win32 로 직접 잡는다. <b>Screen.SetResolution 을 쓰면 안 된다</b> —
+            // 유니티가 그 값을 레지스트리에 적어 두고 다음에 켤 때 그 크기로 창을 여는데,
+            // 그러면 로고가 다시 화면을 덮는다(2026-09-07).
+            bool ok = TransparentWindow.Apply(clickThrough: true);
+            Say("[3] 투명 창 적용 ..... " + (ok ? "OK" : "실패: " + TransparentWindow.LastError));
+            Say("[4] 클릭 통과 ....... " + (TransparentWindow.IsClickThrough() ? "OK" : "미적용"));
+#else
+            Screen.SetResolution(_vWidth, _vHeight, FullScreenMode.Windowed);
+#endif
+        }
+
         private void Update()
         {
+            StretchWindow();
+
             _t += Time.deltaTime;
             _cam.orthographicSize = Screen.height * 0.5f;
 
@@ -4476,9 +4562,9 @@ namespace SnailPet
             Say($"      화면 구성이 바뀌었습니다: ({_vLeft},{_vTop},{_vWidth},{_vHeight}) → ({v.Left},{v.Top},{v.Width},{v.Height})");
 
             _vLeft = v.Left; _vTop = v.Top; _vWidth = v.Width; _vHeight = v.Height;
-            Screen.SetResolution(_vWidth, _vHeight, FullScreenMode.Windowed);
 
-            // 창을 다시 만든 셈이므로 투명·클릭 통과 속성도 다시 건다
+            // 크기도 Apply 가 같이 잡는다. Screen.SetResolution 은 쓰지 않는다 —
+            // 그 값이 레지스트리에 남아 다음에 켤 때 로고가 화면을 덮는다(StretchWindow 참고).
             TransparentWindow.Apply(clickThrough: true);
 #endif
         }
