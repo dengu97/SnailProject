@@ -100,6 +100,16 @@ namespace SnailPet
         private Vector2 _grabOffset;
 
         /// <summary>
+        /// 달팽이를 들고 있을 때 <see cref="_grabOffset"/> 이 찾아갈 자리 —
+        /// <b>처음 잡았던 그 지점</b>이 커서 밑에 오게 하는 값이다.
+        ///
+        /// 벽에서 뗄 때는 몸을 쭉 당겨야 떨어지므로, 떨어지는 순간의 커서는 몸에서 한참
+        /// 벗어나 있다. 그 벌어짐을 그대로 들고 다니면 달팽이가 커서와 동떨어져 매달린다.
+        /// 그렇다고 그 자리에서 바로 붙이면 툭 튄다 — 그래서 좁혀 간다.
+        /// </summary>
+        private Vector2 _carryOffset;
+
+        /// <summary>
         /// 달팽이가 벽을 벗어난 상태. 들려 있거나 떨어지는 중이다.
         /// 이때는 앵커 대신 이 발 좌표(가상 화면 px)가 위치를 결정한다.
         /// </summary>
@@ -145,6 +155,12 @@ namespace SnailPet
         private const float CarryMaxStretch = 0.28f;
         private const float CarryLeanPerSpeed = 0.014f;
         private const float CarryMaxLeanDeg = 22f;
+
+        /// <summary>
+        /// 뗄 때 벌어진 거리를 좁혀 커서 밑으로 돌아오는 빠르기(초당 비율). 클수록 빨리 붙는다.
+        /// 12 면 0.2초쯤에 거의 다 붙는다 — 떨어지는 순간의 「툭」은 보이고 매달리지는 않는다.
+        /// </summary>
+        private const float CarrySettle = 12f;
 
         /// <summary>떨어지는 동안 아래로 늘어지는 정도.</summary>
         private const float FallStretchPerSpeed = 0.00014f;
@@ -4029,7 +4045,11 @@ namespace SnailPet
                     _snailFalling = false;
                     _snailVelY = 0f;
                     _snailFootScreen = CurrentFootScreen(footDepth, halfExtent);
-                    _grabOffset = _snailFootScreen - cursor;
+
+                    // 떨어진 그 순간의 벌어짐에서 시작해(안 튀게), 잡았던 지점으로 좁혀 간다.
+                    // 벽에 붙어 있는 동안에는 기어가지 않으므로 발 자리는 잡을 때와 같다.
+                    _grabOffset  = _snailFootScreen - cursor;
+                    _carryOffset = _snailFootScreen - _grabScreen;
                     _stretchVel += PopRecoil * SpringStiffness * 0.05f;   // 툭 하고 되튕긴다
                     Say("      벽에서 떨어졌습니다.");
                 }
@@ -4042,6 +4062,11 @@ namespace SnailPet
                                              -CarryMaxStretch * 0.7f, CarryMaxStretch);
                 _leanTarget = Mathf.Clamp(_handVel.x * CarryLeanPerSpeed,
                                           -CarryMaxLeanDeg, CarryMaxLeanDeg);
+
+                // 뗄 때 벌어진 거리를 좁힌다. 프레임 길이에 안 휘둘리는 감쇠라 dt 가 튀어도
+                // 목표를 지나치지 않는다(UiSmoothScroll 과 같은 식).
+                _grabOffset = Vector2.Lerp(_grabOffset, _carryOffset,
+                                           1f - Mathf.Exp(-CarrySettle * Time.deltaTime));
             }
             else if (_snailFalling)
             {
