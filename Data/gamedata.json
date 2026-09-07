@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-04 17:02:13",
+  "generatedAt": "2026-09-05 00:02:05",
   "source": "SnailData.xlsx",
   "enums": {
     "BuffType": {"Full": 1},
@@ -595,7 +595,16 @@
     "[일반_기억더듬이01정보]": 581,
     "[일반_기억더듬이02]": 582,
     "[설정_이펙트끄기]": 583,
-    "[외형관련]": 584
+    "[외형관련]": 584,
+    "[에픽_마법몸]": 585,
+    "[에픽_마법몸정보]": 586,
+    "[에픽_항아리01]": 587,
+    "[에픽_항아리01정보]": 588,
+    "[에픽_항아리02]": 589,
+    "[에픽_항아리03]": 590,
+    "[레어_양초더듬이01]": 591,
+    "[레어_양초더듬이정보]": 592,
+    "[레어_양초더듬이02]": 593
   },
   "tables": {
     "EnumData": [
@@ -695,7 +704,7 @@
       {"Id": 214, "NameId": 214, "PartsGroupIds": [17], "RarityType": "Rare", "PartsType": "Body", "ResourceKey": "rarebody03", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 215, "SellItem": 36, "SellCount": 6, "AnimFps": null, "MutationGroup": 318, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 216, "NameId": 216, "PartsGroupIds": [17], "RarityType": "Rare", "PartsType": "Shell", "ResourceKey": "tubeshell", "IsUseColor": true, "Colors": ["tubeshell_c01"], "AppearWeight": 7, "InfoId": 217, "SellItem": 36, "SellCount": 6, "AnimFps": null, "MutationGroup": 314, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 218, "NameId": 218, "PartsGroupIds": [17, 497], "RarityType": "Rare", "PartsType": "Feeler", "ResourceKey": "duckfeeler", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 219, "SellItem": 36, "SellCount": 6, "AnimFps": null, "MutationGroup": 324, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
-      {"Id": 228, "NameId": 228, "PartsGroupIds": [17, 497], "RarityType": "Rare", "PartsType": "Shell", "ResourceKey": "rareshell03", "IsUseColor": true, "Colors": ["rareshell03_c01"], "AppearWeight": 7, "InfoId": 229, "SellItem": 36, "SellCount": 6, "AnimFps": null, "MutationGroup": 314, "MutationWeight": 5, "EffectPath": "flower1", "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
+      {"Id": 228, "NameId": 228, "PartsGroupIds": [17, 497], "RarityType": "Rare", "PartsType": "Shell", "ResourceKey": "rareshell03", "IsUseColor": true, "Colors": ["rareshell03_c01"], "AppearWeight": 7, "InfoId": 229, "SellItem": 36, "SellCount": 6, "AnimFps": null, "MutationGroup": 314, "MutationWeight": 5, "EffectPath": "flower2", "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 230, "NameId": 230, "PartsGroupIds": [17, 497], "RarityType": "Rare", "PartsType": "Shell", "ResourceKey": "rareshell03", "IsUseColor": true, "Colors": ["rareshell03_c02"], "AppearWeight": 7, "InfoId": 231, "SellItem": 36, "SellCount": 6, "AnimFps": null, "MutationGroup": 314, "MutationWeight": 5, "EffectPath": "flower1", "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 257, "NameId": 257, "PartsGroupIds": [17, 497], "RarityType": "Rare", "PartsType": "Shell", "ResourceKey": "dragonfruitshell", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 258, "SellItem": 36, "SellCount": 6, "AnimFps": null, "MutationGroup": 314, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 259, "NameId": 259, "PartsGroupIds": [17], "RarityType": "Rare", "PartsType": "Shell", "ResourceKey": "fishshell", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 260, "SellItem": 36, "SellCount": 6, "AnimFps": null, "MutationGroup": 314, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
@@ -795,7 +804,7 @@
       {"Id": 525, "NameId": 525, "PartsGroupIds": [169], "RarityType": "Epic", "PartsType": "Body", "ResourceKey": "commonbody01", "IsUseColor": true, "Colors": ["bubble"], "AppearWeight": 5, "InfoId": 526, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 319, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 527, "NameId": 527, "PartsGroupIds": [17], "RarityType": "Rare", "PartsType": "Feeler", "ResourceKey": "coinfeeler", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 528, "SellItem": 36, "SellCount": 6, "AnimFps": null, "MutationGroup": 324, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 529, "NameId": 529, "PartsGroupIds": [17], "RarityType": "Rare", "PartsType": "Eyes", "ResourceKey": "coineye", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 530, "SellItem": 36, "SellCount": 7, "AnimFps": null, "MutationGroup": 325, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
-      {"Id": 531, "NameId": 531, "PartsGroupIds": [169], "RarityType": "Epic", "PartsType": "Shell", "ResourceKey": "coinbag", "IsUseColor": false, "Colors": [], "AppearWeight": 5, "InfoId": 532, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 326, "MutationWeight": 5, "EffectPath": "music", "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
+      {"Id": 531, "NameId": 531, "PartsGroupIds": [169], "RarityType": "Epic", "PartsType": "Shell", "ResourceKey": "coinbag", "IsUseColor": false, "Colors": [], "AppearWeight": 5, "InfoId": 532, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 326, "MutationWeight": 5, "EffectPath": "money", "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 533, "NameId": 533, "PartsGroupIds": [17], "RarityType": "Rare", "PartsType": "Feeler", "ResourceKey": "spoon", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 534, "SellItem": 36, "SellCount": 6, "AnimFps": null, "MutationGroup": 324, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 535, "NameId": 535, "PartsGroupIds": [2, 497], "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "som", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 536, "SellItem": 36, "SellCount": 5, "AnimFps": null, "MutationGroup": 322, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 537, "NameId": 537, "PartsGroupIds": [2, 497], "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "crayon01", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 538, "SellItem": 36, "SellCount": 5, "AnimFps": null, "MutationGroup": 322, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
@@ -812,7 +821,13 @@
       {"Id": 576, "NameId": 576, "PartsGroupIds": [2], "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler06", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 577, "SellItem": 36, "SellCount": 5, "AnimFps": null, "MutationGroup": 322, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 578, "NameId": 578, "PartsGroupIds": [17], "RarityType": "Rare", "PartsType": "Eyes", "ResourceKey": "bignose", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 579, "SellItem": 36, "SellCount": 7, "AnimFps": null, "MutationGroup": 325, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
       {"Id": 580, "NameId": 580, "PartsGroupIds": [2], "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler07", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 581, "SellItem": 36, "SellCount": 5, "AnimFps": null, "MutationGroup": 322, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
-      {"Id": 582, "NameId": 582, "PartsGroupIds": [2], "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler07", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 581, "SellItem": 36, "SellCount": 5, "AnimFps": null, "MutationGroup": 322, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null}
+      {"Id": 582, "NameId": 582, "PartsGroupIds": [2], "RarityType": "Common", "PartsType": "Feeler", "ResourceKey": "commonfeeler07", "IsUseColor": false, "Colors": [], "AppearWeight": 10, "InfoId": 581, "SellItem": 36, "SellCount": 5, "AnimFps": null, "MutationGroup": 322, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
+      {"Id": 585, "NameId": 585, "PartsGroupIds": [169], "RarityType": "Epic", "PartsType": "Body", "ResourceKey": "commonbody01", "IsUseColor": true, "Colors": ["witch"], "AppearWeight": 5, "InfoId": 586, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 319, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
+      {"Id": 587, "NameId": 587, "PartsGroupIds": [169], "RarityType": "Epic", "PartsType": "Shell", "ResourceKey": "pot01", "IsUseColor": false, "Colors": [], "AppearWeight": 5, "InfoId": 588, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 326, "MutationWeight": 5, "EffectPath": "CFXR2 Poison Cloud", "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
+      {"Id": 589, "NameId": 589, "PartsGroupIds": [169], "RarityType": "Epic", "PartsType": "Shell", "ResourceKey": "pot01", "IsUseColor": false, "Colors": [], "AppearWeight": 5, "InfoId": 588, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 326, "MutationWeight": 5, "EffectPath": "CFXR2 Poison Cloud", "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
+      {"Id": 590, "NameId": 590, "PartsGroupIds": [169], "RarityType": "Epic", "PartsType": "Shell", "ResourceKey": "pot01", "IsUseColor": false, "Colors": [], "AppearWeight": 5, "InfoId": 588, "SellItem": 36, "SellCount": 20, "AnimFps": null, "MutationGroup": 326, "MutationWeight": 5, "EffectPath": "CFXR2 Poison Cloud", "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
+      {"Id": 591, "NameId": 591, "PartsGroupIds": [17], "RarityType": "Rare", "PartsType": "Feeler", "ResourceKey": "candle01", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 592, "SellItem": 36, "SellCount": 6, "AnimFps": null, "MutationGroup": 324, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null},
+      {"Id": 593, "NameId": 593, "PartsGroupIds": [17], "RarityType": "Rare", "PartsType": "Feeler", "ResourceKey": "candle01", "IsUseColor": false, "Colors": [], "AppearWeight": 7, "InfoId": 592, "SellItem": 36, "SellCount": 6, "AnimFps": null, "MutationGroup": 324, "MutationWeight": 5, "EffectPath": null, "RewardId01": 36, "RewardCount01": 5, "RewardId02": null, "RewardCount02": null, "RewardId03": null, "RewardCount03": null}
     ],
     "FoodData": [
       {"Id": 31, "FoodType": "vegetable", "NameId": 31, "RarityType": "Common", "FullPoint": 5, "HappyPoint": 3, "EatTime": 2, "BuffId": 0, "InfoId": 124, "ResourceKey": "food_lettuce", "PartsResourceKey": "food_parts", "PoopResourceKey": "poop_green", "PoopCount": 1, "PoopTime": 20, "ResourceSize": 1},
@@ -1481,7 +1496,16 @@
       {"Id": 123, "Kr": "차가울만한데, 꽤나 마음에 든 모양이에요.", "En": null},
       {"Id": 164, "Kr": "메모지 붙은 몸", "En": null},
       {"Id": 583, "Kr": "달팽이 이펙트 끄기", "En": null},
-      {"Id": 584, "Kr": "외형 관련", "En": null}
+      {"Id": 584, "Kr": "외형 관련", "En": null},
+      {"Id": 585, "Kr": "마법의 몸", "En": null},
+      {"Id": 586, "Kr": "마법으로 만들어진 아름다운 색의 몸입니다.", "En": null},
+      {"Id": 587, "Kr": "솥단지(보라색)", "En": null},
+      {"Id": 589, "Kr": "솥단지(초록색)", "En": null},
+      {"Id": 590, "Kr": "솥단지(분홍색)", "En": null},
+      {"Id": 588, "Kr": "무언가 끓고 있는 솥단지입니다… 맛은 보지 않는게 좋겠어요.", "En": null},
+      {"Id": 591, "Kr": "양초 더듬이(빨간색)", "En": null},
+      {"Id": 593, "Kr": "양초 더듬이(파란색)", "En": null},
+      {"Id": 592, "Kr": "후 불어도 꺼지지 않는 강력한 양초모양 더듬이입니다.", "En": null}
     ],
     "UnlockData": [
       {"Id": 101, "ConditionType": "SnailLevel", "NeedConditionValue": 2, "CostItem": null, "CostCount": null}

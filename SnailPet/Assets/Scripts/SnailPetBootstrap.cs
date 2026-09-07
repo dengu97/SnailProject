@@ -4485,6 +4485,47 @@ namespace SnailPet
             return new Vector3(Mathf.Lerp(-halfW, halfW, u), Mathf.Lerp(halfH, -halfH, v), 0f);
         }
 
+        /// <summary>
+        /// 파츠에 붙은 이펙트가 <b>1초 뒤에</b> 실제로 어떤 상태인지 적는다.
+        ///
+        /// 붙이는 순간에 적는 값(SparkField.Describe)으로는 모자랐다 — 그때는 달팽이 자세도
+        /// 크기도 안 걸려 있고 알갱이도 아직 하나도 안 나왔다. 「붙긴 했는데 안 보인다」를
+        /// 가르는 것은 여기 값들이다: 알갱이가 나오고 있는지, 크기가 몇 px 인지, 화면 안인지.
+        /// </summary>
+        private void LogPartEffects()
+        {
+            if (_partEffects == null || _partEffects.Count == 0) { Say("      파츠 이펙트   : 없음"); return; }
+
+            float halfH = _cam.orthographicSize, halfW = halfH * _cam.aspect;
+            Vector3 eye = _cam.transform.position;
+
+            foreach (var fx in _partEffects)
+            {
+                if (fx.Root == null) continue;
+
+                var ps = fx.Root.GetComponentInChildren<ParticleSystem>(true);
+                var r  = fx.Root.GetComponentInChildren<ParticleSystemRenderer>(true);
+
+                Vector3 p = fx.Root.position;
+                bool onScreen = Mathf.Abs(p.x - eye.x) <= halfW && Mathf.Abs(p.y - eye.y) <= halfH;
+
+                // 화면에 실제로 그려진 넓이. 계산해 낸 값이 아니라 렌더러가 재 준 값이다.
+                float drawn = r != null ? r.bounds.size.y : 0f;
+                float bodyPx = (_bounds.Top - _bounds.Foot) * _scale;
+
+                Say($"      파츠 이펙트   : {fx.Root.name} @({p.x:0},{p.y:0}) {(onScreen ? "화면 안" : "화면 밖")}" +
+                    $" · 배율 {fx.Root.localScale.x:0.####}" +
+                    $" · 그려진 크기 {drawn:0.#}px (몸 {bodyPx:0.#}px)" +
+                    $" · 맞춤 {(fx.Tuned ? "끝" : "아직")}" +
+                    $" · 살아있는 알갱이 {(ps == null ? -1 : ps.particleCount)}개" +
+                    $" · {(ps == null ? "PS 없음" : ps.isPlaying ? "도는 중" : "멈춤")}" +
+                    $" · 뿌리는 중 {(ps != null && ps.isEmitting)}" +
+                    $" · 렌더러 {(r == null ? "없음" : r.enabled ? "켜짐" : "꺼짐")}" +
+                    $" 정렬 {(r == null ? 0 : r.sortingOrder)}" +
+                    $" 재질 {(r == null || r.sharedMaterial == null ? "없음" : r.sharedMaterial.name)}");
+            }
+        }
+
         private void LogDiagnostics()
         {
             Say("");
@@ -4492,6 +4533,7 @@ namespace SnailPet
             // 파츠가 실제로 몇 px 로 들어왔는지. 애니메이션 시트의 칸을 이 크기에 맞춰 자르므로
             // 여기가 어긋나면 그 파츠만 크기가 다르게 나온다.
             Say($"      Screen        : {Screen.width}x{Screen.height} (요청 {_vWidth}x{_vHeight})");
+            LogPartEffects();
             Say($"      변형 그룹     : {DescribeGroups(_composed)}");
             Say($"      몸통 경계     : L{_bounds.Left:0} R{_bounds.Right:0} 발{_bounds.Foot:0} T{_bounds.Top:0} (스케일 전)");
             Say($"      파츠 캔버스   : {DescribeCanvas()}");

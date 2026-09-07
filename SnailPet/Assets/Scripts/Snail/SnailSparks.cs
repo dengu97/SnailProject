@@ -180,10 +180,21 @@ namespace SnailPet.Snail
                 // 없고 필요도 없다(여기는 월드에 그린다). 꺼진 채로 두면 아무것도 안 보인다.
                 if (!r.enabled) r.enabled = true;
 
-                // 그리는 순서를 안 정해 둔 프리팹은 달팽이 위로 올린다.
-                // 스토어에서 받은 이펙트는 대개 0 이라 그대로 두면 몸에 가려 안 보인다.
-                // 0 이 아닌 것은 만든 사람이 정한 값이므로 건드리지 않는다.
-                if (r.sortingOrder == 0) r.sortingOrder = DefaultOrder;
+                // 통째로 달팽이 위로 올린다. 프리팹에 적힌 값은 <b>제 안에서의 앞뒤</b>로만 쓴다.
+                //
+                // 달팽이 파츠는 SortOrder*2 로 깔려 한 자릿수~스물 몇에 들어 있어서, 남의
+                // 프로젝트에서 온 값(0 이나 2 같은)을 그대로 두면 몸 사이에 끼어 안 보인다.
+                // 예전에는 0 일 때만 올렸는데, 2 로 적힌 프리팹이 그대로 몸 뒤에 깔렸다(2026-09-05).
+                //
+                // 이미 위에 있으면 그대로 둔다 — 안 그러면 프리팹에서 값을 올려 놓을 때마다
+                // 여기서 또 더해 배로 불어난다(9600 으로 고쳤더니 19200 이 됐다).
+                if (r.sortingOrder < DefaultOrder) r.sortingOrder += DefaultOrder;
+
+                // 재질이 없으면 그 알갱이는 <b>아무것도 안 그려진다</b>. 프리팹을 다른 곳에서
+                // 가져올 때 재질만 빠지는 일이 흔한데, 조용히 안 보이므로 여기서 짚어 준다.
+                if (r.sharedMaterial == null)
+                    Debug.LogWarning("[SnailPet] 이펙트에 재질이 없습니다: " + prefabKey + " / " + r.name +
+                                     " — 이 알갱이는 안 그려집니다");
             }
 
             return go;
@@ -210,6 +221,21 @@ namespace SnailPet.Snail
         {
             public Transform Root;
             public Vector3 Local;
+
+            /// <summary>
+            /// 달팽이 배율 1 당 이 이펙트에 줄 배율. <see cref="Place"/> 가 매 프레임 곱한다.
+            /// 0 이면 크기를 안 건드린다(못 쟀다는 뜻).
+            /// </summary>
+            public float Fit;
+
+            /// <summary>이 이펙트가 차지했으면 하는 세로(캔버스 단위). 달팽이 몸 높이에서 나온다.</summary>
+            public float WantCanvas;
+
+            /// <summary>붙은 뒤 흐른 시간. 알갱이가 퍼질 때까지 기다렸다 재려고 센다.</summary>
+            public float Age;
+
+            /// <summary>실제로 그려진 크기를 재서 한 번 맞췄는가.</summary>
+            public bool Tuned;
         }
 
         /// <summary>
@@ -225,6 +251,12 @@ namespace SnailPet.Snail
             // 설정에서 껐으면 아예 안 붙인다. 내 달팽이와 손님이 이 길을 함께 쓰므로
             // 여기 하나만 막으면 둘 다 꺼진다.
             if (NoEffect) return list;
+
+            // 몸 높이는 <b>캔버스 단위</b>로 잰다. 달팽이 배율은 여기서 곱하지 않는다 —
+            // 이펙트를 붙이는 시점에는 자세가 아직 안 정해져 배율이 1 로 읽힌다.
+            // 실제 크기는 매 프레임 Place 가 그때의 배율을 곱해 맞춘다.
+            var b = SnailMetrics.Measure(look, withAccessories: false);
+            float bodyCanvas = b.Measured ? b.Top - b.Foot : 0f;
 
             foreach (var p in look.Parts)
             {
@@ -242,9 +274,104 @@ namespace SnailPet.Snail
                     continue;
                 }
 
-                list.Add(new Attached { Root = go.transform, Local = local });
+                float fit = FitOf(go, bodyCanvas);
+                Describe(p.ResourceKey, row.EffectPath, go, fit);
+                list.Add(new Attached
+                {
+                    Root = go.transform,
+                    Local = local,
+                    Fit = fit,
+                    WantCanvas = bodyCanvas * EffectFraction,
+                });
             }
             return list;
+        }
+
+        /// <summary>
+        /// 이펙트 <b>전체</b>가 차지할 세로 — 달팽이 몸 높이에 대한 비율.
+        /// 0.9 면 30px 짜리 달팽이에 27px 짜리 이펙트가 뜬다. 크기가 어색하면 여기만 만진다.
+        ///
+        /// 알갱이 하나가 아니라 전체를 재는 것은, 알갱이 하나의 크기는 프리팹마다 손잡이가
+        /// 달라 믿을 수 없기 때문이다(<see cref="Tune"/> 참고).
+        /// </summary>
+        private const float EffectFraction = 0.9f;
+
+        /// <summary>알갱이가 퍼질 때까지 기다리는 시간(초). 갓 태어난 것만 재면 뭉쳐 있어 작게 나온다.</summary>
+        private const float TuneDelay = 0.35f;
+
+        /// <summary>
+        /// <b>실제로 그려진 크기를 재서</b> 한 번 맞춘다.
+        ///
+        /// 프리팹의 <c>startSize</c> 로 미루어 짐작하는 것은 못 쓴다 — 크기를 정하는 손잡이가
+        /// 한둘이 아니다(startSize · size3D · 수명 곡선 · 트랜스폼 배율 · 렌더 모드).
+        /// heart 는 그 계산으로 「9.5px」이었는데 화면에서는 훨씬 컸다(2026-09-05).
+        ///
+        /// 렌더러의 <c>bounds</c> 는 지금 살아 있는 알갱이가 <b>차지한 실제 넓이</b>라
+        /// 그 손잡이들이 어떻게 얽혔든 결과 하나만 본다. 한 번 재서 고치면 그다음부터는
+        /// 배율만 곱하면 되므로 매 프레임 잴 일도 없다.
+        /// </summary>
+        private static void Tune(ref Attached a, float wantPx)
+        {
+            a.Age += Time.deltaTime;
+            if (a.Age < TuneDelay || wantPx <= 0f) return;
+
+            var ps = a.Root.GetComponentInChildren<ParticleSystem>(true);
+            var r  = a.Root.GetComponentInChildren<ParticleSystemRenderer>(true);
+
+            // 알갱이가 아직 하나도 안 나왔으면 잴 것이 없다. 다음 프레임에 다시 본다.
+            if (ps == null || r == null || ps.particleCount == 0) return;
+
+            float now = r.bounds.size.y;
+            if (now > 0.0001f) a.Fit *= wantPx / now;
+
+            a.Tuned = true;
+        }
+
+        /// <summary>
+        /// 첫 배율의 어림값. 여기서 크게 빗나가도 <see cref="Tune"/> 이 곧 바로잡으므로,
+        /// 첫 몇 프레임이 터무니없지만 않으면 된다.
+        ///
+        /// <b>이게 없으면 대부분의 이펙트가 안 보인다.</b> 남에게서 받은 프리팹은 1 유닛을
+        /// 1 미터로 잡고 만드는데, 여기는 카메라가 <c>orthographicSize = 화면 높이 / 2</c> 라
+        /// <b>1 유닛이 1 픽셀</b>이다. heart 는 그래서 3px 짜리로 떠 있었다(2026-09-05).
+        ///
+        /// 프리팹에 적힌 크기는 버린다 — 어떤 크기로 만들어 오든 화면에서는 같게 보인다.
+        /// </summary>
+        private static float FitOf(GameObject go, float bodyCanvas)
+        {
+            if (bodyCanvas <= 0f) return 0f;
+
+            var ps = go.GetComponentInChildren<ParticleSystem>(true);
+            if (ps == null) return 0f;
+
+            // startSizeMultiplier 는 상수로 잡았든 곡선으로 잡았든 그 크기의 배수다.
+            float unit = ps.main.startSizeMultiplier;
+            return unit > 0.0001f ? bodyCanvas * EffectFraction / unit : 0f;
+        }
+
+        /// <summary>
+        /// 붙인 이펙트가 어떤 상태인지 로그에 남긴다.
+        ///
+        /// 「연결했는데 안 뜬다」가 되풀이되는 자리라서 남긴다. 남의 프로젝트에서 온 프리팹은
+        /// 대개 <b>1 유닛 = 1 미터</b>로 만들어져 있는데 여기는 <b>1 유닛 = 1 픽셀</b>이라
+        /// (카메라 orthographicSize = 화면 높이의 절반), 알갱이가 몇 픽셀짜리로 줄어
+        /// 붙긴 붙었는데 안 보이는 일이 생긴다. 그 크기를 눈으로 확인할 수 있게 적는다.
+        /// </summary>
+        private static void Describe(string partKey, string effectKey, GameObject go, float fit)
+        {
+            var all = go.GetComponentsInChildren<ParticleSystemRenderer>(true);
+
+            // 재질 없는 렌더러가 섞여 있으면 그것만 안 그려진다. 몇 개 중 몇 개인지 같이 적는다.
+            int drawn = 0;
+            foreach (var r in all) if (r.sharedMaterial != null) drawn++;
+
+            // 픽셀 크기는 여기서 못 적는다 — 달팽이 배율이 아직 안 걸려 있다(Place 가 맞춘다).
+            // 대신 못 쟀는지(0)만 보이면 된다. 실제 크기는 Place 의 Tune 이 재서 맞춘다.
+            Debug.Log($"[SnailPet] 이펙트 {partKey} → {effectKey}: " +
+                      $"자리({go.transform.position.x:0},{go.transform.position.y:0}) " +
+                      $"크기맞춤 {(fit > 0f ? $"몸의 {EffectFraction * 100:0}%" : "못 쟀음")} " +
+                      $"렌더러 {all.Length}개 중 그릴 수 있는 것 {drawn}개 " +
+                      $"정렬 {(all.Length > 0 ? all[0].sortingOrder : 0)}");
         }
 
         /// <summary>
@@ -285,10 +412,24 @@ namespace SnailPet.Snail
         {
             if (attached == null || attached.Count == 0 || snailRoot == null) return;
 
+            float scale = Mathf.Abs(snailRoot.lossyScale.y);
+
             for (int i = attached.Count - 1; i >= 0; i--)
             {
-                if (attached[i].Root == null) { attached.RemoveAt(i); continue; }
-                attached[i].Root.position = snailRoot.TransformPoint(attached[i].Local);
+                var a = attached[i];
+                if (a.Root == null) { attached.RemoveAt(i); continue; }
+
+                a.Root.position = snailRoot.TransformPoint(a.Local);
+
+                // 크기는 여기서 맞춘다. 붙일 때 한 번만 하면 안 된다 — 그때는 달팽이 자세가
+                // 아직 안 정해져 배율이 1 로 읽혀 이펙트가 서른 배로 커졌다(2026-09-05).
+                // 여기서 하면 레벨이 올라 몸이 커질 때 이펙트도 저절로 따라 커진다.
+                if (a.Fit > 0f)
+                {
+                    a.Root.localScale = Vector3.one * (a.Fit * scale);
+                    if (!a.Tuned) Tune(ref a, a.WantCanvas * scale);
+                    attached[i] = a;
+                }
             }
         }
 

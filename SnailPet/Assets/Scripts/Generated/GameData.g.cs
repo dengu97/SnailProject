@@ -667,7 +667,7 @@ namespace SnailPet.Data
             new PartsDataRow(214, 214, new int[] { 17 }, RarityType.Rare, PartsType.Body, "rarebody03", false, System.Array.Empty<string>(), 7, 215, 36, 6d, null, 318, 5, null, 36, 5, null, null, null, null),
             new PartsDataRow(216, 216, new int[] { 17 }, RarityType.Rare, PartsType.Shell, "tubeshell", true, new string[] { "tubeshell_c01" }, 7, 217, 36, 6d, null, 314, 5, null, 36, 5, null, null, null, null),
             new PartsDataRow(218, 218, new int[] { 17, 497 }, RarityType.Rare, PartsType.Feeler, "duckfeeler", false, System.Array.Empty<string>(), 7, 219, 36, 6d, null, 324, 5, null, 36, 5, null, null, null, null),
-            new PartsDataRow(228, 228, new int[] { 17, 497 }, RarityType.Rare, PartsType.Shell, "rareshell03", true, new string[] { "rareshell03_c01" }, 7, 229, 36, 6d, null, 314, 5, "flower1", 36, 5, null, null, null, null),
+            new PartsDataRow(228, 228, new int[] { 17, 497 }, RarityType.Rare, PartsType.Shell, "rareshell03", true, new string[] { "rareshell03_c01" }, 7, 229, 36, 6d, null, 314, 5, "flower2", 36, 5, null, null, null, null),
             new PartsDataRow(230, 230, new int[] { 17, 497 }, RarityType.Rare, PartsType.Shell, "rareshell03", true, new string[] { "rareshell03_c02" }, 7, 231, 36, 6d, null, 314, 5, "flower1", 36, 5, null, null, null, null),
             new PartsDataRow(257, 257, new int[] { 17, 497 }, RarityType.Rare, PartsType.Shell, "dragonfruitshell", false, System.Array.Empty<string>(), 7, 258, 36, 6d, null, 314, 5, null, 36, 5, null, null, null, null),
             new PartsDataRow(259, 259, new int[] { 17 }, RarityType.Rare, PartsType.Shell, "fishshell", false, System.Array.Empty<string>(), 7, 260, 36, 6d, null, 314, 5, null, 36, 5, null, null, null, null),
@@ -767,7 +767,7 @@ namespace SnailPet.Data
             new PartsDataRow(525, 525, new int[] { 169 }, RarityType.Epic, PartsType.Body, "commonbody01", true, new string[] { "bubble" }, 5, 526, 36, 20d, null, 319, 5, null, 36, 5, null, null, null, null),
             new PartsDataRow(527, 527, new int[] { 17 }, RarityType.Rare, PartsType.Feeler, "coinfeeler", false, System.Array.Empty<string>(), 7, 528, 36, 6d, null, 324, 5, null, 36, 5, null, null, null, null),
             new PartsDataRow(529, 529, new int[] { 17 }, RarityType.Rare, PartsType.Eyes, "coineye", false, System.Array.Empty<string>(), 7, 530, 36, 7d, null, 325, 5, null, 36, 5, null, null, null, null),
-            new PartsDataRow(531, 531, new int[] { 169 }, RarityType.Epic, PartsType.Shell, "coinbag", false, System.Array.Empty<string>(), 5, 532, 36, 20d, null, 326, 5, "music", 36, 5, null, null, null, null),
+            new PartsDataRow(531, 531, new int[] { 169 }, RarityType.Epic, PartsType.Shell, "coinbag", false, System.Array.Empty<string>(), 5, 532, 36, 20d, null, 326, 5, "money", 36, 5, null, null, null, null),
             new PartsDataRow(533, 533, new int[] { 17 }, RarityType.Rare, PartsType.Feeler, "spoon", false, System.Array.Empty<string>(), 7, 534, 36, 6d, null, 324, 5, null, 36, 5, null, null, null, null),
             new PartsDataRow(535, 535, new int[] { 2, 497 }, RarityType.Common, PartsType.Feeler, "som", false, System.Array.Empty<string>(), 10, 536, 36, 5d, null, 322, 5, null, 36, 5, null, null, null, null),
             new PartsDataRow(537, 537, new int[] { 2, 497 }, RarityType.Common, PartsType.Feeler, "crayon01", false, System.Array.Empty<string>(), 10, 538, 36, 5d, null, 322, 5, null, 36, 5, null, null, null, null),
@@ -785,6 +785,12 @@ namespace SnailPet.Data
             new PartsDataRow(578, 578, new int[] { 17 }, RarityType.Rare, PartsType.Eyes, "bignose", false, System.Array.Empty<string>(), 7, 579, 36, 7d, null, 325, 5, null, 36, 5, null, null, null, null),
             new PartsDataRow(580, 580, new int[] { 2 }, RarityType.Common, PartsType.Feeler, "commonfeeler07", false, System.Array.Empty<string>(), 10, 581, 36, 5d, null, 322, 5, null, 36, 5, null, null, null, null),
             new PartsDataRow(582, 582, new int[] { 2 }, RarityType.Common, PartsType.Feeler, "commonfeeler07", false, System.Array.Empty<string>(), 10, 581, 36, 5d, null, 322, 5, null, 36, 5, null, null, null, null),
+            new PartsDataRow(585, 585, new int[] { 169 }, RarityType.Epic, PartsType.Body, "commonbody01", true, new string[] { "witch" }, 5, 586, 36, 20d, null, 319, 5, null, 36, 5, null, null, null, null),
+            new PartsDataRow(587, 587, new int[] { 169 }, RarityType.Epic, PartsType.Shell, "pot01", false, System.Array.Empty<string>(), 5, 588, 36, 20d, null, 326, 5, "CFXR2 Poison Cloud", 36, 5, null, null, null, null),
+            new PartsDataRow(589, 589, new int[] { 169 }, RarityType.Epic, PartsType.Shell, "pot01", false, System.Array.Empty<string>(), 5, 588, 36, 20d, null, 326, 5, "CFXR2 Poison Cloud", 36, 5, null, null, null, null),
+            new PartsDataRow(590, 590, new int[] { 169 }, RarityType.Epic, PartsType.Shell, "pot01", false, System.Array.Empty<string>(), 5, 588, 36, 20d, null, 326, 5, "CFXR2 Poison Cloud", 36, 5, null, null, null, null),
+            new PartsDataRow(591, 591, new int[] { 17 }, RarityType.Rare, PartsType.Feeler, "candle01", false, System.Array.Empty<string>(), 7, 592, 36, 6d, null, 324, 5, null, 36, 5, null, null, null, null),
+            new PartsDataRow(593, 593, new int[] { 17 }, RarityType.Rare, PartsType.Feeler, "candle01", false, System.Array.Empty<string>(), 7, 592, 36, 6d, null, 324, 5, null, 36, 5, null, null, null, null),
         };
 
         public static readonly FoodDataRow[] FoodData = new FoodDataRow[]
@@ -1480,6 +1486,15 @@ namespace SnailPet.Data
             new LanguageDataRow(164, "메모지 붙은 몸", null),
             new LanguageDataRow(583, "달팽이 이펙트 끄기", null),
             new LanguageDataRow(584, "외형 관련", null),
+            new LanguageDataRow(585, "마법의 몸", null),
+            new LanguageDataRow(586, "마법으로 만들어진 아름다운 색의 몸입니다.", null),
+            new LanguageDataRow(587, "솥단지(보라색)", null),
+            new LanguageDataRow(589, "솥단지(초록색)", null),
+            new LanguageDataRow(590, "솥단지(분홍색)", null),
+            new LanguageDataRow(588, "무언가 끓고 있는 솥단지입니다… 맛은 보지 않는게 좋겠어요.", null),
+            new LanguageDataRow(591, "양초 더듬이(빨간색)", null),
+            new LanguageDataRow(593, "양초 더듬이(파란색)", null),
+            new LanguageDataRow(592, "후 불어도 꺼지지 않는 강력한 양초모양 더듬이입니다.", null),
         };
 
         public static readonly UnlockDataRow[] UnlockData = new UnlockDataRow[]
@@ -2212,6 +2227,15 @@ namespace SnailPet.Data
             { "[일반_기억더듬이02]", 582 },
             { "[설정_이펙트끄기]", 583 },
             { "[외형관련]", 584 },
+            { "[에픽_마법몸]", 585 },
+            { "[에픽_마법몸정보]", 586 },
+            { "[에픽_항아리01]", 587 },
+            { "[에픽_항아리01정보]", 588 },
+            { "[에픽_항아리02]", 589 },
+            { "[에픽_항아리03]", 590 },
+            { "[레어_양초더듬이01]", 591 },
+            { "[레어_양초더듬이정보]", 592 },
+            { "[레어_양초더듬이02]", 593 },
         };
 
         public static readonly Dictionary<int, string> TokenById = BuildTokenById();
